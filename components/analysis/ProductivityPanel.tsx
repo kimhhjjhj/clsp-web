@@ -32,6 +32,7 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
   const [multipliers, setMultipliers] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ProductivityResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   function setMult(taskId: string, value: number) {
     setMultipliers(prev => {
@@ -45,11 +46,13 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
   function resetAll() {
     setMultipliers(new Map())
     setResult(null)
+    setError(null)
   }
 
   async function run() {
     if (!cpmTasks) return
     setLoading(true)
+    setError(null)
     try {
       const adjustments = Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier }))
       const res = await fetch(`/api/projects/${projectId}/productivity`, {
@@ -57,7 +60,11 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adjustments, mode }),
       })
-      if (res.ok) setResult(await res.json())
+      const data = await res.json()
+      if (res.ok) setResult(data)
+      else setError(data?.error ?? '계산에 실패했습니다.')
+    } catch (e: any) {
+      setError(e?.message ?? '네트워크 오류')
     } finally { setLoading(false) }
   }
 
@@ -143,6 +150,13 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
           </table>
         </div>
       </div>
+
+      {/* 에러 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+          ⚠ {error}
+        </div>
+      )}
 
       {/* 비교 결과 */}
       {result && (
