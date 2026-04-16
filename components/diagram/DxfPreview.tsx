@@ -225,6 +225,8 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     ctx.fillText(`${loops.length} polygons  ×${zoom.toFixed(1)}`, 8, 14)
   }, [segments, loops, getView, zoom, hoveredIdx, selectedSiteIdx, selectedBldgIdx, selectMode])
 
+  const drawRef = useRef<() => void>(() => {})
+  useEffect(() => { drawRef.current = draw }, [draw])
   useEffect(() => { draw() }, [draw])
 
   // ── Wheel zoom ──
@@ -286,7 +288,7 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved.current = true
         panRef.current = { x: panRef.current.x + dx, y: panRef.current.y + dy }
         lastPos.current = { x: e.clientX, y: e.clientY }
-        forceRender(n => n + 1)
+        drawRef.current()
         return
       }
       if (!selectModeRef.current) return
