@@ -8,6 +8,12 @@ import sys
 import base64
 import io
 
+# Windows에서 stderr/stdout을 UTF-8로 강제 설정
+if hasattr(sys.stderr, 'buffer'):
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+if hasattr(sys.stdout, 'buffer'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
 try:
     import ezdxf
     from ezdxf.addons.dwg import load as dwg_load
