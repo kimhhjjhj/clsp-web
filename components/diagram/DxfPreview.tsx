@@ -229,10 +229,24 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
   useEffect(() => { drawRef.current = draw }, [draw])
   useEffect(() => { draw() }, [draw])
 
-  // ── Wheel zoom ──
+  // ── Wheel zoom (마우스 포인터 중심) ──
   const onWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
-    setZoom(z => clamp(z * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 0.05, 30))
+    const canvas = canvasRef.current; if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const mx = e.clientX - rect.left
+    const my = e.clientY - rect.top
+    const PAD = 32
+    const zoomOld = zoomRef.current
+    const zoomNew = clamp(zoomOld * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 0.05, 30)
+    const ratio = zoomNew / zoomOld
+    // 마우스 위치의 월드 좌표가 줌 전후 동일하도록 pan 보정
+    panRef.current = {
+      x: mx - PAD - (mx - PAD - panRef.current.x) * ratio,
+      y: my - (H - PAD) + (H - PAD - my + panRef.current.y) * ratio,
+    }
+    zoomRef.current = zoomNew
+    setZoom(zoomNew)
   }, [])
   useEffect(() => {
     const el = containerRef.current; if (!el) return
