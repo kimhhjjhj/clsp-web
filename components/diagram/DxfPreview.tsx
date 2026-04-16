@@ -26,9 +26,8 @@ interface Props {
   bbox: [number, number, number, number] | null
   onSiteSelect?: (loop: Loop) => void
   onBldgSelect?: (loop: Loop) => void
+  width?: number   // 부모 패널 너비 (없으면 420)
 }
-
-const W = 420, H = 400
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)) }
 
@@ -61,7 +60,13 @@ function minEdgeDist(px: number, py: number, pts: [number, number][]): number {
   return min
 }
 
-export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldgSelect }: Props) {
+export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldgSelect, width }: Props) {
+  // W, H 동적 계산 — panelWidth가 바뀌면 캔버스도 따라 조정
+  const W = width ?? 420
+  const H = Math.round(W * 0.88)
+  const whRef = useRef({ W, H })
+  useEffect(() => { whRef.current = { W, H } }, [W, H])
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1.0)
@@ -97,7 +102,7 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     const dw = maxX - minX || 1, dh = maxY - minY || 1
     const PAD = 32
     return { ox: minX, oy: minY, dw, dh, sc: Math.min((W - PAD * 2) / dw, (H - PAD * 2) / dh) }
-  }, [bbox])
+  }, [bbox, W, H])
 
   // 파일 로드 시 자동 맞춤
   useEffect(() => {
@@ -228,7 +233,7 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     loops.slice(0, 5).forEach((l, i) => {
       ctx.fillText(`[${i}] ${l.layer}  ${l.area.toFixed(1)}m²`, 8, 26 + i * 11)
     })
-  }, [segments, loops, getView, zoom, hoveredIdx, selectedSiteIdx, selectedBldgIdx, selectMode])
+  }, [segments, loops, getView, zoom, hoveredIdx, selectedSiteIdx, selectedBldgIdx, selectMode, W, H])
 
   const drawRef = useRef<() => void>(() => {})
   useEffect(() => { drawRef.current = draw }, [draw])
@@ -247,9 +252,10 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     const factor = Math.pow(2, -e.deltaY * 0.003)
     const zoomNew = clamp(zoomOld * factor, 0.05, 500)
     const ratio = zoomNew / zoomOld
+    const { H: curH } = whRef.current
     panRef.current = {
       x: mx - PAD - (mx - PAD - panRef.current.x) * ratio,
-      y: my - (H - PAD) + (H - PAD - my + panRef.current.y) * ratio,
+      y: my - (curH - PAD) + (curH - PAD - my + panRef.current.y) * ratio,
     }
     zoomRef.current = zoomNew
     drawRef.current()   // 즉시 렌더링 (React re-render 기다리지 않음)
@@ -272,12 +278,13 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       const [minX, minY, maxX, maxY] = b
       const dw = maxX - minX || 1, dh = maxY - minY || 1
       const PAD = 32
-      const baseSc = Math.min((W - PAD * 2) / dw, (H - PAD * 2) / dh)
+      const { W: curW, H: curH } = whRef.current
+      const baseSc = Math.min((curW - PAD * 2) / dw, (curH - PAD * 2) / dh)
       const sc = baseSc * zoomRef.current
       const ox = minX, oy = minY
       const px = panRef.current.x, py = panRef.current.y
       const wx = (sx - PAD - px) / sc + ox
-      const wy = (H - PAD - sy + py) / sc + oy
+      const wy = (curH - PAD - sy + py) / sc + oy
       const loops = loopsRef.current
       const edgeThreshold = 10 / sc
 

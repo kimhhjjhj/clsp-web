@@ -1110,8 +1110,9 @@ export default function NewProjectPage() {
                       bbox={dxfData.bbox}
                       onSiteSelect={(loop) => handlePolygonSelect('site', loop)}
                       onBldgSelect={(loop) => handlePolygonSelect('bldg', loop)}
+                      width={panelWidth}
                     />
-                  : <div className="flex flex-col items-center justify-center gap-3 bg-[#0f172a]" style={{ height: 436 }}>
+                  : <div className="flex flex-col items-center justify-center gap-3 bg-[#0f172a]" style={{ height: Math.round(panelWidth * 0.88) }}>
                       <div className="w-14 h-14 rounded-2xl bg-white/[0.05] flex items-center justify-center border border-white/[0.05]">
                         <Upload size={20} className="text-white/20" />
                       </div>
