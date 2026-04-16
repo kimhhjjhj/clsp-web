@@ -221,80 +221,117 @@ function getUnitFactor(maxCoord: number): number {
 }
 
 // ── 독립 선분들에서 닫힌 루프 재구성 ──────────────────────
-// greedy chain: 끝점끼리 이어 붙여 닫히면 루프로 인식.
-// 단순 폐합 폴리곤(건물외곽 등)에 효과적.
+// 전략:
+//  1) 50cm 허용오차로 끝점 스냅
+//  2) 모든 시작 선분 × 양방향 시도 (전역 used 없음 → 로컬 used만)
+//  3) 분기점에서 루프 닫힘 후보 먼저 확인, 그 다음 최소 꺾임+긴 선 선호
+//  4) compactness 0.02 이상 (L자·U자 등 복잡한 형태 포함)
 
 function findLineLoops(segsM: DxfSegment[]): DxfLoop[] {
   if (segsM.length < 3) return []
 
-  const TOL2 = 0.1 * 0.1   // 10cm²  (거리 제곱 비교용)
+  const TOL  = 0.5            // 50cm (선 끝점 불일치 허용)
+  const TOL2 = TOL * TOL
   const d2 = (ax: number, ay: number, bx: number, by: number) =>
     (ax - bx) ** 2 + (ay - by) ** 2
 
-  const segs = segsM.map(s => ({ ...s, used: false }))
+  // ── 끝점 스냅: 가까운 끝점들을 같은 노드로 통합 ──────────
+  const nodes: [number, number][] = []
+  const snap = (x: number, y: number): number => {
+    for (let i = 0; i < nodes.length; i++) {
+      if (d2(x, y, nodes[i][0], nodes[i][1]) < TOL2) return i
+    }
+    nodes.push([x, y]); return nodes.length - 1
+  }
+
+  interface GEdge { ni: number; nj: number; si: number }
+  const edges: GEdge[] = []
+  const adj = new Map<number, GEdge[]>()  // node → 연결 엣지 목록
+
+  for (let i = 0; i < segsM.length; i++) {
+    const s = segsM[i]
+    const ni = snap(s.x1, s.y1), nj = snap(s.x2, s.y2)
+    if (ni === nj) continue          // 길이 0 선분 무시
+    const e: GEdge = { ni, nj, si: i }
+    edges.push(e)
+    if (!adj.has(ni)) adj.set(ni, [])
+    if (!adj.has(nj)) adj.set(nj, [])
+    adj.get(ni)!.push(e)
+    adj.get(nj)!.push(e)
+  }
+
   const loops: DxfLoop[] = []
+  // 중복 제거: centroid 기반 (2m 이내 + 면적 5% 이내)
+  const isDup = (pts: [number, number][], area: number) => {
+    const cx = pts.reduce((s, [x]) => s + x, 0) / pts.length
+    const cy = pts.reduce((s, [, y]) => s + y, 0) / pts.length
+    return loops.some(l => {
+      const lx = l.pts.reduce((s, [x]) => s + x, 0) / l.pts.length
+      const ly = l.pts.reduce((s, [, y]) => s + y, 0) / l.pts.length
+      return Math.hypot(lx - cx, ly - cy) < 2.0 &&
+             Math.abs(l.area - area) / Math.max(l.area, 1) < 0.05
+    })
+  }
 
-  for (let si = 0; si < segs.length; si++) {
-    if (segs[si].used) continue
+  // ── 모든 엣지 × 양방향에서 greedy chain 시도 ──────────────
+  for (const startEdge of edges) {
+    for (const fwd of [true, false]) {
+      const startNode = fwd ? startEdge.ni : startEdge.nj
+      const firstNext  = fwd ? startEdge.nj : startEdge.ni
 
-    const chain: [number, number][] = [
-      [segs[si].x1, segs[si].y1],
-      [segs[si].x2, segs[si].y2],
-    ]
-    segs[si].used = true
+      const chainNodes: number[] = [startNode, firstNext]
+      const usedEdges  = new Set<GEdge>([startEdge])
 
-    for (let iter = 0; iter < segs.length; iter++) {
-      const [lx, ly] = chain[chain.length - 1]
-      const [fx, fy] = chain[0]
+      for (let iter = 0; iter < edges.length; iter++) {
+        const curNode  = chainNodes[chainNodes.length - 1]
+        const origNode = chainNodes[0]
+        const [lx, ly] = nodes[curNode]
 
-      // 허용오차 내 모든 후보 수집
-      const cands: { j: number; flip: boolean; nx: number; ny: number }[] = []
-      for (let j = 0; j < segs.length; j++) {
-        if (segs[j].used) continue
-        if (d2(lx, ly, segs[j].x1, segs[j].y1) < TOL2) cands.push({ j, flip: false, nx: segs[j].x2, ny: segs[j].y2 })
-        else if (d2(lx, ly, segs[j].x2, segs[j].y2) < TOL2) cands.push({ j, flip: true,  nx: segs[j].x1, ny: segs[j].y1 })
-      }
-      if (cands.length === 0) break
+        const connEdges = (adj.get(curNode) ?? []).filter(e => !usedEdges.has(e))
+        if (connEdges.length === 0) break
 
-      // 분기점: 현재 진행 방향과 가장 일직선(최소 꺾임)인 선분 우선,
-      //         그 다음 더 긴 선분 우선 (짧은 코너 마감선 회피)
-      let bestJ = cands[0].j, bestFlip = cands[0].flip
-      let nx = cands[0].nx, ny = cands[0].ny
-      if (cands.length > 1 && chain.length >= 2) {
-        const [px, py] = chain[chain.length - 2]
-        const curAngle = Math.atan2(ly - py, lx - px)
-        let bestScore = -Infinity
-        for (const c of cands) {
-          const outAngle = Math.atan2(c.ny - ly, c.nx - lx)
-          let da = Math.abs(outAngle - curAngle)
-          if (da > Math.PI) da = 2 * Math.PI - da  // 0~π로 정규화 (꺾임 각도)
-          const segLen = Math.sqrt(d2(lx, ly, c.nx, c.ny))
-          const score = -da * 10 + Math.log1p(segLen)  // 꺾임 최소 + 긴 선 선호
-          if (score > bestScore) { bestScore = score; bestJ = c.j; bestFlip = c.flip; nx = c.nx; ny = c.ny }
+        // 각 후보의 "다음 노드" 계산
+        const cands = connEdges.map(e => ({
+          e,
+          nextNode: e.ni === curNode ? e.nj : e.ni,
+        }))
+
+        // ① 루프 닫힘 후보 먼저 확인 (chain 길이 ≥ 3)
+        if (chainNodes.length >= 3) {
+          const closing = cands.find(c => c.nextNode === origNode)
+          if (closing) {
+            const pts = chainNodes.map(n => nodes[n])
+            const area = shoelaceArea(pts)
+            const perim = polyPerim(pts, true)
+            const compactness = (4 * Math.PI * area) / (perim * perim)
+            if (area >= 1 && compactness >= 0.02 && !isDup(pts, area)) {
+              loops.push({ layer: segsM[startEdge.si].layer, pts: [...pts], area, perim })
+            }
+            break
+          }
         }
-      } else {
-        nx = cands[0].nx; ny = cands[0].ny
-      }
-      segs[bestJ].used = true
 
-      // 닫힘 확인
-      if (chain.length >= 3 && d2(nx, ny, fx, fy) < TOL2) {
-        const area = shoelaceArea(chain)
-        const perim = polyPerim(chain, true)
-        // 얇은 띠 형태 제거 (벽 두께 루프): compactness = 4π·A/P² < 0.04
-        const compactness = (4 * Math.PI * area) / (perim * perim)
-        if (area >= 1 && compactness >= 0.04) {
-          loops.push({
-            layer: segs[si].layer,
-            pts: [...chain],
-            area,
-            perim,
-          })
+        // ② 분기점: 꺾임 최소 + 긴 선 선호
+        let best = cands[0]
+        if (cands.length > 1 && chainNodes.length >= 2) {
+          const prevNode = chainNodes[chainNodes.length - 2]
+          const [px, py] = nodes[prevNode]
+          const curAngle = Math.atan2(ly - py, lx - px)
+          let bestScore = -Infinity
+          for (const c of cands) {
+            const [nx, ny] = nodes[c.nextNode]
+            const outAngle = Math.atan2(ny - ly, nx - lx)
+            let da = Math.abs(outAngle - curAngle)
+            if (da > Math.PI) da = 2 * Math.PI - da
+            const segLen = Math.hypot(nx - lx, ny - ly)
+            const score = -da * 10 + Math.log1p(segLen)
+            if (score > bestScore) { bestScore = score; best = c }
+          }
         }
-        break
-      }
 
-      chain.push([nx, ny])
+        usedEdges.add(best.e)
+        chainNodes.push(best.nextNode)
+      }
     }
   }
 
