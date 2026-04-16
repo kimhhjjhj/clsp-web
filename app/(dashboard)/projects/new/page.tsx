@@ -304,7 +304,12 @@ export default function NewProjectPage() {
         mode: form.mode,
       }),
     })
-    if (!res.ok) { setError('저장에 실패했습니다.'); setSaving(false); return }
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      setError(`저장에 실패했습니다. ${errData?.error ?? ''}`)
+      setSaving(false)
+      return
+    }
     const project = await res.json()
     router.push(`/projects/${project.id}`)
   }
