@@ -7,22 +7,18 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params
 
   const [
+    project,
     taskCount,
-    taskFirst,
     riskCount,
     baselineCount,
     latestWeekly,
     latestDaily,
     weeklyDistinct,
   ] = await Promise.all([
+    // stage1: Project의 lastCpmDuration
+    prisma.project.findUnique({ where: { id }, select: { lastCpmDuration: true } }),
     // stage1: Task 테이블에 해당 projectId 데이터 있는지
     prisma.task.count({ where: { projectId: id } }),
-    // stage1: 대표 task (totalDuration 추정용 - 가장 큰 duration)
-    prisma.task.findFirst({
-      where: { projectId: id },
-      orderBy: { duration: 'desc' },
-      select: { duration: true },
-    }),
     // stage2: RiskOpportunity count
     prisma.riskOpportunity.count({ where: { projectId: id } }),
     // stage2: BaselineTask count
@@ -50,7 +46,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   return NextResponse.json({
     stage1: {
       hasCpm: taskCount > 0,
-      totalDuration: taskCount > 0 ? (taskFirst?.duration ?? null) : null,
+      totalDuration: project?.lastCpmDuration ?? null,
     },
     stage2: {
       riskCount,

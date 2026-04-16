@@ -54,5 +54,11 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const cpmResult = calculateCPM(wbsTasks)
 
+  // 총 공기를 프로젝트에 저장 (Stage Hub 상태 표시용)
+  await prisma.project.update({
+    where: { id },
+    data: { lastCpmDuration: cpmResult.totalDuration },
+  })
+
   return NextResponse.json(cpmResult)
 }
