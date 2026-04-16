@@ -220,6 +220,106 @@ function getUnitFactor(maxCoord: number): number {
   return 1.0
 }
 
+// ── 독립 선분들에서 닫힌 루프 재구성 ──────────────────────
+// rightmost-turn 알고리즘: 각 directed edge에서 가장 오른쪽으로 꺾는
+// 다음 엣지를 따라가면 내부 면(CCW)만 수집됨.
+// 외부 무한 면은 CW → signed area < 0 → 제거.
+
+function signedArea(pts: [number, number][]): number {
+  const n = pts.length; if (n < 3) return 0; let s = 0
+  for (let i = 0; i < n; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % n]
+    s += x1 * y2 - x2 * y1
+  }
+  return s / 2
+}
+
+function findLineLoops(segsM: DxfSegment[]): DxfLoop[] {
+  if (segsM.length < 3) return []
+
+  const TOL = 0.05   // 5cm 스냅 허용오차 (미터 단위)
+  const snap = (v: number) => Math.round(v / TOL) * TOL
+  const ptKey = (x: number, y: number) => `${snap(x)},${snap(y)}`
+
+  // 인접 그래프 구축
+  interface AdjNode { x: number; y: number; neighbors: string[] }
+  const nodes = new Map<string, AdjNode>()
+
+  const ensure = (x: number, y: number) => {
+    const k = ptKey(x, y)
+    if (!nodes.has(k)) nodes.set(k, { x: snap(x), y: snap(y), neighbors: [] })
+    return k
+  }
+
+  for (const s of segsM) {
+    const k1 = ensure(s.x1, s.y1)
+    const k2 = ensure(s.x2, s.y2)
+    if (k1 === k2) continue
+    const n1 = nodes.get(k1)!, n2 = nodes.get(k2)!
+    if (!n1.neighbors.includes(k2)) n1.neighbors.push(k2)
+    if (!n2.neighbors.includes(k1)) n2.neighbors.push(k1)
+  }
+
+  const visited = new Set<string>()
+  const dirKey = (a: string, b: string) => `${a}|${b}`
+  const loops: DxfLoop[] = []
+
+  for (const [startKey, startNode] of nodes) {
+    for (const nextKey of startNode.neighbors) {
+      if (visited.has(dirKey(startKey, nextKey))) continue
+
+      // 면 추적
+      const chain: [number, number][] = [[startNode.x, startNode.y]]
+      let prevKey = startKey
+      let curKey = nextKey
+      let closed = false
+
+      for (let step = 0; step <= nodes.size; step++) {
+        visited.add(dirKey(prevKey, curKey))
+        const curNode = nodes.get(curKey)!
+        chain.push([curNode.x, curNode.y])
+
+        if (curKey === startKey) { closed = true; break }
+
+        // 다음 엣지: 가장 오른쪽 꺾기 (most clockwise)
+        const prevNode = nodes.get(prevKey)!
+        const inAngle = Math.atan2(curNode.y - prevNode.y, curNode.x - prevNode.x)
+        const candidates = curNode.neighbors.filter(k => k !== prevKey)
+        if (candidates.length === 0) break
+
+        let bestKey = candidates[0], bestScore = -Infinity
+        for (const k of candidates) {
+          const n = nodes.get(k)!
+          const outAngle = Math.atan2(n.y - curNode.y, n.x - curNode.x)
+          // inAngle 기준 시계방향 회전량이 클수록 더 오른쪽
+          let da = inAngle - outAngle + Math.PI
+          while (da < 0) da += 2 * Math.PI
+          while (da >= 2 * Math.PI) da -= 2 * Math.PI
+          if (da > bestScore) { bestScore = da; bestKey = k }
+        }
+        prevKey = curKey
+        curKey = bestKey
+      }
+
+      if (!closed || chain.length < 4) continue
+      const pts = chain.slice(0, -1)  // 마지막(=시작점 중복) 제거
+      const sa = signedArea(pts)
+      if (sa <= 0) continue          // CW = 외부 무한면 → 제거
+      if (sa < 1) continue           // 1m² 미만 무시
+
+      // 레이어: 해당 시작 엣지의 세그먼트 레이어
+      const layer = segsM.find(s =>
+        ptKey(s.x1, s.y1) === startKey && ptKey(s.x2, s.y2) === nextKey ||
+        ptKey(s.x2, s.y2) === startKey && ptKey(s.x1, s.y1) === nextKey
+      )?.layer ?? 'LINE'
+
+      loops.push({ layer, pts, area: sa, perim: polyPerim(pts, true) })
+    }
+  }
+
+  return loops
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  메인 파서 — 모든 닫힌 폴리곤 반환 (사용자가 직접 선택)
 // ═══════════════════════════════════════════════════════════════
@@ -280,11 +380,25 @@ export function parseDxf(rawText: string): DxfResult {
     })
   }
 
-  // 면적 큰 순서로 정렬
-  loops.sort((a, b) => b.area - a.area)
-
   // ── 세그먼트 → m 변환 (전체 반환, 필터링 없음) ──
   const segsM = allSegs.map(s => ({ x1: s.x1 * uf, y1: s.y1 * uf, x2: s.x2 * uf, y2: s.y2 * uf, layer: s.layer }))
+
+  // ── 독립 선분들로 만들어진 닫힌 루프 추가 ──
+  const lineLoops = findLineLoops(segsM)
+  for (const ll of lineLoops) {
+    // 기존 폴리라인 루프와 중복 체크 (centroid 기반)
+    const cx = ll.pts.reduce((s, [x]) => s + x, 0) / ll.pts.length
+    const cy = ll.pts.reduce((s, [, y]) => s + y, 0) / ll.pts.length
+    const dup = loops.some(l => {
+      const lx = l.pts.reduce((s, [x]) => s + x, 0) / l.pts.length
+      const ly = l.pts.reduce((s, [, y]) => s + y, 0) / l.pts.length
+      return Math.hypot(lx - cx, ly - cy) < 0.5 && Math.abs(l.area - ll.area) / Math.max(l.area, 1) < 0.05
+    })
+    if (!dup) loops.push(ll)
+  }
+
+  // 면적 큰 순서로 정렬
+  loops.sort((a, b) => b.area - a.area)
 
   // bbox
   let bbox: [number, number, number, number] | null = null
