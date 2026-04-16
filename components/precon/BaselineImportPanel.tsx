@@ -94,29 +94,32 @@ export default function BaselineImportPanel({ projectId }: Props) {
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = ''
+
     const reader = new FileReader()
     reader.onload = ev => {
-      const text = ev.target?.result as string
-      // EUC-KR 깨진 경우 latin1로 재시도
-      const parsed = parseCSV(text)
+      const buf = ev.target?.result as ArrayBuffer
+
+      // 인코딩 순서대로 시도: UTF-8 → EUC-KR → CP949
+      const encodings = ['utf-8', 'euc-kr', 'ks_c_5601-1987']
+      let parsed: Omit<BTask, 'id'>[] = []
+
+      for (const enc of encodings) {
+        try {
+          const text = new TextDecoder(enc).decode(buf)
+          parsed = parseCSV(text)
+          if (parsed.length > 0) break
+        } catch { continue }
+      }
+
       if (parsed.length === 0) {
-        // 인코딩 문제일 수 있어서 latin1로 재시도
-        const r2 = new FileReader()
-        r2.onload = ev2 => {
-          const t2 = ev2.target?.result as string
-          const p2 = parseCSV(t2)
-          if (p2.length > 0) { setPreview(p2); setSaved(false) }
-          else alert('파싱 실패: CSV 헤더를 인식하지 못했습니다.\n브라우저 콘솔(F12)에서 [CSV Header] 로그를 확인 후 알려주세요.')
-        }
-        r2.readAsText(file, 'latin1')
+        alert('파싱 실패: 인식된 작업이 없습니다.\nCSV 컬럼에 "작업이름"(또는 name), "기간"(또는 duration) 이 있는지 확인해주세요.')
       } else {
         setPreview(parsed)
         setSaved(false)
       }
     }
-    reader.readAsText(file, 'utf-8')
-    // 같은 파일 재업로드 가능하도록 초기화
-    e.target.value = ''
+    reader.readAsArrayBuffer(file)
   }
 
   async function saveBaseline() {
