@@ -9,7 +9,6 @@ interface BuildingDiagramProps {
   hasTransfer: boolean
   wtBottom: number
   waBottom: number
-  raBottom: number
   excDepth: number
   isAutoExc?: boolean
 }
@@ -108,14 +107,14 @@ function buildGroups(g: number, lr: number, hasTransfer: boolean): FloorGroup[] 
 
 export default function BuildingDiagram({
   ground, basement, lowrise, hasTransfer,
-  wtBottom, waBottom, raBottom, excDepth, isAutoExc,
+  wtBottom, waBottom, excDepth, isAutoExc,
 }: BuildingDiagramProps) {
   const g   = Math.max(0, ground)
   const b   = Math.max(0, basement)
   const lr  = clamp(lowrise, 0, g > 0 ? g - 1 : 0)
   const wt  = Math.max(0, wtBottom)
   const wa  = Math.max(wt, waBottom)
-  const ra  = Math.max(wa, raBottom)
+  const ra  = wa   // 풍화암 하단 이하 전부 연암
   const exc = Math.max(0, excDepth)
 
   // ── 층 그룹 & 픽셀 계산 ────────────────────────────────

@@ -26,7 +26,7 @@ interface FormData {
   siteArea: string; bldgArea: string; sitePerim: string; bldgPerim: string
   groundCond: string
   // 지반정보 step
-  wtBottom: string; waBottom: string; raBottom: string
+  wtBottom: string; waBottom: string
   excDepth: string
   mode: 'cp' | 'full'
 }
@@ -55,7 +55,7 @@ const INITIAL: FormData = {
   ground: '', basement: '0', lowrise: '0', hasTransfer: false,
   siteArea: '', bldgArea: '', sitePerim: '', bldgPerim: '',
   groundCond: '보통',
-  wtBottom: '', waBottom: '', raBottom: '', excDepth: '',
+  wtBottom: '', waBottom: '', excDepth: '',
   mode: 'cp',
 }
 
@@ -263,32 +263,25 @@ export default function NewProjectPage() {
     if (bh.layers?.length > 0) {
       const wt = extractSoilDepth(bh.layers, 'wt')
       const wa = extractSoilDepth(bh.layers, 'wa')
-      const rk = extractSoilDepth(bh.layers, 'ra')
       if (wt > 0) set('wtBottom', wt.toFixed(1))
       if (wa > 0) set('waBottom', wa.toFixed(1))
-      if (rk > 0) set('raBottom', rk.toFixed(1))
     } else {
       if (bh.wtr != null) set('waBottom', String(bh.wtr))
-      if (bh.rk != null) set('raBottom', String(bh.rk))
     }
   }
 
   function applyAverage(list: BoreholeResult[]) {
     const wtVals: number[] = []
     const waVals: number[] = []
-    const rkVals: number[] = []
 
     for (const bh of list) {
       if (bh.layers?.length > 0) {
         const wt = extractSoilDepth(bh.layers, 'wt')
         const wa = extractSoilDepth(bh.layers, 'wa')
-        const rk = extractSoilDepth(bh.layers, 'ra')
         if (wt > 0) wtVals.push(wt)
         if (wa > 0) waVals.push(wa)
-        if (rk > 0) rkVals.push(rk)
       } else {
         if (bh.wtr != null && bh.wtr > 0) waVals.push(bh.wtr)
-        if (bh.rk != null && bh.rk > 0) rkVals.push(bh.rk)
       }
     }
 
@@ -296,11 +289,9 @@ export default function NewProjectPage() {
 
     const wtAvg = avg(wtVals)
     const waAvg = avg(waVals)
-    const rkAvg = avg(rkVals)
 
     if (wtAvg) set('wtBottom', wtAvg.toFixed(1))
     if (waAvg) set('waBottom', waAvg.toFixed(1))
-    if (rkAvg) set('raBottom', rkAvg.toFixed(1))
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -328,7 +319,6 @@ export default function NewProjectPage() {
         bldgPerim: form.bldgPerim ? Number(form.bldgPerim) : undefined,
         wtBottom: form.wtBottom ? Number(form.wtBottom) : undefined,
         waBottom: form.waBottom ? Number(form.waBottom) : undefined,
-        raBottom: form.raBottom ? Number(form.raBottom) : undefined,
         excDepth: form.excDepth ? Number(form.excDepth) : undefined,
         mode: form.mode,
       }),
@@ -353,7 +343,6 @@ export default function NewProjectPage() {
     hasTransfer: form.hasTransfer,
     wtBottom: Number(form.wtBottom) || 0,
     waBottom: Number(form.waBottom) || 0,
-    raBottom: Number(form.raBottom) || 0,
     excDepth: effectiveExc,
     isAutoExc,
   }
@@ -856,7 +845,7 @@ export default function NewProjectPage() {
                 {/* 토질 분포 */}
                 <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-sm space-y-4">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">토질 분포 심도</p>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="wtBottom" className="text-xs font-semibold text-amber-700">풍화토 하단 (m)</Label>
                       <Input id="wtBottom" type="number" min={0} step={0.1} placeholder="5.5" value={form.wtBottom} onChange={e => set('wtBottom', e.target.value)} onFocus={e => e.target.select()}
@@ -866,11 +855,6 @@ export default function NewProjectPage() {
                       <Label htmlFor="waBottom" className="text-xs font-semibold text-yellow-800">풍화암 하단 (m)</Label>
                       <Input id="waBottom" type="number" min={0} step={0.1} placeholder="12.0" value={form.waBottom} onChange={e => set('waBottom', e.target.value)} onFocus={e => e.target.select()}
                         className="h-10 rounded-xl border-yellow-200 bg-yellow-50/30 focus:bg-white focus:border-yellow-600 text-sm transition-colors" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="raBottom" className="text-xs font-semibold text-gray-600">연암 하단 (m)</Label>
-                      <Input id="raBottom" type="number" min={0} step={0.1} placeholder="20.0" value={form.raBottom} onChange={e => set('raBottom', e.target.value)} onFocus={e => e.target.select()}
-                        className="h-10 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-gray-500 text-sm transition-colors" />
                     </div>
                   </div>
                 </div>
@@ -915,7 +899,6 @@ export default function NewProjectPage() {
                             <th className="px-3 py-2.5 text-right font-semibold text-gray-500 whitespace-nowrap">거리</th>
 
                             <th className="px-3 py-2.5 text-right font-semibold text-yellow-800 whitespace-nowrap">풍화암</th>
-                            <th className="px-3 py-2.5 text-right font-semibold text-gray-600 whitespace-nowrap">연암</th>
                             <th className="px-3 py-2.5 text-right font-semibold text-gray-500 whitespace-nowrap">심도</th>
                             <th className="px-3 py-2.5 text-left font-semibold text-gray-500">주소</th>
                           </tr>
@@ -935,7 +918,6 @@ export default function NewProjectPage() {
                               <td className="px-3 py-2 text-right text-gray-500">{bh.distance_m.toLocaleString()}m</td>
 
                               <td className="px-3 py-2 text-right font-medium text-yellow-800">{bh.wtr_display ?? '-'}</td>
-                              <td className="px-3 py-2 text-right font-medium text-gray-600">{bh.rk_display ?? '-'}</td>
                               <td className="px-3 py-2 text-right text-gray-400">{bh.depth != null ? `${bh.depth}m` : '-'}</td>
                               <td className="px-3 py-2 text-gray-400 text-[10px] max-w-[140px] truncate">{bh.addr || '-'}</td>
                             </tr>
