@@ -739,7 +739,7 @@ export default function NewProjectPage() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="ground" className="text-xs font-semibold text-gray-500">지상 층수 <span className="text-red-500">*</span></Label>
-                      <Input id="ground" type="number" min={1} placeholder="25" value={form.ground} onChange={e => set('ground', e.target.value)}
+                      <Input id="ground" type="number" min={1} placeholder="25" value={form.ground} onChange={e => set('ground', e.target.value)} onFocus={e => e.target.select()}
                         className="h-11 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] text-sm font-semibold text-center transition-colors" />
                     </div>
                     <div className="space-y-2">
@@ -845,6 +845,7 @@ export default function NewProjectPage() {
                         placeholder={isAutoExc ? `자동 ${autoExcDepth}m` : '예) 10.5'}
                         value={form.excDepth}
                         onChange={e => set('excDepth', e.target.value)}
+                        onFocus={e => e.target.select()}
                         className={cn('h-10 rounded-xl text-sm transition-colors',
                           isAutoExc ? 'border-orange-200 bg-orange-50/40' : 'border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb]'
                         )} />
@@ -858,17 +859,17 @@ export default function NewProjectPage() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="wtBottom" className="text-xs font-semibold text-amber-700">풍화토 하단 (m)</Label>
-                      <Input id="wtBottom" type="number" min={0} step={0.1} placeholder="5.5" value={form.wtBottom} onChange={e => set('wtBottom', e.target.value)}
+                      <Input id="wtBottom" type="number" min={0} step={0.1} placeholder="5.5" value={form.wtBottom} onChange={e => set('wtBottom', e.target.value)} onFocus={e => e.target.select()}
                         className="h-10 rounded-xl border-amber-200 bg-amber-50/30 focus:bg-white focus:border-amber-500 text-sm transition-colors" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="waBottom" className="text-xs font-semibold text-yellow-800">풍화암 하단 (m)</Label>
-                      <Input id="waBottom" type="number" min={0} step={0.1} placeholder="12.0" value={form.waBottom} onChange={e => set('waBottom', e.target.value)}
+                      <Input id="waBottom" type="number" min={0} step={0.1} placeholder="12.0" value={form.waBottom} onChange={e => set('waBottom', e.target.value)} onFocus={e => e.target.select()}
                         className="h-10 rounded-xl border-yellow-200 bg-yellow-50/30 focus:bg-white focus:border-yellow-600 text-sm transition-colors" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="raBottom" className="text-xs font-semibold text-gray-600">연암 하단 (m)</Label>
-                      <Input id="raBottom" type="number" min={0} step={0.1} placeholder="20.0" value={form.raBottom} onChange={e => set('raBottom', e.target.value)}
+                      <Input id="raBottom" type="number" min={0} step={0.1} placeholder="20.0" value={form.raBottom} onChange={e => set('raBottom', e.target.value)} onFocus={e => e.target.select()}
                         className="h-10 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-gray-500 text-sm transition-colors" />
                     </div>
                   </div>
