@@ -18,6 +18,7 @@ import MonteCarloPanel from '@/components/analysis/MonteCarloPanel'
 import ProductivityPanel from '@/components/analysis/ProductivityPanel'
 import { generateReport } from '@/lib/engine/report-pdf'
 import type { CPMSummary, CPMResult } from '@/lib/types'
+import { getWorkRate } from '@/lib/engine/wbs'
 
 interface Project {
   id: string
@@ -403,17 +404,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-[260px]">공종명</TableHead>
-                          <TableHead className="w-12 text-center text-xs">단위</TableHead>
                           <TableHead className="w-16 text-right text-xs">물량</TableHead>
-                          <TableHead className="w-28 text-xs">생산성/소요기간</TableHead>
+                          <TableHead className="w-12 text-center text-xs">단위</TableHead>
+                          <TableHead className="w-28 text-xs">생산성</TableHead>
                           <TableHead className="text-right w-14 text-xs font-semibold text-blue-600">W.D</TableHead>
+                          <TableHead className="text-center w-20 text-xs text-gray-500">공종별 가동률</TableHead>
                           <TableHead className="text-right w-14 text-xs font-semibold text-gray-500">C.D</TableHead>
-                          <TableHead className="text-right w-12 text-xs">ES</TableHead>
-                          <TableHead className="text-right w-12 text-xs">EF</TableHead>
-                          <TableHead className="text-right w-12 text-xs">LS</TableHead>
-                          <TableHead className="text-right w-12 text-xs">LF</TableHead>
-                          <TableHead className="text-right w-12 text-xs">TF</TableHead>
-                          <TableHead className="text-center w-8">CP</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -427,20 +423,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 className="cursor-pointer hover:bg-muted/50 bg-muted/20"
                                 onClick={() => toggleCat(cat)}
                               >
-                                <TableCell className="font-medium" colSpan={4}>
+                                <TableCell className="font-medium" colSpan={7}>
                                   <div className="flex items-center gap-2">
                                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                     <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
                                     {cat}
                                     <span className="text-xs text-muted-foreground font-normal">({tasks.length}개)</span>
+                                    {critCount > 0 && <Badge className="bg-clsp-orange text-white border-0 text-[10px] px-1 ml-1">CP {critCount}</Badge>}
                                   </div>
                                 </TableCell>
-                                <TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
-                                <TableCell className="text-center">
-                                  {critCount > 0 && <Badge className="bg-clsp-orange text-white border-0 text-[10px] px-1">CP</Badge>}
-                                </TableCell>
                               </TableRow>
-                              {isExpanded && tasks.map(task => (
+                              {isExpanded && tasks.map(task => {
+                                const wr = getWorkRate(task.category)
+                                const wrLabel = wr === null ? '—' : `${(wr * 100).toFixed(1)}%`
+                                return (
                                 <TableRow key={task.taskId} className={task.isCritical ? 'bg-clsp-orange/5' : ''}>
                                   <TableCell className="pl-10">
                                     <div className={task.isCritical ? 'text-clsp-orange' : ''}>
@@ -450,25 +446,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                       )}
                                     </div>
                                   </TableCell>
-                                  <TableCell className="text-center text-xs text-muted-foreground">{task.unit ?? '—'}</TableCell>
                                   <TableCell className="text-right font-mono text-xs text-muted-foreground">
                                     {task.quantity != null ? task.quantity.toLocaleString() : '—'}
                                   </TableCell>
+                                  <TableCell className="text-center text-xs text-muted-foreground">{task.unit ?? '—'}</TableCell>
                                   <TableCell className="text-xs text-muted-foreground">{fmtProductivity(task)}</TableCell>
                                   <TableCell className="text-right font-mono text-sm font-medium text-blue-700">{Math.round(task.duration)}</TableCell>
+                                  <TableCell className="text-center font-mono text-xs text-muted-foreground">{wrLabel}</TableCell>
                                   <TableCell className="text-right font-mono text-sm text-muted-foreground">{Math.round(task.duration * 7 / 5)}</TableCell>
-                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.ES}</TableCell>
-                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.EF}</TableCell>
-                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.LS}</TableCell>
-                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.LF}</TableCell>
-                                  <TableCell className={`text-right font-mono text-sm font-bold ${task.TF === 0 ? 'text-clsp-orange' : 'text-muted-foreground'}`}>
-                                    {task.TF}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {task.isCritical && <span className="text-clsp-orange">★</span>}
-                                  </TableCell>
                                 </TableRow>
-                              ))}
+                                )
+                              })}
                             </React.Fragment>
                           )
                         })}
