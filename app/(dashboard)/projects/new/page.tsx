@@ -38,12 +38,10 @@ interface BoreholeResult {
   lng: number
   depth: number | null
   addr: string
-  wt: number | null
-  wtr: number | null
-  rk: number | null
+  wt: number | null       // 풍화토 하단
+  wtr: number | null      // 풍화암 하단
   wt_display: string
   wtr_display: string
-  rk_display: string
   layers: { soil_type: string; depth_from: number; depth_to: number }[]
 }
 
@@ -260,30 +258,13 @@ export default function NewProjectPage() {
   }
 
   function applyBorehole(bh: BoreholeResult) {
-    if (bh.layers?.length > 0) {
-      const wt = extractSoilDepth(bh.layers, 'wt')
-      const wa = extractSoilDepth(bh.layers, 'wa')
-      if (wt > 0) set('wtBottom', wt.toFixed(1))
-      if (wa > 0) set('waBottom', wa.toFixed(1))
-    } else {
-      if (bh.wtr != null) set('waBottom', String(bh.wtr))
-    }
+    if (bh.wt != null) set('wtBottom', String(bh.wt))
+    if (bh.wtr != null) set('waBottom', String(bh.wtr))
   }
 
   function applyAverage(list: BoreholeResult[]) {
-    const wtVals: number[] = []
-    const waVals: number[] = []
-
-    for (const bh of list) {
-      if (bh.layers?.length > 0) {
-        const wt = extractSoilDepth(bh.layers, 'wt')
-        const wa = extractSoilDepth(bh.layers, 'wa')
-        if (wt > 0) wtVals.push(wt)
-        if (wa > 0) waVals.push(wa)
-      } else {
-        if (bh.wtr != null && bh.wtr > 0) waVals.push(bh.wtr)
-      }
-    }
+    const wtVals = list.map(b => b.wt).filter((v): v is number => v != null && v > 0)
+    const waVals = list.map(b => b.wtr).filter((v): v is number => v != null && v > 0)
 
     const avg = (arr: number[]) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : null
 
@@ -898,7 +879,8 @@ export default function NewProjectPage() {
                             <th className="px-3 py-2.5 text-left font-semibold text-gray-500 whitespace-nowrap">시추공</th>
                             <th className="px-3 py-2.5 text-right font-semibold text-gray-500 whitespace-nowrap">거리</th>
 
-                            <th className="px-3 py-2.5 text-right font-semibold text-yellow-800 whitespace-nowrap">풍화암</th>
+                            <th className="px-3 py-2.5 text-right font-semibold text-amber-700 whitespace-nowrap">풍화토 하단</th>
+                            <th className="px-3 py-2.5 text-right font-semibold text-yellow-800 whitespace-nowrap">풍화암 하단</th>
                             <th className="px-3 py-2.5 text-right font-semibold text-gray-500 whitespace-nowrap">심도</th>
                             <th className="px-3 py-2.5 text-left font-semibold text-gray-500">주소</th>
                           </tr>
@@ -917,6 +899,7 @@ export default function NewProjectPage() {
                               <td className="px-3 py-2 font-mono text-[11px] text-gray-700 whitespace-nowrap">{bh.id}</td>
                               <td className="px-3 py-2 text-right text-gray-500">{bh.distance_m.toLocaleString()}m</td>
 
+                              <td className="px-3 py-2 text-right font-medium text-amber-700">{bh.wt_display ?? '-'}</td>
                               <td className="px-3 py-2 text-right font-medium text-yellow-800">{bh.wtr_display ?? '-'}</td>
                               <td className="px-3 py-2 text-right text-gray-400">{bh.depth != null ? `${bh.depth}m` : '-'}</td>
                               <td className="px-3 py-2 text-gray-400 text-[10px] max-w-[140px] truncate">{bh.addr || '-'}</td>

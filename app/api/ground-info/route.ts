@@ -11,10 +11,10 @@ export interface BoreholeResult {
   lng: number
   depth: number | null
   addr: string
-  wtr: number | null
-  rk: number | null
+  wt: number | null       // 풍화토 하단 (= 풍화암 시작)
+  wtr: number | null      // 풍화암 하단 (= 풍화암 끝)
+  wt_display: string
   wtr_display: string
-  rk_display: string
   layers: { soil_type: string; depth_from: number; depth_to: number }[]
 }
 
@@ -195,16 +195,16 @@ export async function POST(req: NextRequest) {
     const results: BoreholeResult[] = nearest.map((bh, i) => {
       const raw = (layerMap.get(bh.id) ?? []).sort((a, b) => a.end - b.end)
 
-      let wtr: number | null = null
-      let rk: number | null = null
-      let prev = 0
+      let wt: number | null = null   // 풍화토 하단 = 풍화암 시작
+      let wtr: number | null = null  // 풍화암 하단 = 풍화암 끝
       const layers: BoreholeResult['layers'] = []
 
       for (const l of raw) {
         layers.push({ soil_type: l.nm || '미상', depth_from: l.start, depth_to: l.end })
-        if (l.nm.includes('풍화암'))  { if (wtr === null || l.end > wtr) wtr = l.end }
-        if ((l.nm.includes('연암') || l.nm.includes('경암')) && rk === null) rk = prev
-        prev = l.end
+        if (l.nm.includes('풍화암')) {
+          if (wt === null) wt = l.start   // 첫 번째 풍화암 시작 = 풍화토 하단
+          wtr = l.end                      // 풍화암 끝 = 풍화암 하단 (마지막 값 사용)
+        }
       }
 
       return {
@@ -214,9 +214,9 @@ export async function POST(req: NextRequest) {
         lng: bh.lng,
         depth: bh.depth,
         addr: addrs[i],
-        wtr, rk,
+        wt, wtr,
+        wt_display:  wt  != null ? `${wt.toFixed(1)}m`  : '-',
         wtr_display: wtr != null ? `${wtr.toFixed(1)}m` : '-',
-        rk_display:  rk  != null ? `${rk.toFixed(1)}m`  : '-',
         layers,
       }
     })
@@ -246,8 +246,8 @@ function makeMock(lat: number, lng: number): BoreholeResult[] {
     {
       id: 'BH-MOCK-001', distance_m: 45, lat: lat + 0.0003, lng: lng + 0.0003,
       depth: 20, addr: '(CSV 파일 없음 - 목업 데이터)',
-      wtr: 12.0, rk: 12.0,
-      wtr_display: '12.0m', rk_display: '12.0m',
+      wt: 5.5, wtr: 12.0,
+      wt_display: '5.5m', wtr_display: '12.0m',
       layers: [
         { soil_type: '풍화토', depth_from: 0, depth_to: 5.5 },
         { soil_type: '풍화암', depth_from: 5.5, depth_to: 12.0 },
