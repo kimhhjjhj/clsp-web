@@ -13,7 +13,7 @@ export function calculateCPM(tasks: WBSTask[]): CPMSummary {
   const taskMap = new Map<string, WBSTask>()
   for (const t of tasks) taskMap.set(t.id, t)
 
-  // 결과 초기화
+  // 결과 초기화 — duration 정수화로 부동소수점 누적 오차 방지
   const results = new Map<string, CPMResult>()
   for (const t of tasks) {
     results.set(t.id, {
@@ -26,7 +26,7 @@ export function calculateCPM(tasks: WBSTask[]): CPMSummary {
       quantity:     t.quantity,
       productivity: t.productivity,
       stdDays:      t.stdDays,
-      duration:     t.duration,
+      duration:     Math.round(t.duration),
       ES: 0,
       EF: 0,
       LS: 0,
@@ -78,11 +78,11 @@ export function calculateCPM(tasks: WBSTask[]): CPMSummary {
       if (predEF > maxEF) maxEF = predEF
     }
     r.ES = maxEF
-    r.EF = r.ES + task.duration
+    r.EF = r.ES + Math.round(task.duration)
   }
 
-  // 전체 공기 = max(EF)
-  const totalDuration = Math.max(...Array.from(results.values()).map(r => r.EF))
+  // 전체 공기 = max(EF) — 정수
+  const totalDuration = Math.round(Math.max(...Array.from(results.values()).map(r => r.EF)))
 
   // ── Backward Pass (LS, LF 계산) ───────────────────────────────────
   // 종료 태스크의 LF = totalDuration
@@ -96,7 +96,7 @@ export function calculateCPM(tasks: WBSTask[]): CPMSummary {
     if (succs.length > 0) {
       r.LF = Math.min(...succs.map(sId => results.get(sId)?.LS ?? totalDuration))
     }
-    r.LS = r.LF - r.duration
+    r.LS = r.LF - Math.round(r.duration)
   }
 
   // ── Float & Critical Path ──────────────────────────────────────────
