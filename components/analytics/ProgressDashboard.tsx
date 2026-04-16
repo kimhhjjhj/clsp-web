@@ -16,17 +16,22 @@ interface Props {
   cpmResult: CPMSummary | null
 }
 
+interface DailyRecord {
+  date: string; workers: Record<string, number> | null
+}
+
 export default function ProgressDashboard({ projectId, projectName, cpmResult }: Props) {
-  const [history, setHistory] = useState<WeeklyRecord[]>([])
-  const [issues, setIssues]   = useState('')
-  const [nextPlan, setNextPlan] = useState('')
-  const [reportWeek, setReportWeek] = useState<{ year: number; weekNo: number } | null>(null)
-  const sCurveRef  = useRef<HTMLCanvasElement>(null)
+  const [history, setHistory]     = useState<WeeklyRecord[]>([])
+  const [dailies, setDailies]     = useState<DailyRecord[]>([])
+  const [issues, setIssues]       = useState('')
+  const [nextPlan, setNextPlan]   = useState('')
+  const sCurveRef    = useRef<HTMLCanvasElement>(null)
   const deviationRef = useRef<HTMLCanvasElement>(null)
+  const workerRef    = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/weekly-progress`)
-      .then(r => r.json()).then(setHistory)
+    fetch(`/api/projects/${projectId}/weekly-progress`).then(r => r.json()).then(setHistory)
+    fetch(`/api/projects/${projectId}/daily-reports`).then(r => r.json()).then((d: DailyRecord[]) => setDailies(d))
   }, [projectId])
 
   // 주차별 집계
@@ -126,7 +131,45 @@ export default function ProgressDashboard({ projectId, projectName, cpmResult }:
     ctx.fillText(`-${maxAbs.toFixed(0)}%`,PL-4,PT+ch-5)
   }, [deviation, weeks])
 
-  useEffect(() => { drawSCurve(); drawDeviation() }, [drawSCurve, drawDeviation])
+  // 투입인원 추이 차트
+  const drawWorker = useCallback(() => {
+    const canvas = workerRef.current
+    if (!canvas || dailies.length === 0) return
+    const ctx = canvas.getContext('2d')!
+    if (!ctx) return
+    const sorted = [...dailies].sort((a,b) => a.date.localeCompare(b.date))
+    const totals = sorted.map(d => d.workers ? Object.values(d.workers).reduce((s,v) => s+v, 0) : 0)
+    const W = 680, H = 160, PL = 40, PR = 20, PT = 15, PB = 35
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = W*dpr; canvas.height = H*dpr; canvas.style.height = `${H}px`
+    ctx.scale(dpr,dpr); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H)
+    const cw = W-PL-PR, ch = H-PT-PB, n = sorted.length
+    const maxV = Math.max(...totals, 1)
+    const barW = (cw / n) * 0.7
+
+    totals.forEach((v, i) => {
+      const x = PL + (i / n) * cw + (cw/n - barW)/2
+      const bh = (v / maxV) * ch
+      ctx.fillStyle = '#3b82f6'
+      ctx.beginPath(); ctx.roundRect(x, PT + ch - bh, barW, bh, 2); ctx.fill()
+    })
+
+    for (let g = 0; g <= 4; g++) {
+      const y = PT + (ch/4)*g
+      ctx.strokeStyle='#f1f5f9'; ctx.lineWidth=0.5
+      ctx.beginPath(); ctx.moveTo(PL,y); ctx.lineTo(PL+cw,y); ctx.stroke()
+      ctx.fillStyle='#94a3b8'; ctx.font='9px sans-serif'; ctx.textAlign='right'
+      ctx.fillText(String(Math.round((maxV/4)*(4-g))), PL-4, y+3)
+    }
+
+    ctx.fillStyle='#64748b'; ctx.font='8px sans-serif'; ctx.textAlign='center'
+    const step = Math.max(1, Math.floor(n / 8))
+    sorted.forEach((d, i) => {
+      if (i % step === 0) ctx.fillText(d.date.slice(5), PL+(i/n)*cw+cw/n/2, H-PB+13)
+    })
+  }, [dailies])
+
+  useEffect(() => { drawSCurve(); drawDeviation(); drawWorker() }, [drawSCurve, drawDeviation, drawWorker])
 
   function downloadReport(year: number, weekNo: number) {
     const rows = history.filter(h => h.year === year && h.weekNo === weekNo)
@@ -245,6 +288,16 @@ export default function ProgressDashboard({ projectId, projectName, cpmResult }:
         </h3>
         <canvas ref={deviationRef} style={{ width: 680, maxWidth: '100%' }} />
       </div>
+
+      {/* 투입인원 추이 */}
+      {dailies.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <Users size={15} className="text-[#2563eb]" /> 일별 투입인원 추이
+          </h3>
+          <canvas ref={workerRef} style={{ width: 680, maxWidth: '100%' }} />
+        </div>
+      )}
 
       {/* 공종별 실적 분석 */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
