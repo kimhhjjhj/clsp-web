@@ -1,26 +1,19 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, Clock, HardHat, Truck,
-  CheckSquare, Archive, Plus, Bell, Settings, HelpCircle,
-  Building2, Search, MessageSquare,
+  Activity, HardHat, Plus, Bell, Settings,
+  Search, LayoutGrid,
 } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
-// ── Sidebar nav items ──────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { href: '/',           label: '전체 프로젝트',  icon: LayoutDashboard },
-  { href: '/schedules',  label: '진행 공정표',    icon: Clock },
-  { href: '/pre-con',    label: '착공 전 단계',   icon: HardHat },
-  { href: '/logistics',  label: '현장 물류',      icon: Truck },
-  { href: '/closeout',   label: '준공 처리',      icon: CheckSquare },
-  { href: '/archive',    label: '아카이브',       icon: Archive },
+  { href: '/',         label: '대시보드',   icon: HardHat },
+  { href: '/projects', label: '프로젝트',   icon: Activity },
 ]
 
-// ── Top nav links ──────────────────────────────────────────────────────
-const TOP_NAV = [
+const TOP_TABS = [
   { href: '/',         label: '대시보드' },
   { href: '/projects', label: '프로젝트' },
 ]
@@ -28,125 +21,84 @@ const TOP_NAV = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  const isDash    = pathname === '/'
-  const isProject = pathname.startsWith('/projects')
-
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex h-full" style={{ background: '#fafafa' }}>
 
-      {/* ── TOP NAVIGATION BAR ──────────────────────── */}
-      <header className="flex-shrink-0 h-14 border-b border-border bg-card flex items-center gap-0 px-0 z-30">
-
-        {/* Brand — same width as sidebar */}
-        <div className="w-56 flex-shrink-0 flex items-center gap-3 px-4 h-full border-r border-border">
-          <div className="w-8 h-8 rounded-lg bg-clsp-navy flex items-center justify-center flex-shrink-0">
-            <Building2 size={15} className="text-white" />
-          </div>
-          <div className="leading-none">
-            <div className="text-sm font-bold tracking-tight text-clsp-navy">CLSP</div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-widest mt-0.5">Scheduler</div>
-          </div>
+      {/* 사이드바 */}
+      <aside className="w-56 flex-shrink-0 flex flex-col text-white" style={{ background: '#1e293b' }}>
+        <div className="px-4 py-5 border-b border-white/10">
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Project Lifecycle</p>
+          <p className="text-[11px] text-slate-300">통합 공정관리</p>
         </div>
 
-        {/* Nav links */}
-        <nav className="flex items-center h-full px-4 gap-1">
-          {TOP_NAV.map(({ href, label }) => {
-            const active = href === '/' ? isDash : isProject
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href
             return (
-              <Link
-                key={href}
-                href={href}
-                className={`px-4 h-full flex items-center text-sm font-medium border-b-2 transition-colors ${
-                  active
-                    ? 'border-clsp-navy text-clsp-navy'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+              <Link key={href} href={href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors no-underline ${
+                  active ? 'bg-[#2563eb] text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
+                <Icon size={15} className="flex-shrink-0" />
                 {label}
               </Link>
             )
           })}
         </nav>
 
-        {/* Right side */}
-        <div className="ml-auto flex items-center gap-2 px-4">
-          {/* Search */}
-          <div className="hidden lg:flex items-center gap-2 h-8 px-3 rounded-lg bg-muted/60 border border-border text-sm text-muted-foreground w-48">
-            <Search size={13} />
-            <span className="text-xs">프로젝트 검색...</span>
-          </div>
-
-          <button className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-            <Bell size={16} />
+        <div className="px-3 pb-3 border-t border-white/10 pt-3">
+          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+            <Settings size={14} />설정
           </button>
-          <button className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-            <Settings size={16} />
-          </button>
-          <button className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-            <HelpCircle size={16} />
-          </button>
-
-          {/* Avatar */}
-          <Avatar className="w-8 h-8 border-2 border-clsp-orange cursor-pointer">
-            <AvatarImage src="" />
-            <AvatarFallback className="bg-clsp-navy text-white text-xs font-semibold">K</AvatarFallback>
-          </Avatar>
         </div>
-      </header>
 
-      {/* ── BODY ──────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+        <div className="px-3 pb-4 pt-2">
+          <Link href="/projects/new"
+            className="flex items-center justify-center gap-2 w-full h-9 rounded-md text-white text-sm font-medium transition-colors no-underline"
+            style={{ background: '#2563eb' }}
+          >
+            <Plus size={15} />새 프로젝트 생성
+          </Link>
+        </div>
+      </aside>
 
-        {/* ── SIDEBAR ─────────────────────────────────── */}
-        <aside className="w-56 flex-shrink-0 bg-card border-r border-border flex flex-col">
+      {/* 본문 */}
+      <div className="flex-1 flex flex-col overflow-hidden">
 
-          {/* Nav items */}
-          <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-            {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href
+        {/* 상단 네비 */}
+        <header className="h-14 bg-white border-b border-gray-200 flex items-center px-6 gap-6 flex-shrink-0">
+          <Image src="/tongyang-logo.png" alt="TONGYANG" height={28} width={140} className="object-contain h-7 w-auto" />
+
+          <nav className="flex items-center h-full gap-1 ml-4">
+            {TOP_TABS.map(({ href, label }) => {
+              const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
               return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
-                    active
-                      ? 'bg-clsp-navy text-white font-medium'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                <Link key={href} href={href}
+                  className={`px-4 h-full flex items-center text-sm font-medium border-b-2 transition-colors no-underline ${
+                    active ? 'border-[#2563eb] text-[#2563eb]' : 'border-transparent text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  <Icon size={15} className="flex-shrink-0" />
                   {label}
                 </Link>
               )
             })}
           </nav>
 
-          {/* Bottom actions */}
-          <div className="px-3 space-y-1 border-t border-border pt-3 pb-3">
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors">
-              <MessageSquare size={15} />
-              팀 채팅
-            </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors">
-              <HelpCircle size={15} />
-              고객지원
-            </button>
+          <div className="ml-auto flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-2 h-8 px-3 rounded-lg bg-gray-100 border border-gray-200 w-44">
+              <Search size={13} className="text-gray-400" />
+              <span className="text-xs text-gray-400">프로젝트 검색...</span>
+            </div>
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"><Bell size={16} /></button>
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"><Settings size={16} /></button>
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"><LayoutGrid size={16} /></button>
+            <div className="w-8 h-8 rounded-full bg-[#2563eb] flex items-center justify-center text-white text-xs font-bold">K</div>
           </div>
+        </header>
 
-          {/* New Project button */}
-          <div className="px-3 pb-4 pt-2">
-            <Link
-              href="/projects/new"
-              className="flex items-center justify-center gap-2 w-full h-9 rounded-md bg-clsp-navy text-white text-sm font-medium hover:bg-clsp-navy/90 transition-colors no-underline"
-            >
-              <Plus size={15} />
-              새 프로젝트
-            </Link>
-          </div>
-        </aside>
-
-        {/* ── MAIN CONTENT ──────────────────────────────── */}
-        <main className="flex-1 overflow-auto bg-background">
+        {/* 메인 콘텐츠 */}
+        <main className="flex-1 overflow-auto" style={{ background: '#fafafa' }}>
           {children}
         </main>
       </div>

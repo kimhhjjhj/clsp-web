@@ -54,7 +54,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/projects/new"
-          className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-clsp-navy text-white text-sm font-medium hover:bg-clsp-navy/90 transition-colors no-underline"
+          className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-[#2563eb] text-white text-sm font-medium hover:bg-[#2563eb]/90 transition-colors no-underline"
         >
           <Plus size={14} />
           새 프로젝트
@@ -69,8 +69,8 @@ export default function DashboardPage() {
           <div className="bg-card rounded-lg border border-border p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">전체 프로젝트</p>
-              <div className="w-7 h-7 rounded-md bg-clsp-navy/10 flex items-center justify-center">
-                <LayoutGrid size={13} className="text-clsp-navy" />
+              <div className="w-7 h-7 rounded-md bg-[#2563eb]/10 flex items-center justify-center">
+                <LayoutGrid size={13} className="text-[#2563eb]" />
               </div>
             </div>
             <p className="text-2xl font-bold text-foreground">
@@ -82,8 +82,8 @@ export default function DashboardPage() {
           <div className="bg-card rounded-lg border border-border p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">평균 연면적</p>
-              <div className="w-7 h-7 rounded-md bg-clsp-orange/10 flex items-center justify-center">
-                <TrendingUp size={13} className="text-clsp-orange" />
+              <div className="w-7 h-7 rounded-md bg-orange-400/10 flex items-center justify-center">
+                <TrendingUp size={13} className="text-orange-400" />
               </div>
             </div>
             <p className="text-2xl font-bold text-foreground">
@@ -95,8 +95,8 @@ export default function DashboardPage() {
           <div className="bg-card rounded-lg border border-border p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">평균 규모</p>
-              <div className="w-7 h-7 rounded-md bg-clsp-navy/10 flex items-center justify-center">
-                <Building2 size={13} className="text-clsp-navy" />
+              <div className="w-7 h-7 rounded-md bg-[#2563eb]/10 flex items-center justify-center">
+                <Building2 size={13} className="text-[#2563eb]" />
               </div>
             </div>
             <p className="text-2xl font-bold text-foreground">
@@ -124,13 +124,13 @@ export default function DashboardPage() {
           </div>
         ) : projects.length === 0 ? (
           <div className="text-center py-20 bg-card border border-t-0 border-border rounded-b-lg">
-            <div className="w-14 h-14 rounded-2xl bg-clsp-navy/5 border border-border flex items-center justify-center mx-auto mb-4">
-              <Building2 size={24} className="text-clsp-navy/30" />
+            <div className="w-14 h-14 rounded-2xl bg-[#2563eb]/5 border border-border flex items-center justify-center mx-auto mb-4">
+              <Building2 size={24} className="text-[#2563eb]/30" />
             </div>
             <p className="text-sm text-muted-foreground mb-4">아직 프로젝트가 없습니다</p>
             <Link
               href="/projects/new"
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-clsp-navy text-white text-sm font-medium hover:bg-clsp-navy/90 transition-colors no-underline"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-[#2563eb] text-white text-sm font-medium hover:bg-[#2563eb]/90 transition-colors no-underline"
             >
               <Plus size={14} />
               첫 프로젝트 만들기
@@ -144,8 +144,8 @@ export default function DashboardPage() {
                 className="group grid grid-cols-[40px_1fr_80px_100px_90px_110px_80px] gap-3 items-center px-4 py-3.5 hover:bg-muted/30 transition-colors"
               >
                 {/* 아이콘 */}
-                <div className="w-8 h-8 rounded-md bg-clsp-navy/10 flex items-center justify-center flex-shrink-0">
-                  <Building2 size={14} className="text-clsp-navy" />
+                <div className="w-8 h-8 rounded-md bg-[#2563eb]/10 flex items-center justify-center flex-shrink-0">
+                  <Building2 size={14} className="text-[#2563eb]" />
                 </div>
 
                 {/* 이름 */}
@@ -156,7 +156,7 @@ export default function DashboardPage() {
                       <Badge variant="outline" className="text-[10px] h-4 px-1.5">{project.type}</Badge>
                     )}
                     {project._count.tasks > 0 && (
-                      <span className="text-[10px] text-clsp-orange font-semibold">CP</span>
+                      <span className="text-[10px] text-orange-400 font-semibold">CP</span>
                     )}
                   </div>
                   {(project.client || project.location) && (
@@ -184,7 +184,7 @@ export default function DashboardPage() {
                   <span className={cn(
                     'text-xs font-medium px-2 py-0.5 rounded-full',
                     project._count.tasks > 0
-                      ? 'bg-clsp-navy/10 text-clsp-navy'
+                      ? 'bg-[#2563eb]/10 text-[#2563eb]'
                       : 'bg-muted text-muted-foreground'
                   )}>
                     {project._count.tasks > 0 ? `${project._count.tasks}개` : '미산정'}
@@ -206,7 +206,7 @@ export default function DashboardPage() {
                   </button>
                   <Link
                     href={`/projects/${project.id}`}
-                    className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-clsp-navy hover:bg-clsp-navy/10 transition-colors no-underline"
+                    className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-[#2563eb] hover:bg-[#2563eb]/10 transition-colors no-underline"
                   >
                     <ChevronRight size={14} />
                   </Link>
@@ -221,12 +221,12 @@ export default function DashboardPage() {
       <footer className="h-10 bg-card border-t border-border flex items-center justify-between px-6 flex-shrink-0">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-clsp-navy" />
+            <div className="w-3 h-3 rounded bg-[#2563eb]" />
             <span className="text-[11px] text-muted-foreground">일반 공종</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-clsp-orange" />
-            <span className="text-[11px] text-clsp-orange font-medium">크리티컬 패스</span>
+            <div className="w-3 h-3 rounded bg-orange-400" />
+            <span className="text-[11px] text-orange-400 font-medium">크리티컬 패스</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-muted border border-border" />
@@ -234,7 +234,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="font-semibold text-clsp-navy">CLSP SCHEDULER</span>
+          <span className="font-semibold text-[#2563eb]">CLSP SCHEDULER</span>
           <span>·</span>
           <span>공동주택 공기산정 플랫폼</span>
         </div>
