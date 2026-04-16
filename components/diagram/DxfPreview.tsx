@@ -243,14 +243,16 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     const my = e.clientY - rect.top
     const PAD = 32
     const zoomOld = zoomRef.current
-    const zoomNew = clamp(zoomOld * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 0.05, 500)
+    // deltaY 크기에 비례한 줌 — 빠른 스크롤에도 급격히 날아가지 않음
+    const factor = Math.pow(2, -e.deltaY * 0.003)
+    const zoomNew = clamp(zoomOld * factor, 0.05, 500)
     const ratio = zoomNew / zoomOld
-    // 마우스 위치의 월드 좌표가 줌 전후 동일하도록 pan 보정
     panRef.current = {
       x: mx - PAD - (mx - PAD - panRef.current.x) * ratio,
       y: my - (H - PAD) + (H - PAD - my + panRef.current.y) * ratio,
     }
     zoomRef.current = zoomNew
+    drawRef.current()   // 즉시 렌더링 (React re-render 기다리지 않음)
     setZoom(zoomNew)
   }, [])
   useEffect(() => {
