@@ -194,6 +194,15 @@ export default function NewProjectPage() {
         if (data.bldg_area > 0) { set('bldgArea', String(Math.round(data.bldg_area * 100) / 100)); applied = true }
         if (data.site_perim > 0) set('sitePerim', String(Math.round(data.site_perim * 100) / 100))
         if (data.bldg_perim > 0) set('bldgPerim', String(Math.round(data.bldg_perim * 100) / 100))
+
+        // 설계개요 자동입력
+        if (data.designInfo) {
+          if (data.designInfo.projectName) { set('name', data.designInfo.projectName); applied = true }
+          if (data.designInfo.location) { set('location', data.designInfo.location); applied = true }
+          if (data.designInfo.floors) { set('ground', data.designInfo.floors.toString()); applied = true }
+          if (data.designInfo.area) { set('bldgArea', String(Math.round(data.designInfo.area * 100) / 100)); applied = true }
+        }
+
         if (data.segments?.length > 0) {
           setDxfData({ segments: data.segments, loops: data.loops ?? [], highlightLayers: data.highlightLayers ?? [], bbox: data.bbox ?? null })
           setRightTab('dxf')
@@ -701,16 +710,16 @@ export default function NewProjectPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input ref={dxfInputRef} type="file" accept=".dxf" className="hidden" onChange={handleDxfUpload} />
-                    <button
-                      type="button"
-                      onClick={() => dxfInputRef.current?.click()}
-                      disabled={isDxfLoading}
-                      className="flex items-center gap-2 h-9 px-4 rounded-xl border-2 border-dashed border-gray-300 text-xs font-medium text-gray-500 hover:border-[#2563eb] hover:text-[#2563eb] hover:bg-blue-50/50 transition-all"
-                    >
-                      {isDxfLoading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                      DXF 업로드
-                    </button>
+                      <input ref={dxfInputRef} type="file" accept=".dxf,.dwg" className="hidden" onChange={handleDxfUpload} />
+                      <button
+                        type="button"
+                        onClick={() => dxfInputRef.current?.click()}
+                        disabled={isDxfLoading}
+                        className="flex items-center gap-2 h-9 px-4 rounded-xl border-2 border-dashed border-gray-300 text-xs font-medium text-gray-500 hover:border-[#2563eb] hover:text-[#2563eb] hover:bg-blue-50/50 transition-all"
+                      >
+                        {isDxfLoading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                        도면 업로드 (DXF/DWG)
+                      </button>
                   </div>
                 </div>
 

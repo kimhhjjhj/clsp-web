@@ -15,6 +15,15 @@ export interface DxfLoop {
   perim: number
 }
 
+export interface DesignInfo {
+  projectName?: string
+  location?: string
+  floors?: number
+  area?: number
+  perimeter?: number
+  notes?: string[]
+}
+
 export interface DxfResult {
   site_area: number
   bldg_area: number
@@ -24,6 +33,7 @@ export interface DxfResult {
   loops: DxfLoop[]            // [0]=SITE, [1]=건물외곽
   highlightLayers: string[]   // 프리뷰에서 강조할 레이어명
   bbox: [number, number, number, number] | null
+  designInfo?: DesignInfo
   debug?: string
 }
 
@@ -71,7 +81,7 @@ function segInBbox(s: DxfSegment, bb: [number, number, number, number]): boolean
 // ── DXF text parsing ────────────────────────────────────────
 
 interface RawEntity {
-  type: string; layer: string; pts: [number, number][]; flags: number
+  type: string; layer: string; pts: [number, number][]; flags: number; text?: string
 }
 
 function parseEntities(lines: string[]): RawEntity[] {
@@ -86,7 +96,28 @@ function parseEntities(lines: string[]): RawEntity[] {
   let i = secStart
   while (i < secEnd - 1) {
     const code = lines[i]?.trim(), val = lines[i + 1]?.trim() ?? ''
-    if (code === '0' && (val === 'LWPOLYLINE' || val === 'POLYLINE' || val === 'LINE')) {
+
+    // ── TEXT/MTEXT ──
+    if (code === '0' && (val === 'TEXT' || val === 'MTEXT')) {
+      const etype = val; let layer = '', text = ''; let x: number | null = null, y: number | null = null
+      i += 2
+      const textParts: string[] = []
+      while (i < secEnd - 1) {
+        const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
+        if (c === '0') break
+        if (c === '8') layer = v
+        if (c === '1' || c === '3') textParts.push(v)
+        if (c === '10') x = parseFloat(v)
+        else if (c === '20') y = parseFloat(v)
+        i += 2
+      }
+      text = textParts.join(' ')
+      if (text.trim() && x !== null && y !== null) {
+        entities.push({ type: etype, layer, pts: [[x, y]], flags: 0, text })
+      }
+    }
+    // ── LWPOLYLINE / POLYLINE / LINE ──
+    else if (code === '0' && (val === 'LWPOLYLINE' || val === 'POLYLINE' || val === 'LINE')) {
       const etype = val; let layer = '', flags = 0; const pts: [number, number][] = []; let cx: number | null = null
       i += 2
       if (etype === 'POLYLINE') {
@@ -135,7 +166,65 @@ function parseEntities(lines: string[]): RawEntity[] {
   return entities
 }
 
-// ── CON outline reconstruction (claude1.py _build_con_outline) ──
+// ── 설계개요 추출 ──────────────────────────────────
+
+function extractDesignInfo(textEntities: RawEntity[]): DesignInfo | undefined {
+  if (textEntities.length === 0) return undefined
+
+  const allText = textEntities.map(e => e.text || '').join('\n')
+  const info: DesignInfo = {}
+  const notes: string[] = []
+
+  // 프로젝트명 / 건물명
+  let match = allText.match(/(?:프로젝트|건(?:물)?명|건명|Project|Building)[\s：:]*([^\n]*)/)
+  if (match && match[1]) info.projectName = match[1].trim()
+
+  // 위치 / 주소
+  match = allText.match(/(?:위치|주소|Location|Address)[\s：:]*([^\n]*)/)
+  if (match && match[1]) info.location = match[1].trim()
+
+  // 지상층수 / 층수
+  match = allText.match(/(?:지상|지상층)[수층]*[\s：:]*(\d+)/)
+  if (match && match[1]) info.floors = parseInt(match[1], 10)
+
+  // 대지/연면적
+  match = allText.match(/(?:대지|연)?면적[\s：:]*(\d+[.,]?\d*)/)
+  if (match && match[1]) {
+    const areaStr = match[1].replace(',', '.')
+    const area = parseFloat(areaStr)
+    if (!isNaN(area)) info.area = area
+  }
+
+  // m² 또는 ㎡ 단위 추출
+  if (!info.area) {
+    match = allText.match(/(\d+[.,]?\d*)\s*(?:m²|㎡|m2)/)
+    if (match && match[1]) {
+      const areaStr = match[1].replace(',', '.')
+      const area = parseFloat(areaStr)
+      if (!isNaN(area)) info.area = area
+    }
+  }
+
+  // 둘레
+  match = allText.match(/(?:둘레|perimeter)[\s：:]*(\d+[.,]?\d*)/)
+  if (match && match[1]) {
+    const perimStr = match[1].replace(',', '.')
+    const perim = parseFloat(perimStr)
+    if (!isNaN(perim)) info.perimeter = perim
+  }
+
+  // 기타 정보 수집
+  for (const text of allText.split('\n')) {
+    const t = text.trim()
+    if (t.length > 0 && t.length < 100 && !info.projectName?.includes(t) && !info.location?.includes(t)) {
+      notes.push(t)
+    }
+  }
+
+  if (notes.length > 0) info.notes = notes
+
+  return Object.keys(info).length > 0 ? info : undefined
+}
 
 function buildConOutline(
   conLines: DxfSegment[],
@@ -231,12 +320,18 @@ export function parseDxf(rawText: string): DxfResult {
   const sitePolys: { pts: [number, number][]; area: number; perim: number }[] = []
   const conLines: DxfSegment[] = []
   const defPolys: { pts: [number, number][]; area: number; perim: number }[] = []
+  const textEntities: RawEntity[] = []
   let maxCoord = 0
   const seenSite = new Set<string>()
 
   for (const ent of entities) {
-    const { pts, layer, flags, type } = ent
+    const { pts, layer, flags, type, text } = ent
     const lu = layer.toUpperCase().trim()
+
+    // TEXT/MTEXT 수집
+    if (type === 'TEXT' || type === 'MTEXT') {
+      textEntities.push(ent)
+    }
 
     for (const [x, y] of pts) {
       if (Math.abs(x) > maxCoord) maxCoord = Math.abs(x)
@@ -362,6 +457,9 @@ export function parseDxf(rawText: string): DxfResult {
 
   const layerNames = [...new Set(entities.map(e => e.layer))].join(', ')
 
+  // 설계개요 추출
+  const designInfo = extractDesignInfo(textEntities)
+
   return {
     site_area: siteLoop ? siteLoop.area * uf * uf : 0,
     bldg_area: bldgOutline ? bldgOutline.area * uf * uf : 0,
@@ -371,6 +469,7 @@ export function parseDxf(rawText: string): DxfResult {
     loops,
     highlightLayers,
     bbox,
+    designInfo,
     debug: `entities=${entities.length} segs=${segsM.length} conLines=${conLines.length} layers=[${layerNames}] uf=${uf}`,
   }
 }
