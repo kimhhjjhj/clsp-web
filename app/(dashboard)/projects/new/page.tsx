@@ -189,28 +189,21 @@ export default function NewProjectPage() {
       if (!res.ok) {
         setDxfError(data.error ?? 'DXF 파싱 실패')
       } else {
-        let applied = false
-        if (data.site_area > 0) { set('siteArea', String(Math.round(data.site_area * 100) / 100)); applied = true }
-        if (data.bldg_area > 0) { set('bldgArea', String(Math.round(data.bldg_area * 100) / 100)); applied = true }
-        if (data.site_perim > 0) set('sitePerim', String(Math.round(data.site_perim * 100) / 100))
-        if (data.bldg_perim > 0) set('bldgPerim', String(Math.round(data.bldg_perim * 100) / 100))
-
-        // 설계개요 자동입력
+        // 설계개요 자동입력 (면적/둘레는 폴리곤 직접 선택으로 입력)
         if (data.designInfo) {
-          if (data.designInfo.projectName) { set('name', data.designInfo.projectName); applied = true }
-          if (data.designInfo.location) { set('location', data.designInfo.location); applied = true }
-          if (data.designInfo.floors) { set('ground', data.designInfo.floors.toString()); applied = true }
-          if (data.designInfo.area) { set('bldgArea', String(Math.round(data.designInfo.area * 100) / 100)); applied = true }
+          if (data.designInfo.projectName) set('name', data.designInfo.projectName)
+          if (data.designInfo.location) set('location', data.designInfo.location)
+          if (data.designInfo.floors) set('ground', data.designInfo.floors.toString())
         }
 
-        if (data.segments?.length > 0) {
-          setDxfData({ segments: data.segments, loops: data.loops ?? [], highlightLayers: data.highlightLayers ?? [], bbox: data.bbox ?? null })
+        if (data.segments?.length > 0 || data.loops?.length > 0) {
+          setDxfData({ segments: data.segments ?? [], loops: data.loops ?? [], highlightLayers: [], bbox: data.bbox ?? null })
           setRightTab('dxf')
-        }
-        if (!applied && data.debug) {
-          setDxfError(`면적을 인식하지 못했습니다. [${data.debug}]`)
+          setDxfError(data.loops?.length > 0
+            ? `${data.loops.length}개 폴리곤 인식됨 — 대지경계/건물외곽 선택 버튼으로 폴리곤을 클릭하세요`
+            : '폴리곤을 인식하지 못했습니다.')
         } else {
-          setDxfError('')
+          setDxfError(`도면 요소를 인식하지 못했습니다. [${data.debug ?? ''}]`)
         }
       }
     } catch {
@@ -219,6 +212,17 @@ export default function NewProjectPage() {
       setIsDxfLoading(false)
       if (dxfInputRef.current) dxfInputRef.current.value = ''
     }
+  }
+
+  function handlePolygonSelect(type: 'site' | 'bldg', loop: { area: number; perim: number }) {
+    if (type === 'site') {
+      set('siteArea', String(Math.round(loop.area * 100) / 100))
+      set('sitePerim', String(Math.round(loop.perim * 100) / 100))
+    } else {
+      set('bldgArea', String(Math.round(loop.area * 100) / 100))
+      set('bldgPerim', String(Math.round(loop.perim * 100) / 100))
+    }
+    setDxfError('')
   }
 
   // ── Ground Info ───────────────────────────────────────────────────────────
@@ -724,7 +728,7 @@ export default function NewProjectPage() {
                 </div>
 
                 {dxfError && (
-                  <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-xs">{dxfError}</div>
+                  <div className={`rounded-xl px-4 py-3 text-xs border ${dxfError.includes('폴리곤 인식됨') ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-red-50 border-red-200 text-red-600'}`}>{dxfError}</div>
                 )}
 
                 {/* 층수 */}
@@ -1102,7 +1106,14 @@ export default function NewProjectPage() {
               )}
               {rightTab === 'dxf' && (
                 dxfData
-                  ? <DxfPreview segments={dxfData.segments} loops={dxfData.loops} highlightLayers={dxfData.highlightLayers} bbox={dxfData.bbox} />
+                  ? <DxfPreview
+                      segments={dxfData.segments}
+                      loops={dxfData.loops}
+                      highlightLayers={dxfData.highlightLayers}
+                      bbox={dxfData.bbox}
+                      onSiteSelect={(loop) => handlePolygonSelect('site', loop)}
+                      onBldgSelect={(loop) => handlePolygonSelect('bldg', loop)}
+                    />
                   : <div className="flex flex-col items-center justify-center gap-3 bg-[#0f172a]" style={{ height: 436 }}>
                       <div className="w-14 h-14 rounded-2xl bg-white/[0.05] flex items-center justify-center border border-white/[0.05]">
                         <Upload size={20} className="text-white/20" />
