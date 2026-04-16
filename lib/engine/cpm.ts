@@ -17,10 +17,16 @@ export function calculateCPM(tasks: WBSTask[]): CPMSummary {
   const results = new Map<string, CPMResult>()
   for (const t of tasks) {
     results.set(t.id, {
-      taskId: t.id,
-      name: t.name,
-      category: t.category,
-      duration: t.duration,
+      taskId:       t.id,
+      name:         t.name,
+      category:     t.category,
+      subcategory:  t.subcategory,
+      wbsCode:      t.wbsCode,
+      unit:         t.unit,
+      quantity:     t.quantity,
+      productivity: t.productivity,
+      stdDays:      t.stdDays,
+      duration:     t.duration,
       ES: 0,
       EF: 0,
       LS: 0,

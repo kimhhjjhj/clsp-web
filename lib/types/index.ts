@@ -16,6 +16,7 @@ export interface ProjectInput {
   bldgArea?: number    // 연면적 (m²)
   wtBottom?: number    // 지하수위 깊이 (m)
   waBottom?: number    // 흙막이 깊이 (m)
+  mode?: 'cp' | 'full' // WBS 생성 모드: 개략(CP) / 상세(Full)
 }
 
 // WBS 태스크
@@ -39,6 +40,12 @@ export interface CPMResult {
   taskId: string
   name: string
   category: string
+  subcategory?: string
+  wbsCode?: string
+  unit?: string
+  quantity?: number
+  productivity?: string
+  stdDays?: string
   duration: number
   ES: number  // Early Start
   EF: number  // Early Finish

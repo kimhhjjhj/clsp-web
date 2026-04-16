@@ -1,14 +1,12 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_KR, Geist } from 'next/font/google'
+import { Noto_Sans_KR } from 'next/font/google'
 import './globals.css'
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
   weight: ['400', '500', '700'],
-  variable: '--font-noto',
+  variable: '--font-sans',
 })
 
 export const metadata: Metadata = {
@@ -18,9 +16,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className={cn("h-full", notoSansKR.variable, "font-sans", geist.variable)}>
-      <body className="h-full bg-gray-950 text-gray-100 antialiased font-sans">
-        {children}
+    <html lang="ko" className={`${notoSansKR.variable} h-full dark`}>
+      <body className="h-full bg-background text-foreground antialiased font-sans">
+        <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
   )

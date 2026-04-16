@@ -1,217 +1,178 @@
 import type { ProjectInput, WBSTask } from '@/lib/types'
 
-let _seq = 0
-function nextId() {
-  return `t${++_seq}`
+// ═══════════════════════════════════════════════════════════
+// CSV 데이터 — QuickPlan_생산성.csv (CP 공종, 20행)
+// 파이썬 원본 build_default_tasks_csv_only() 기반
+// ═══════════════════════════════════════════════════════════
+export interface DBRow {
+  category: string   // 대분류
+  sub:      string   // 중분류
+  name:     string   // 작업명
+  unit:     string   // 단위
+  prod:     number | null  // 생산성 (단위당 처리량)
+  stdDays:  number | null  // 소요기간(일) (단위당 일수)
+  wbsCode?: string
 }
 
-/**
- * 공동주택 표준 WBS 자동 생성
- * 파이썬 EXE의 generate_default_tasks_and_schedule() 로직 기반
- */
+const CP_DB: DBRow[] = [
+  { category: '공사준비', sub: '공통가설', name: '가설울타리',       unit: 'm',   prod: 115,  stdDays: null, wbsCode: 'T.1.1' },
+  { category: '공사준비', sub: '공통가설', name: '가설사무실',       unit: '개소', prod: 8,    stdDays: null, wbsCode: 'T.1.2' },
+  { category: '공사준비', sub: '공통가설', name: '가설 전기/용수',   unit: '전체', prod: null, stdDays: 5,   wbsCode: 'T.1.3' },
+  { category: '공사준비', sub: '공통가설', name: '부지정지',         unit: 'm2',  prod: 1000, stdDays: null, wbsCode: 'T.1.4' },
+  { category: '토목공사', sub: '흙막이공사', name: 'CIP(철근망)',    unit: 'm',   prod: 100,  stdDays: null, wbsCode: 'C.1.1' },
+  { category: '토목공사', sub: '흙막이공사', name: 'CIP(H-BEAM)',   unit: 'm',   prod: 70,   stdDays: null, wbsCode: 'C.1.2' },
+  { category: '토목공사', sub: '흙막이공사', name: '장비조립',       unit: '전체', prod: null, stdDays: 5,   wbsCode: 'C.1.3' },
+  { category: '토목공사', sub: '흙막이공사', name: '캠빔 설치',      unit: 'm',   prod: 30,   stdDays: null, wbsCode: 'C.1.4' },
+  { category: '토목공사', sub: '차수공사',   name: 'SGR공사',        unit: 'm',   prod: 300,  stdDays: null, wbsCode: 'C.2.1' },
+  { category: '토목공사', sub: '토공사',     name: '터파기(풍화토)', unit: 'm3',  prod: 350,  stdDays: null, wbsCode: 'C.3.1' },
+  { category: '토목공사', sub: '토공사',     name: '터파기(풍화암)', unit: 'm3',  prod: 250,  stdDays: null, wbsCode: 'C.3.2' },
+  { category: '토목공사', sub: '토공사',     name: '터파기(연암)',   unit: 'm3',  prod: 150,  stdDays: null, wbsCode: 'C.3.3' },
+  { category: '골조공사', sub: '골조공사',   name: '기초',           unit: '전체', prod: null, stdDays: 20,  wbsCode: 'A.1.1' },
+  { category: '골조공사', sub: '골조공사',   name: '지하층',         unit: '층',  prod: null, stdDays: 25,  wbsCode: 'A.1.2' },
+  { category: '골조공사', sub: '골조공사',   name: '지상층(저층부)', unit: '층',  prod: null, stdDays: 15,  wbsCode: 'A.1.3' },
+  { category: '골조공사', sub: '골조공사',   name: '전이층(PIT포함)', unit: '층', prod: null, stdDays: 30,  wbsCode: 'A.1.4' },
+  { category: '골조공사', sub: '골조공사',   name: '지상층(세팅층)', unit: '층',  prod: null, stdDays: 20,  wbsCode: 'A.1.5' },
+  { category: '골조공사', sub: '골조공사',   name: '지상층(기준층)', unit: '층',  prod: null, stdDays: 7,   wbsCode: 'A.1.6' },
+  { category: '골조공사', sub: '골조공사',   name: '지상층(최상층)', unit: '층',  prod: null, stdDays: 10,  wbsCode: 'A.1.7' },
+  { category: '마감공사', sub: '공동주택',   name: '공동주택마감',   unit: '전체', prod: null, stdDays: 210, wbsCode: 'A.2.1' },
+]
+
+// ═══════════════════════════════════════════════════════════
+// 가동률 (파이썬 WORK_RATES와 동일)
+// 공사준비/토목: 66.6%, 골조: 63.2%, 마감: None(적용 안 함)
+// ═══════════════════════════════════════════════════════════
+export function getWorkRate(category: string): number | null {
+  if (category.startsWith('공사준비')) return 0.666
+  if (category.startsWith('토목공사')) return 0.666
+  if (category.startsWith('골조공사')) return 0.632
+  if (category.startsWith('마감공사')) return null  // 별도 산정 (raw 그대로)
+  return 1.0
+}
+
+// ═══════════════════════════════════════════════════════════
+// 기간 계산 (파이썬 calc_duration과 동일)
+// 생산성 있으면: qty / prod / work_rate
+// 소요기간 있으면: qty * stdDays / work_rate
+// ═══════════════════════════════════════════════════════════
+export function calcDuration(row: DBRow, qty: number): number {
+  const rate = getWorkRate(row.category)
+  let durRaw = 0
+
+  if (row.prod !== null && row.prod > 0) {
+    durRaw = qty / row.prod
+  } else if (row.stdDays !== null && row.stdDays > 0) {
+    durRaw = qty * row.stdDays
+  } else {
+    return 0
+  }
+
+  if (rate !== null && rate > 0) {
+    return Math.round(durRaw / rate * 10) / 10  // 소수점 1자리
+  }
+  return Math.round(durRaw * 10) / 10
+}
+
+// ═══════════════════════════════════════════════════════════
+// 물량 자동 산정 (파이썬 compute_quantities()와 동일)
+// ═══════════════════════════════════════════════════════════
+export function computeQuantities(p: ProjectInput): Record<string, number> {
+  const sitePerim = p.sitePerim ?? 0
+  const bldgPerim = p.bldgPerim ?? 0
+  const bldgArea  = p.bldgArea  ?? 0
+  const basement  = p.basement  ?? 0
+  const ground    = p.ground    ?? 0
+  const lowrise   = p.lowrise   ?? 0
+  const hasTr     = p.hasTransfer
+  const wtBot     = p.wtBottom  ?? 0
+  const waBot     = p.waBottom  ?? 0
+
+  // 지하층 굴착 깊이 (층당 3.5m + 기초 1.0m)
+  const totalExc = basement > 0 ? basement * 3.5 + 1.0 : 0
+  const wtDepth  = Math.min(wtBot, totalExc)
+  const waDepth  = Math.max(0, Math.min(waBot, totalExc) - wtDepth)
+  const rkDepth  = Math.max(0, totalExc - wtDepth - waDepth)
+
+  // 흙막이 물량
+  const cipCnt      = bldgPerim > 0 ? Math.floor(bldgPerim / 0.5) : 0
+  const cipRebarCnt = Math.floor(cipCnt * 2 / 3)
+  const cipHbeamCnt = cipCnt - cipRebarCnt
+  const cipRebarLen = cipRebarCnt * (wtBot + 1)
+  const cipHbeamLen = cipHbeamCnt * (totalExc + 2)
+  const sgrCount    = sitePerim > 0 ? Math.floor(sitePerim / 0.5) : 0
+  const phtoDepth   = totalExc > 0 ? totalExc * 0.5 : 0
+  const sgrLen      = sgrCount * (phtoDepth + 1)
+  const cambeamLen  = Math.floor(bldgPerim)
+
+  // 골조 층 수 분류
+  const numSetting  = ground > 0 ? 1 : 0
+  const numTop      = ground > 0 ? 1 : 0
+  const numStandard = Math.max(0, ground - lowrise - numSetting - numTop)
+
+  return {
+    '가설울타리':       sitePerim,
+    '가설사무실':       8,
+    '가설 전기/용수':   1,
+    '부지정지':         bldgArea,
+    'CIP(철근망)':      cipRebarLen,
+    'CIP(H-BEAM)':      cipHbeamLen,
+    '장비조립':         1,
+    '캠빔 설치':        cambeamLen,
+    'SGR공사':          sgrLen,
+    '터파기(풍화토)':   bldgArea * wtDepth,
+    '터파기(풍화암)':   bldgArea * waDepth,
+    '터파기(연암)':     bldgArea * rkDepth,
+    '기초':             1,
+    '지하층':           basement,
+    '지상층(저층부)':   lowrise,
+    '전이층(PIT포함)':  hasTr ? 1 : 0,
+    '지상층(세팅층)':   numSetting,
+    '지상층(기준층)':   numStandard,
+    '지상층(최상층)':   numTop,
+    '공동주택마감':     1,
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// WBS 자동 생성 — 파이썬 build_default_tasks_csv_only() 포팅
+// 선후행: 단순 순차 (각 작업의 선행 = 바로 앞 작업)
+// 물량 0이거나 기간 0인 작업은 제외
+// ═══════════════════════════════════════════════════════════
 export function generateWBS(p: ProjectInput): WBSTask[] {
-  _seq = 0
+  const qtys  = computeQuantities(p)
   const tasks: WBSTask[] = []
+  let nextId  = 1
+  let prevId  = ''
 
-  const totalFloors = p.ground + p.basement
-  const bldgArea = p.bldgArea ?? 0
-  const siteArea = p.siteArea ?? 0
-  const bldgPerim = p.bldgPerim ?? Math.sqrt(bldgArea) * 4
+  for (const row of CP_DB) {
+    // 물량 결정
+    let qty = qtys[row.name] ?? 0
 
-  // ──────────────────────────────────────────────────────────────────
-  // 1. 가설공사
-  // ──────────────────────────────────────────────────────────────────
-  const t01 = id()
-  const t02 = id()
-  const t03 = id()
+    // 단위가 '층'인데 물량이 없으면 ground 층수로 대체
+    if (qty <= 0 && row.unit === '층') qty = Math.max(1, p.ground)
+    // 전체/개소/전체 단위는 1
+    if (qty <= 0 && ['전체', '개소', '대', '주'].includes(row.unit)) qty = 1
 
-  tasks.push(
-    task(t01, '01', '가설공사', '현장사무소 설치', roundDays(7), []),
-    task(t02, '02', '가설공사', '가설울타리 및 게이트', roundDays(bldgPerim / 30), [t01]),
-    task(t03, '03', '가설공사', '타워크레인 설치', roundDays(14), [t02]),
-  )
+    if (qty <= 0) continue  // 물량 없으면 건너뜀
 
-  // ──────────────────────────────────────────────────────────────────
-  // 2. 토공사 (지하 있을 때)
-  // ──────────────────────────────────────────────────────────────────
-  let lastEarth = t02
-  if (p.basement > 0) {
-    const depth = p.waBottom ?? p.basement * 3.5
-    const excavVol = siteArea * depth * 0.8
-    const t10 = id()
-    const t11 = id()
-    const t12 = id()
+    const dur = calcDuration(row, qty)
+    if (dur <= 0) continue  // 기간 0이면 건너뜀
 
-    tasks.push(
-      task(t10, '10', '토공사', '흙막이 공사', roundDays(depth * 5 + 10), [t02]),
-      task(t11, '11', '토공사', '굴토 (터파기)', roundDays(excavVol / 500), [t10]),
-      task(t12, '12', '토공사', '잔토처리 및 성토', roundDays((excavVol / 500) * 0.3), [t11]),
-    )
-    lastEarth = t12
+    const tid = String(nextId++)
+    tasks.push({
+      id:           tid,
+      wbsCode:      row.wbsCode,
+      name:         row.name,
+      category:     row.category,
+      subcategory:  row.sub,
+      unit:         row.unit,
+      quantity:     qty,
+      productivity: row.prod !== null ? String(row.prod) : undefined,
+      stdDays:      row.stdDays !== null ? String(row.stdDays) : undefined,
+      duration:     Math.max(0.1, dur),
+      predecessors: prevId ? [prevId] : [],
+    })
+    prevId = tid
   }
-
-  // ──────────────────────────────────────────────────────────────────
-  // 3. 기초공사
-  // ──────────────────────────────────────────────────────────────────
-  const floorArea = bldgArea / (totalFloors || 1)
-  const t20 = id()
-  const t21 = id()
-  const t22 = id()
-
-  tasks.push(
-    task(t20, '20', '기초공사', '기초 거푸집 조립', roundDays(floorArea / 80), [lastEarth]),
-    task(t21, '21', '기초공사', '기초 철근 조립', roundDays(floorArea / 60), [t20]),
-    task(t22, '22', '기초공사', '기초 콘크리트 타설 및 양생', roundDays(floorArea / 100 + 14), [t21]),
-  )
-
-  // ──────────────────────────────────────────────────────────────────
-  // 4. 지하 골조 (지하가 있을 때)
-  // ──────────────────────────────────────────────────────────────────
-  let lastUnderground = t22
-  if (p.basement > 0) {
-    let prevLayer = t22
-    for (let b = p.basement; b >= 1; b--) {
-      const ta = id()
-      const tb = id()
-      const tc = id()
-      tasks.push(
-        task(ta, `B${b}a`, '지하골조', `B${b}F 거푸집 조립`, roundDays(floorArea / 70), [prevLayer]),
-        task(tb, `B${b}b`, '지하골조', `B${b}F 철근 조립`, roundDays(floorArea / 50), [ta]),
-        task(tc, `B${b}c`, '지하골조', `B${b}F 콘크리트 타설`, roundDays(floorArea / 90 + 7), [tb]),
-      )
-      prevLayer = tc
-    }
-    lastUnderground = prevLayer
-  }
-
-  // ──────────────────────────────────────────────────────────────────
-  // 5. 지상 골조 (타입 옵션에 따라 다름)
-  // ──────────────────────────────────────────────────────────────────
-  // 저층부 (podium)
-  let lastPodium = lastUnderground
-  if (p.lowrise > 0) {
-    const t30 = id()
-    const t31 = id()
-    const t32 = id()
-    tasks.push(
-      task(t30, '30', '저층부골조', `1~${p.lowrise}F 거푸집`, roundDays((floorArea * p.lowrise) / 60), [lastUnderground]),
-      task(t31, '31', '저층부골조', `1~${p.lowrise}F 철근`, roundDays((floorArea * p.lowrise) / 45), [t30]),
-      task(t32, '32', '저층부골조', `1~${p.lowrise}F 콘크리트`, roundDays((floorArea * p.lowrise) / 80 + 7), [t31]),
-    )
-    lastPodium = t32
-  }
-
-  // 전이층
-  let lastTransfer = lastPodium
-  if (p.hasTransfer) {
-    const t35 = id()
-    const t36 = id()
-    tasks.push(
-      task(t35, '35', '전이층', '전이층 거푸집/철근', roundDays(floorArea / 30), [lastPodium]),
-      task(t36, '36', '전이층', '전이층 콘크리트 타설 및 양생', roundDays(floorArea / 50 + 21), [t35]),
-    )
-    lastTransfer = t36
-  }
-
-  // 지상 고층부 (5개 층씩 묶음)
-  const hiFloors = p.ground - p.lowrise
-  let lastFrame = lastTransfer
-  if (hiFloors > 0) {
-    const batchSize = 5
-    const batches = Math.ceil(hiFloors / batchSize)
-    let prevBatch = lastTransfer
-    let startFloor = p.lowrise + 1
-
-    for (let i = 0; i < batches; i++) {
-      const endFloor = Math.min(startFloor + batchSize - 1, p.ground)
-      const floors = endFloor - startFloor + 1
-      const ta = id()
-      const tb = id()
-      const tc = id()
-      tasks.push(
-        task(ta, `${startFloor}Fa`, '지상골조', `${startFloor}~${endFloor}F 거푸집`, roundDays((floorArea * floors) / 60), [prevBatch]),
-        task(tb, `${startFloor}Fb`, '지상골조', `${startFloor}~${endFloor}F 철근`, roundDays((floorArea * floors) / 45), [ta]),
-        task(tc, `${startFloor}Fc`, '지상골조', `${startFloor}~${endFloor}F 콘크리트`, roundDays((floorArea * floors) / 80 + 7), [tb]),
-      )
-      prevBatch = tc
-      startFloor = endFloor + 1
-    }
-    lastFrame = prevBatch
-  }
-
-  // ──────────────────────────────────────────────────────────────────
-  // 6. 지붕/옥탑
-  // ──────────────────────────────────────────────────────────────────
-  const t50 = id()
-  tasks.push(
-    task(t50, '50', '지붕/옥탑', '지붕층 골조 및 방수', roundDays(21), [lastFrame]),
-  )
-
-  // ──────────────────────────────────────────────────────────────────
-  // 7. 외부 마감 (골조 완료 후 시작, 병렬 진행 가능)
-  // ──────────────────────────────────────────────────────────────────
-  const t60 = id()
-  const t61 = id()
-  const t62 = id()
-  tasks.push(
-    task(t60, '60', '외부마감', '외부 단열 및 창호 설치', roundDays((bldgPerim * p.ground * 3) / 200), [lastFrame]),
-    task(t61, '61', '외부마감', '외벽 마감 (석재/타일/도장)', roundDays((bldgPerim * p.ground * 3) / 150), [t60]),
-    task(t62, '62', '외부마감', '옥외 설비 배관', roundDays(14), [t50]),
-  )
-
-  // ──────────────────────────────────────────────────────────────────
-  // 8. 내부 마감 (세대당 공정)
-  // ──────────────────────────────────────────────────────────────────
-  const t70 = id()
-  const t71 = id()
-  const t72 = id()
-  const t73 = id()
-  tasks.push(
-    task(t70, '70', '내부마감', '세대 내부 단열/방수', roundDays(bldgArea / 300), [lastFrame]),
-    task(t71, '71', '내부마감', '설비/전기/소방 배관', roundDays(bldgArea / 200), [t70]),
-    task(t72, '72', '내부마감', '내부 미장 및 타일', roundDays(bldgArea / 250), [t71]),
-    task(t73, '73', '내부마감', '도배, 바닥재, 도장', roundDays(bldgArea / 300), [t72]),
-  )
-
-  // ──────────────────────────────────────────────────────────────────
-  // 9. 설비 및 기계 (병렬)
-  // ──────────────────────────────────────────────────────────────────
-  const t80 = id()
-  const t81 = id()
-  tasks.push(
-    task(t80, '80', '설비공사', '승강기 설치', roundDays(30), [lastFrame]),
-    task(t81, '81', '설비공사', '전기/통신/소방 마감', roundDays(bldgArea / 200), [t73]),
-  )
-
-  // ──────────────────────────────────────────────────────────────────
-  // 10. 준공
-  // ──────────────────────────────────────────────────────────────────
-  const t90 = id()
-  const t91 = id()
-  tasks.push(
-    task(t90, '90', '준공', '외부 조경 및 부대시설', roundDays(21), [t61, t62]),
-    task(t91, '91', '준공', '준공검사 및 인수인계', roundDays(14), [t73, t80, t81, t90]),
-  )
 
   return tasks
-}
-
-// ── 헬퍼 함수 ─────────────────────────────────────────────────────────
-function id() {
-  return nextId()
-}
-
-function roundDays(d: number): number {
-  return Math.max(1, Math.round(d))
-}
-
-function task(
-  taskId: string,
-  wbsCode: string,
-  category: string,
-  name: string,
-  duration: number,
-  predecessors: string[],
-): WBSTask {
-  return { id: taskId, wbsCode, name, category, duration, predecessors }
 }
