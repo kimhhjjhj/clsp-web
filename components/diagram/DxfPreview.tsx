@@ -401,68 +401,40 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       return si
     }
 
-    // 더블클릭 감지용
-    let lastClickMs = 0
+    // 더블클릭 감지용 (mouseup 기준)
+    let lastUpMs = 0
+
+    // 측정 cursor 업데이트 헬퍼
+    const updateMeasureCursor = (clientX: number, clientY: number) => {
+      const canvas = canvasRef.current; if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const [wx, wy] = scrToWorld(clientX - rect.left, clientY - rect.top)
+      const sc = getScaleRef.current()
+      const snap = findSnap(wx, wy, segmentsRef.current, loopsRef.current, sc)
+      measureCursorRef.current = snap ?? [wx, wy]
+      measureSnapRef.current = snap !== null
+    }
 
     const onDown = (e: MouseEvent) => {
       if (e.button !== 0) return
       e.preventDefault()
-      if (measureModeRef.current) {
-        const canvas = canvasRef.current; if (!canvas) return
-        const rect = canvas.getBoundingClientRect()
-        const [wx, wy] = scrToWorld(e.clientX - rect.left, e.clientY - rect.top)
-        const sc = getScaleRef.current()
-        const snap = findSnap(wx, wy, segmentsRef.current, loopsRef.current, sc)
-        const pt: [number, number] = snap ?? [wx, wy]
-
-        const now = Date.now()
-        const isDouble = now - lastClickMs < 300
-        lastClickMs = now
-
-        if (measureDoneRef.current) {
-          // 완료 상태에서 클릭 → 초기화 후 새 시작점
-          measurePtsRef.current = [pt]
-          measureDoneRef.current = false
-          measureCursorRef.current = null
-          measureSnapRef.current = snap !== null
-          setMeasureDone(false); setMeasurePtsCnt(1)
-          drawRef.current(); return
-        }
-
-        if (isDouble && measurePtsRef.current.length > 0) {
-          // 더블클릭: 두 번째 mousedown에서 추가된 점 제거 후 완료
-          measurePtsRef.current = measurePtsRef.current.slice(0, -1)
-          measureCursorRef.current = null
-          measureDoneRef.current = true
-          setMeasureDone(true); setMeasurePtsCnt(measurePtsRef.current.length)
-          drawRef.current(); return
-        }
-
-        // 단일 클릭: 점 추가
-        measurePtsRef.current = [...measurePtsRef.current, pt]
-        measureSnapRef.current = snap !== null
-        setMeasurePtsCnt(measurePtsRef.current.length)
-        drawRef.current(); return
-      }
+      // 측정 모드 포함 모든 경우: drag 감지 시작
       isDragging.current = true; dragMoved.current = false
       lastPos.current = { x: e.clientX, y: e.clientY }
     }
     const onMove = (e: MouseEvent) => {
-      if (measureModeRef.current && !measureDoneRef.current) {
-        const canvas = canvasRef.current; if (!canvas) return
-        const rect = canvas.getBoundingClientRect()
-        const [wx, wy] = scrToWorld(e.clientX - rect.left, e.clientY - rect.top)
-        const sc = getScaleRef.current()
-        const snap = findSnap(wx, wy, segmentsRef.current, loopsRef.current, sc)
-        measureCursorRef.current = snap ?? [wx, wy]
-        measureSnapRef.current = snap !== null
-        drawRef.current(); return
-      }
       if (isDragging.current) {
         const dx = e.clientX - lastPos.current.x, dy = e.clientY - lastPos.current.y
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved.current = true
         panRef.current = { x: panRef.current.x + dx, y: panRef.current.y + dy }
         lastPos.current = { x: e.clientX, y: e.clientY }
+        // 측정 모드이면 cursor도 pan에 맞춰 갱신
+        if (measureModeRef.current && !measureDoneRef.current) updateMeasureCursor(e.clientX, e.clientY)
+        drawRef.current(); return
+      }
+      // 비드래그 이동
+      if (measureModeRef.current && !measureDoneRef.current) {
+        updateMeasureCursor(e.clientX, e.clientY)
         drawRef.current(); return
       }
       if (!selectModeRef.current) return
@@ -472,9 +444,44 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       setHoveredIdx(idx >= 0 ? idx : null)
     }
     const onUp = (e: MouseEvent) => {
-      if (measureModeRef.current) return
       if (!isDragging.current) return
       isDragging.current = false
+
+      if (measureModeRef.current) {
+        if (dragMoved.current) return   // 드래그 pan만 → 점 찍지 않음
+
+        // mouseup 기준 더블클릭 감지
+        const canvas = canvasRef.current; if (!canvas) return
+        const rect = canvas.getBoundingClientRect()
+        const [wx, wy] = scrToWorld(e.clientX - rect.left, e.clientY - rect.top)
+        const sc = getScaleRef.current()
+        const snap = findSnap(wx, wy, segmentsRef.current, loopsRef.current, sc)
+        const pt: [number, number] = snap ?? [wx, wy]
+
+        const now = Date.now()
+        const isDouble = now - lastUpMs < 300
+        lastUpMs = now
+
+        if (measureDoneRef.current) {
+          // 완료 상태 → 초기화 후 새 시작점
+          measurePtsRef.current = [pt]
+          measureDoneRef.current = false; measureCursorRef.current = null; measureSnapRef.current = snap !== null
+          setMeasureDone(false); setMeasurePtsCnt(1); drawRef.current(); return
+        }
+
+        if (isDouble && measurePtsRef.current.length > 0) {
+          // 더블클릭: 직전 단일클릭으로 추가된 점 제거 후 완료
+          measurePtsRef.current = measurePtsRef.current.slice(0, -1)
+          measureCursorRef.current = null; measureDoneRef.current = true
+          setMeasureDone(true); setMeasurePtsCnt(measurePtsRef.current.length); drawRef.current(); return
+        }
+
+        // 단일 클릭: 점 추가
+        measurePtsRef.current = [...measurePtsRef.current, pt]
+        measureSnapRef.current = snap !== null
+        setMeasurePtsCnt(measurePtsRef.current.length); drawRef.current(); return
+      }
+
       if (!dragMoved.current && selectModeRef.current) {
         const canvas = canvasRef.current; if (!canvas) return
         const rect = canvas.getBoundingClientRect()
