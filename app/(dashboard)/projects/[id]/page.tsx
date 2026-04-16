@@ -2,13 +2,18 @@
 
 import React, { useEffect, useState, use } from 'react'
 import Link from 'next/link'
-import { Building2, ChevronRight, Play, AlertTriangle, ChevronDown, ChevronUp, Pencil, Layers, Grid3x3 } from 'lucide-react'
+import {
+  Building2, ChevronRight, Play, AlertTriangle,
+  ChevronDown, ChevronUp, Pencil, Layers, Grid3x3,
+  CalendarDays, BarChart3,
+} from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import type { CPMSummary, CPMResult } from '@/lib/types'
 
 interface Project {
@@ -39,13 +44,14 @@ type WBSMode = 'cp' | 'full'
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
 
-  const [project, setProject] = useState<Project | null>(null)
-  const [cpmResult, setCpmResult] = useState<CPMSummary | null>(null)
+  const [project, setProject]       = useState<Project | null>(null)
+  const [cpmResult, setCpmResult]   = useState<CPMSummary | null>(null)
   const [currentMode, setCurrentMode] = useState<WBSMode>('cp')
   const [selectedMode, setSelectedMode] = useState<WBSMode>('cp')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]       = useState(true)
   const [calculating, setCalculating] = useState(false)
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [expanded, setExpanded]     = useState<Set<string>>(new Set())
+  const [ganttView, setGanttView]   = useState<GanttViewMode>('week')
 
   useEffect(() => {
     fetch(`/api/projects/${id}`)
@@ -77,19 +83,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     })
   }
 
-  function expandAll() {
-    if (!cpmResult) return
-    const cats = new Set(cpmResult.tasks.map(t => t.category))
-    setExpanded(cats)
-  }
-
-  function collapseAll() { setExpanded(new Set()) }
-
   if (loading) return <div className="p-8 text-muted-foreground">불러오는 중...</div>
   if (!project) return <div className="p-8 text-muted-foreground">프로젝트를 찾을 수 없습니다.</div>
 
   const byCategory = cpmResult ? groupBy(cpmResult.tasks, t => t.category) : null
-  const startDate = project.startDate ? new Date(project.startDate) : null
+  const startDate  = project.startDate ? new Date(project.startDate) : null
 
   function completionDate() {
     if (!startDate || !cpmResult) return null
@@ -100,354 +98,406 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   function fmtProductivity(task: CPMResult): string {
     if (task.productivity) return `생산성 ${task.productivity} ${task.unit ?? ''}/일`
-    if (task.stdDays) return `소요기간 ${task.stdDays}일/${task.unit ?? '층'}`
+    if (task.stdDays) return `${task.stdDays}일/${task.unit ?? '층'}`
     return ''
   }
 
   return (
-    <div className="p-8 space-y-6">
-      {/* 브레드크럼 */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-foreground transition-colors">대시보드</Link>
-        <ChevronRight size={14} />
-        <span className="text-foreground truncate">{project.name}</span>
+    <div className="flex flex-col h-full overflow-hidden">
+
+      {/* ── Header (fixed top) ─────────────────────── */}
+      <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-border/60 bg-background/95">
+
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
+          <ChevronRight size={12} />
+          <span className="text-foreground truncate">{project.name}</span>
+        </div>
+
+        {/* Project info + actions */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+              <Building2 size={20} className="text-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold">{project.name}</h1>
+                {project.type && <Badge variant="secondary" className="text-[10px]">{project.type}</Badge>}
+                {cpmResult && (
+                  <Badge variant={currentMode === 'full' ? 'default' : 'outline'} className="text-[10px]">
+                    {currentMode === 'full' ? '상세공기' : '개략공기'}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                {project.location && <span>{project.location}</span>}
+                <span>지상 {project.ground}F / 지하 {project.basement}F</span>
+                {project.bldgArea && <span>연면적 {project.bldgArea.toLocaleString()}m²</span>}
+                {cpmResult && <span className="text-primary font-medium">총 공기 {cpmResult.totalDuration}일</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href={`/projects/${id}/edit`}
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'no-underline')}
+            >
+              <Pencil size={13} className="mr-1.5" />
+              수정
+            </Link>
+
+            {/* Mode toggle */}
+            <div className="flex items-center gap-0.5 bg-muted rounded-lg p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setSelectedMode('cp')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors',
+                  selectedMode === 'cp'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Grid3x3 size={12} />개략 (CP)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedMode('full')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors',
+                  selectedMode === 'full'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Layers size={12} />상세 (층별)
+              </button>
+            </div>
+
+            <Button size="sm" onClick={() => calculate(selectedMode)} disabled={calculating}>
+              <Play size={13} className="mr-1.5" />
+              {calculating ? '계산 중...' : 'WBS 생성 및 공기산정'}
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* 프로젝트 헤더 카드 */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                <Building2 size={24} className="text-primary" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold">{project.name}</h1>
-                  {project.type && <Badge variant="secondary">{project.type}</Badge>}
-                </div>
-                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                  {project.location && <span>{project.location}</span>}
-                  <span>지상 {project.ground}F / 지하 {project.basement}F</span>
-                  {project.bldgArea && <span>연면적 {project.bldgArea.toLocaleString()}m²</span>}
-                </div>
-              </div>
-            </div>
+      {/* ── Body ─────────────────────────────────────── */}
+      <div className="flex-1 overflow-auto">
 
-            <div className="flex items-center gap-3 flex-wrap">
-              <Link href={`/projects/${id}/edit`} className={cn(buttonVariants({ variant: 'outline' }), 'no-underline')}>
-                <Pencil size={14} className="mr-2" />
-                수정
-              </Link>
-
-              {/* 모드 선택 + 실행 */}
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMode('cp')}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
-                    selectedMode === 'cp'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  <Grid3x3 size={13} />
-                  개략공기 (CP)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedMode('full')}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
-                    selectedMode === 'full'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  <Layers size={13} />
-                  상세공기 (층별)
-                </button>
-              </div>
-
-              <Button onClick={() => calculate(selectedMode)} disabled={calculating}>
-                <Play size={15} className="mr-2" />
-                {calculating ? '계산 중...' : 'WBS 생성 및 공기산정'}
-              </Button>
-            </div>
+        {/* Empty state */}
+        {!cpmResult && !calculating && (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <BarChart3 size={48} className="opacity-20 mb-4" />
+            <p className="mb-1 font-medium">아직 공기산정이 실행되지 않았습니다</p>
+            <p className="text-sm opacity-60">개략공기(CP): 20개 집계 공종 | 상세공기(층별): 마감·설비 층별 전개</p>
           </div>
-        </CardContent>
-      </Card>
+        )}
 
-      {/* 계산 전 안내 */}
-      {!cpmResult && !calculating && (
-        <div className="text-center py-16 text-muted-foreground">
-          <Building2 size={48} className="mx-auto mb-4 opacity-20" />
-          <p className="mb-1">아직 공기산정이 실행되지 않았습니다</p>
-          <p className="text-sm opacity-60">
-            개략공기(CP): 20개 공종 집계 | 상세공기(층별): 마감·설비 층별 전개
-          </p>
-        </div>
-      )}
-
-      {calculating && (
-        <div className="text-center py-16">
-          <div className="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-muted-foreground">WBS 자동 생성 및 CPM 계산 중...</p>
-        </div>
-      )}
-
-      {/* CPM 결과 */}
-      {cpmResult && (
-        <Tabs defaultValue="summary">
-          <div className="flex items-center justify-between">
-            <TabsList>
-              <TabsTrigger value="summary">결과 요약</TabsTrigger>
-              <TabsTrigger value="wbs">WBS 공정표</TabsTrigger>
-              <TabsTrigger value="critical">크리티컬 패스</TabsTrigger>
-            </TabsList>
-            <Badge variant={currentMode === 'full' ? 'default' : 'secondary'} className="text-xs">
-              {currentMode === 'full' ? '상세공기 (층별)' : '개략공기 (CP)'}
-            </Badge>
+        {calculating && (
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-sm text-muted-foreground">WBS 자동 생성 및 CPM 계산 중...</p>
           </div>
+        )}
 
-          {/* 요약 탭 */}
-          <TabsContent value="summary" className="space-y-4 mt-4">
-            <div className="grid grid-cols-3 gap-4">
-              <Card className="border-primary/30 bg-primary/5">
-                <CardContent className="pt-6">
-                  <p className="text-xs text-muted-foreground mb-1">총 공사 기간</p>
-                  <p className="text-3xl font-bold text-primary">
-                    {cpmResult.totalDuration}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">일</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {completionDate()
-                      ? `착공 ${project.startDate} → 준공 ${completionDate()}`
-                      : `약 ${Math.round(cpmResult.totalDuration / 30)}개월`}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs text-muted-foreground mb-1">총 공종 수</p>
-                  <p className="text-3xl font-bold">
-                    {cpmResult.tasks.length}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">개</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">WBS 자동 생성</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs text-muted-foreground mb-1">크리티컬 패스</p>
-                  <p className="text-3xl font-bold text-destructive">
-                    {cpmResult.tasks.filter(t => t.isCritical).length}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">개 공종</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">여유시간 0일</p>
-                </CardContent>
-              </Card>
+        {/* Results */}
+        {cpmResult && (
+          <Tabs defaultValue="gantt" className="h-full flex flex-col">
+
+            {/* Tab list */}
+            <div className="flex-shrink-0 px-8 pt-4 border-b border-border/40">
+              <TabsList className="h-9">
+                <TabsTrigger value="gantt" className="text-xs gap-1.5">
+                  <CalendarDays size={13} />공정표 (Gantt)
+                </TabsTrigger>
+                <TabsTrigger value="summary" className="text-xs gap-1.5">
+                  <BarChart3 size={13} />결과 요약
+                </TabsTrigger>
+                <TabsTrigger value="wbs" className="text-xs">WBS 공정표</TabsTrigger>
+                <TabsTrigger value="critical" className="text-xs">크리티컬 패스</TabsTrigger>
+              </TabsList>
             </div>
 
-            {/* 카테고리별 요약 */}
-            {byCategory && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">공종별 현황</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {Object.entries(byCategory).map(([cat, tasks]) => {
-                      const critCount = tasks.filter(t => t.isCritical).length
-                      const maxDur = Math.max(...tasks.map(t => t.EF))
-                      const color = CATEGORY_COLORS[cat] ?? 'bg-gray-600'
-                      return (
-                        <div key={cat} className="flex items-center gap-3">
-                          <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${color}`} />
-                          <span className="text-sm w-24 flex-shrink-0">{cat}</span>
-                          <div className="flex-1 bg-muted rounded-full h-1.5">
-                            <div
-                              className={`h-1.5 rounded-full ${color}`}
-                              style={{ width: `${(maxDur / cpmResult.totalDuration) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground w-16 text-right">{tasks.length}개 공종</span>
-                          {critCount > 0 && (
-                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">CP {critCount}</Badge>
-                          )}
-                        </div>
-                      )
-                    })}
+            {/* ── GANTT TAB ──────────────────────────────── */}
+            <TabsContent value="gantt" className="flex-1 flex flex-col overflow-hidden mt-0 p-0">
+              {/* Toolbar */}
+              <div className="flex-shrink-0 flex items-center justify-between px-8 py-3 border-b border-border/40 bg-background">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm bg-blue-600 inline-block" />
+                    Standard
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* WBS 공정표 탭 */}
-          <TabsContent value="wbs" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center justify-between">
-                  <span>WBS 공정 목록 <span className="text-xs font-normal text-muted-foreground">({cpmResult.tasks.length}개 공종)</span></span>
-                  <div className="flex gap-2">
-                    <button onClick={expandAll} className="text-xs text-muted-foreground hover:text-foreground">전체 펼치기</button>
-                    <span className="text-xs text-muted-foreground">|</span>
-                    <button onClick={collapseAll} className="text-xs text-muted-foreground hover:text-foreground">전체 접기</button>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm bg-orange-500 inline-block" />
+                    Critical Path
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[300px]">공종명</TableHead>
-                      <TableHead className="w-12 text-center text-xs">단위</TableHead>
-                      <TableHead className="w-16 text-right text-xs">물량</TableHead>
-                      <TableHead className="w-28 text-xs">생산성/소요기간</TableHead>
-                      <TableHead className="text-right w-16">기간(일)</TableHead>
-                      <TableHead className="text-right w-12 text-xs">ES</TableHead>
-                      <TableHead className="text-right w-12 text-xs">EF</TableHead>
-                      <TableHead className="text-right w-12 text-xs">LS</TableHead>
-                      <TableHead className="text-right w-12 text-xs">LF</TableHead>
-                      <TableHead className="text-right w-12 text-xs">TF</TableHead>
-                      <TableHead className="text-center w-8">CP</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {byCategory && Object.entries(byCategory).map(([cat, tasks]) => {
-                      const isExpanded = expanded.has(cat)
-                      const critCount = tasks.filter(t => t.isCritical).length
-                      const color = CATEGORY_COLORS[cat] ?? 'bg-gray-600'
-                      return (
-                        <React.Fragment key={cat}>
-                          {/* 카테고리 헤더 행 */}
-                          <TableRow
-                            className="cursor-pointer hover:bg-muted/50 bg-muted/20"
-                            onClick={() => toggleCat(cat)}
-                          >
-                            <TableCell className="font-medium" colSpan={4}>
-                              <div className="flex items-center gap-2">
-                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                <span className={`inline-block w-2.5 h-2.5 rounded-full ${color}`} />
-                                {cat}
-                                <span className="text-xs text-muted-foreground font-normal">({tasks.length}개)</span>
-                              </div>
-                            </TableCell>
-                            <TableCell />
-                            <TableCell /><TableCell /><TableCell /><TableCell />
-                            <TableCell />
-                            <TableCell className="text-center">
-                              {critCount > 0 && <Badge variant="destructive" className="text-[10px] px-1">CP</Badge>}
-                            </TableCell>
-                          </TableRow>
-                          {/* 공종 상세 행 */}
-                          {isExpanded && tasks.map(task => (
-                            <TableRow
-                              key={task.taskId}
-                              className={task.isCritical ? 'bg-destructive/5' : ''}
-                            >
-                              <TableCell className="pl-10">
-                                <div className={task.isCritical ? 'text-destructive' : ''}>
-                                  <div className="text-sm font-medium">{task.name}</div>
-                                  {task.wbsCode && (
-                                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{task.wbsCode}</div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center text-xs text-muted-foreground">
-                                {task.unit ?? '—'}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                                {task.quantity != null ? task.quantity.toLocaleString() : '—'}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {fmtProductivity(task)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-sm font-medium">{task.duration}</TableCell>
-                              <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.ES}</TableCell>
-                              <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.EF}</TableCell>
-                              <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.LS}</TableCell>
-                              <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.LF}</TableCell>
-                              <TableCell className={`text-right font-mono text-sm font-bold ${task.TF === 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                                {task.TF}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {task.isCritical && <span className="text-destructive text-sm">★</span>}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </React.Fragment>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-8 h-1.5 rounded bg-blue-600/20 inline-block" />
+                    Float
+                  </div>
+                </div>
 
-          {/* 크리티컬 패스 탭 */}
-          <TabsContent value="critical" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <AlertTriangle size={15} className="text-destructive" />
-                  크리티컬 패스 (Critical Path)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  아래 공종들은 여유시간(Total Float)이 0일인 공종입니다.
-                  하나라도 지연되면 전체 공기가 늘어납니다.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {cpmResult.criticalPath.map((name, i) => (
-                    <div key={i} className="flex items-center gap-1.5">
-                      {i > 0 && <ChevronRight size={12} className="text-muted-foreground" />}
-                      <Badge variant="destructive" className="text-xs">{name}</Badge>
-                    </div>
+                {/* View toggle */}
+                <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                  {(['day', 'week', 'month'] as GanttViewMode[]).map(v => (
+                    <button
+                      key={v}
+                      onClick={() => setGanttView(v)}
+                      className={cn(
+                        'px-3 py-1 rounded text-xs font-medium transition-colors capitalize',
+                        ganttView === v
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {v === 'day' ? 'Day' : v === 'week' ? 'Week' : 'Month'}
+                    </button>
                   ))}
                 </div>
+              </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>공종명</TableHead>
-                      <TableHead className="text-right w-12 text-xs">단위</TableHead>
-                      <TableHead className="text-right w-20 text-xs">물량</TableHead>
-                      <TableHead className="text-right">기간(일)</TableHead>
-                      <TableHead className="text-right text-xs">ES</TableHead>
-                      <TableHead className="text-right text-xs">EF</TableHead>
-                      <TableHead className="text-right text-xs">TF</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {cpmResult.tasks.filter(t => t.isCritical).map(task => (
-                      <TableRow key={task.taskId} className="bg-destructive/5">
-                        <TableCell>
-                          <div className="font-medium text-destructive text-sm">{task.name}</div>
-                          {task.wbsCode && (
-                            <div className="text-[10px] text-muted-foreground font-mono">{task.wbsCode}</div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right text-xs text-muted-foreground">{task.unit ?? '—'}</TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                          {task.quantity != null ? task.quantity.toLocaleString() : '—'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-medium">{task.duration}</TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.ES}</TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.EF}</TableCell>
-                        <TableCell className="text-right font-mono font-bold text-destructive">0</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      )}
+              {/* Chart */}
+              <div className="flex-1 overflow-hidden p-4">
+                <GanttChart
+                  tasks={cpmResult.tasks}
+                  totalDuration={cpmResult.totalDuration}
+                  startDate={project.startDate}
+                  viewMode={ganttView}
+                />
+              </div>
+            </TabsContent>
+
+            {/* ── SUMMARY TAB ──────────────────────────────── */}
+            <TabsContent value="summary" className="mt-0 overflow-auto">
+              <div className="p-8 space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <Card className="border-primary/30 bg-primary/5">
+                    <CardContent className="pt-6">
+                      <p className="text-xs text-muted-foreground mb-1">총 공사 기간</p>
+                      <p className="text-3xl font-bold text-primary">
+                        {cpmResult.totalDuration}
+                        <span className="text-sm font-normal text-muted-foreground ml-1">일</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {completionDate()
+                          ? `착공 ${project.startDate} → 준공 ${completionDate()}`
+                          : `약 ${Math.round(cpmResult.totalDuration / 30)}개월`}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <p className="text-xs text-muted-foreground mb-1">총 공종 수</p>
+                      <p className="text-3xl font-bold">
+                        {cpmResult.tasks.length}
+                        <span className="text-sm font-normal text-muted-foreground ml-1">개</span>
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <p className="text-xs text-muted-foreground mb-1">크리티컬 패스</p>
+                      <p className="text-3xl font-bold text-destructive">
+                        {cpmResult.tasks.filter(t => t.isCritical).length}
+                        <span className="text-sm font-normal text-muted-foreground ml-1">개 공종</span>
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {byCategory && (
+                  <Card>
+                    <CardHeader><CardTitle className="text-sm">공종별 현황</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {Object.entries(byCategory).map(([cat, tasks]) => {
+                          const critCount = tasks.filter(t => t.isCritical).length
+                          const maxDur    = Math.max(...tasks.map(t => t.EF))
+                          const color     = CATEGORY_COLORS[cat] ?? 'bg-gray-600'
+                          return (
+                            <div key={cat} className="flex items-center gap-3">
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${color}`} />
+                              <span className="text-sm w-24 flex-shrink-0">{cat}</span>
+                              <div className="flex-1 bg-muted rounded-full h-1.5">
+                                <div className={`h-1.5 rounded-full ${color}`}
+                                  style={{ width: `${(maxDur / cpmResult.totalDuration) * 100}%` }} />
+                              </div>
+                              <span className="text-xs text-muted-foreground w-16 text-right">{tasks.length}개</span>
+                              {critCount > 0 && (
+                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">CP {critCount}</Badge>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ── WBS TAB ──────────────────────────────────── */}
+            <TabsContent value="wbs" className="mt-0 overflow-auto">
+              <div className="p-8">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span>WBS 공정 목록 <span className="text-xs font-normal text-muted-foreground">({cpmResult.tasks.length}개 공종)</span></span>
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          onClick={() => setExpanded(new Set(cpmResult.tasks.map(t => t.category)))}
+                          className="text-muted-foreground hover:text-foreground"
+                        >전체 펼치기</button>
+                        <span className="text-muted-foreground">|</span>
+                        <button
+                          onClick={() => setExpanded(new Set())}
+                          className="text-muted-foreground hover:text-foreground"
+                        >전체 접기</button>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[280px]">공종명</TableHead>
+                          <TableHead className="w-12 text-center text-xs">단위</TableHead>
+                          <TableHead className="w-16 text-right text-xs">물량</TableHead>
+                          <TableHead className="w-28 text-xs">생산성/소요기간</TableHead>
+                          <TableHead className="text-right w-16">기간(일)</TableHead>
+                          <TableHead className="text-right w-12 text-xs">ES</TableHead>
+                          <TableHead className="text-right w-12 text-xs">EF</TableHead>
+                          <TableHead className="text-right w-12 text-xs">LS</TableHead>
+                          <TableHead className="text-right w-12 text-xs">LF</TableHead>
+                          <TableHead className="text-right w-12 text-xs">TF</TableHead>
+                          <TableHead className="text-center w-8">CP</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {byCategory && Object.entries(byCategory).map(([cat, tasks]) => {
+                          const isExpanded = expanded.has(cat)
+                          const critCount  = tasks.filter(t => t.isCritical).length
+                          const color      = CATEGORY_COLORS[cat] ?? 'bg-gray-600'
+                          return (
+                            <React.Fragment key={cat}>
+                              <TableRow
+                                className="cursor-pointer hover:bg-muted/50 bg-muted/20"
+                                onClick={() => toggleCat(cat)}
+                              >
+                                <TableCell className="font-medium" colSpan={4}>
+                                  <div className="flex items-center gap-2">
+                                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                    <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
+                                    {cat}
+                                    <span className="text-xs text-muted-foreground font-normal">({tasks.length}개)</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
+                                <TableCell className="text-center">
+                                  {critCount > 0 && <Badge variant="destructive" className="text-[10px] px-1">CP</Badge>}
+                                </TableCell>
+                              </TableRow>
+                              {isExpanded && tasks.map(task => (
+                                <TableRow key={task.taskId} className={task.isCritical ? 'bg-destructive/5' : ''}>
+                                  <TableCell className="pl-10">
+                                    <div className={task.isCritical ? 'text-destructive' : ''}>
+                                      <div className="text-sm font-medium">{task.name}</div>
+                                      {task.wbsCode && (
+                                        <div className="text-[10px] text-muted-foreground font-mono">{task.wbsCode}</div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-center text-xs text-muted-foreground">{task.unit ?? '—'}</TableCell>
+                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                    {task.quantity != null ? task.quantity.toLocaleString() : '—'}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">{fmtProductivity(task)}</TableCell>
+                                  <TableCell className="text-right font-mono text-sm font-medium">{task.duration}</TableCell>
+                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.ES}</TableCell>
+                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.EF}</TableCell>
+                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.LS}</TableCell>
+                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.LF}</TableCell>
+                                  <TableCell className={`text-right font-mono text-sm font-bold ${task.TF === 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                    {task.TF}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {task.isCritical && <span className="text-destructive">★</span>}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </React.Fragment>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* ── CRITICAL PATH TAB ──────────────────────── */}
+            <TabsContent value="critical" className="mt-0 overflow-auto">
+              <div className="p-8">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <AlertTriangle size={15} className="text-destructive" />
+                      크리티컬 패스 (Critical Path)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      여유시간(Total Float)이 0일인 공종. 하나라도 지연 시 전체 공기가 늘어납니다.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {cpmResult.criticalPath.map((name, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          {i > 0 && <ChevronRight size={12} className="text-muted-foreground" />}
+                          <Badge variant="destructive" className="text-xs">{name}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>공종명</TableHead>
+                          <TableHead className="text-right w-12 text-xs">단위</TableHead>
+                          <TableHead className="text-right">기간(일)</TableHead>
+                          <TableHead className="text-right text-xs">ES</TableHead>
+                          <TableHead className="text-right text-xs">EF</TableHead>
+                          <TableHead className="text-right text-xs">TF</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {cpmResult.tasks.filter(t => t.isCritical).map(task => (
+                          <TableRow key={task.taskId} className="bg-destructive/5">
+                            <TableCell>
+                              <div className="font-medium text-destructive text-sm">{task.name}</div>
+                              {task.wbsCode && (
+                                <div className="text-[10px] text-muted-foreground font-mono">{task.wbsCode}</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground">{task.unit ?? '—'}</TableCell>
+                            <TableCell className="text-right font-mono font-medium">{task.duration}</TableCell>
+                            <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.ES}</TableCell>
+                            <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.EF}</TableCell>
+                            <TableCell className="text-right font-mono font-bold text-destructive">0</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+          </Tabs>
+        )}
+      </div>
     </div>
   )
 }

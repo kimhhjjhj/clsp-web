@@ -2,81 +2,135 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FolderOpen, Plus, Building2 } from 'lucide-react'
+import {
+  LayoutDashboard, FolderKanban, Clock, HardHat, Truck,
+  CheckSquare, Archive, Plus, Bell, Settings, ChevronRight,
+  Building2, Search,
+} from 'lucide-react'
 
-const navItems = [
-  { href: '/', label: '대시보드', icon: LayoutDashboard },
-  { href: '/projects/new', label: '새 프로젝트', icon: Plus },
+// ── Sidebar nav items ──────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { href: '/',             label: 'All Projects',      icon: LayoutDashboard },
+  { href: '/schedules',    label: 'Active Schedules',  icon: Clock },
+  { href: '/pre-con',      label: 'Pre-Construction',  icon: HardHat },
+  { href: '/logistics',    label: 'Site Logistics',    icon: Truck },
+  { href: '/closeout',     label: 'Closeout',          icon: CheckSquare },
+  { href: '/archive',      label: 'Archive',           icon: Archive },
+]
+
+// ── Top nav links ──────────────────────────────────────────────────────
+const TOP_NAV = [
+  { href: '/',          label: 'Dashboard' },
+  { href: '/projects',  label: 'Projects'  },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
+  // active detection helpers
+  const isDash    = pathname === '/'
+  const isProject = pathname.startsWith('/projects')
+
   return (
-    <div className="flex h-full">
-      {/* 사이드바 */}
-      <aside className="w-60 flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col">
-        {/* 로고 */}
-        <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-800">
-          <Building2 className="text-blue-400" size={22} />
-          <div>
-            <div className="text-sm font-bold text-white leading-none">QuickPlan</div>
-            <div className="text-[10px] text-gray-500 mt-0.5">공기산정 시스템</div>
+    <div className="flex flex-col h-full">
+
+      {/* ── TOP NAVIGATION BAR ──────────────────────── */}
+      <header className="flex-shrink-0 h-14 border-b border-border/60 bg-background/95 backdrop-blur-sm flex items-center gap-0 px-0 z-30">
+
+        {/* Brand — same width as sidebar */}
+        <div className="w-60 flex-shrink-0 flex items-center gap-3 px-5 h-full border-r border-border/60">
+          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+            <Building2 size={14} className="text-primary-foreground" />
+          </div>
+          <div className="leading-none">
+            <div className="text-sm font-bold tracking-tight">QuickPlan</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-widest mt-0.5">CLSP Management</div>
           </div>
         </div>
 
-        {/* 네비게이션 */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href
+        {/* Nav links */}
+        <nav className="flex items-center h-full px-6 gap-1">
+          {TOP_NAV.map(({ href, label }) => {
+            const active = href === '/' ? isDash : isProject
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                className={`px-4 h-full flex items-center text-sm font-medium border-b-2 transition-colors ${
                   active
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <Icon size={16} />
                 {label}
               </Link>
             )
           })}
-
-          {/* 프로젝트 목록 */}
-          <div className="pt-4">
-            <div className="flex items-center gap-2 px-3 mb-2">
-              <FolderOpen size={13} className="text-gray-600" />
-              <span className="text-[11px] text-gray-600 uppercase tracking-wider font-medium">
-                프로젝트
-              </span>
-            </div>
-            <ProjectList currentPath={pathname} />
-          </div>
         </nav>
 
-        {/* 버전 */}
-        <div className="px-5 py-3 border-t border-gray-800">
-          <span className="text-[11px] text-gray-600">CLSP v1.0 MVP</span>
+        {/* Right side */}
+        <div className="ml-auto flex items-center gap-3 px-5">
+          {/* Search */}
+          <div className="hidden lg:flex items-center gap-2 h-8 px-3 rounded-lg bg-muted/50 border border-border/60 text-sm text-muted-foreground w-52">
+            <Search size={13} />
+            <span className="text-xs">프로젝트 검색...</span>
+          </div>
+          <button className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <Bell size={16} />
+          </button>
+          <button className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <Settings size={16} />
+          </button>
+          {/* Avatar */}
+          <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-semibold text-primary">
+            K
+          </div>
         </div>
-      </aside>
+      </header>
 
-      {/* 메인 콘텐츠 */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
-    </div>
-  )
-}
+      {/* ── BODY ──────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
 
-// 사이드바용 프로젝트 목록 (클라이언트 컴포넌트)
-function ProjectList({ currentPath }: { currentPath: string }) {
-  // 간단한 구현 — 실제 목록은 대시보드 페이지에서 관리
-  return (
-    <div className="text-[12px] text-gray-600 px-3 py-1">
-      대시보드에서 확인하세요
+        {/* ── SIDEBAR ─────────────────────────────────── */}
+        <aside className="w-60 flex-shrink-0 bg-[hsl(var(--background))] border-r border-border/60 flex flex-col">
+
+          <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+            {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    active
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  <Icon size={15} className="flex-shrink-0" />
+                  {label}
+                </Link>
+              )
+            })}
+          </nav>
+
+          {/* New Project button */}
+          <div className="px-3 pb-4 pt-2 border-t border-border/60">
+            <Link
+              href="/projects/new"
+              className="flex items-center justify-center gap-2 w-full h-9 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors no-underline"
+            >
+              <Plus size={15} />
+              New Project
+            </Link>
+          </div>
+        </aside>
+
+        {/* ── MAIN CONTENT ──────────────────────────────── */}
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
