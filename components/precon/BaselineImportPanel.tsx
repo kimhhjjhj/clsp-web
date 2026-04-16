@@ -25,36 +25,70 @@ export default function BaselineImportPanel({ projectId }: Props) {
 
   useEffect(() => { load() }, [projectId])
 
-  function parseCSV(text: string): Omit<BTask, 'id'>[] {
-    const lines = text.split('\n').filter(l => l.trim())
-    if (lines.length < 2) return []
-    const header = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase())
+  function parseCSVLine(line: string): string[] {
+    const result: string[] = []
+    let cur = '', inQuote = false
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]
+      if (ch === '"') {
+        if (inQuote && line[i+1] === '"') { cur += '"'; i++ }
+        else inQuote = !inQuote
+      } else if (ch === ',' && !inQuote) {
+        result.push(cur.trim()); cur = ''
+      } else {
+        cur += ch
+      }
+    }
+    result.push(cur.trim())
+    return result
+  }
 
-    const col = (row: string[], keys: string[]) => {
+  function parseCSV(text: string): Omit<BTask, 'id'>[] {
+    // BOM 제거, 줄바꿈 정규화
+    const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    const lines = clean.split('\n').filter(l => l.trim())
+    if (lines.length < 2) return []
+
+    const header = parseCSVLine(lines[0]).map(h => h.toLowerCase())
+    console.log('[CSV Header]', header)  // 개발 확인용
+
+    const find = (row: string[], ...keys: string[]) => {
       for (const k of keys) {
-        const i = header.findIndex(h => h.includes(k))
-        if (i >= 0) return (row[i] ?? '').trim().replace(/"/g, '')
+        const i = header.findIndex(h => h === k || h.includes(k))
+        if (i >= 0) return (row[i] ?? '').trim()
       }
       return ''
     }
 
-    return lines.slice(1).map(line => {
-      const row = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) ?? line.split(',')
-      const name = col(row, ['작업이름', '이름', 'name', 'task name'])
-      if (!name) return null
-      const durStr = col(row, ['기간', 'duration'])
-      const durNum = parseFloat(durStr.replace(/[^0-9.]/g, '')) || 1
-      return {
-        mspId:        col(row, ['id']) || null,
-        wbsCode:      col(row, ['wbs']) || null,
-        name,
-        duration:     durNum,
-        start:        col(row, ['시작', 'start']) || null,
-        finish:       col(row, ['완료', 'finish']) || null,
-        predecessors: col(row, ['선행', 'predecessors', 'pred']) || null,
-        level:        0,
-      }
-    }).filter(Boolean) as Omit<BTask, 'id'>[]
+    const results: Omit<BTask, 'id'>[] = []
+    for (let li = 1; li < lines.length; li++) {
+      const row = parseCSVLine(lines[li])
+      // 이름 컬럼 — MS Project 한글/영문 모두 대응
+      const name = find(row,
+        '작업 이름', '작업이름', '이름', 'task name', 'name', '태스크 이름', '태스크이름',
+        'task_name', 'taskname', 'task'
+      )
+      if (!name) continue
+
+      const durRaw = find(row, '기간', 'duration', '소요기간', 'dur')
+      // "5 days", "5d", "5 일", "5" 등 처리
+      const durNum = parseFloat(durRaw.replace(/[^0-9.]/g, '')) || 1
+
+      const mspId  = find(row, 'id', '번호', 'no', '순번') || String(li)
+      const wbs    = find(row, 'wbs', 'wbs 코드', 'wbs코드')
+      const start  = find(row, '시작', '시작일', 'start', 'start date')
+      const finish = find(row, '완료', '완료일', 'finish', 'end', 'end date', 'finish date')
+      const preds  = find(row, '선행 작업', '선행작업', '선행', 'predecessors', 'pred', 'depends on')
+
+      // 개요 작업(들여쓰기) 감지
+      const nameRaw = lines[li].includes('"') ? name : name
+      const level   = nameRaw.match(/^(\s+)/) ? Math.floor(nameRaw.match(/^(\s+)/)![1].length / 2) : 0
+
+      results.push({ mspId, wbsCode: wbs || null, name: name.trim(), duration: durNum,
+        start: start || null, finish: finish || null, predecessors: preds || null, level })
+    }
+    console.log('[CSV Parsed]', results.length, '건')
+    return results
   }
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -63,10 +97,26 @@ export default function BaselineImportPanel({ projectId }: Props) {
     const reader = new FileReader()
     reader.onload = ev => {
       const text = ev.target?.result as string
-      setPreview(parseCSV(text))
-      setSaved(false)
+      // EUC-KR 깨진 경우 latin1로 재시도
+      const parsed = parseCSV(text)
+      if (parsed.length === 0) {
+        // 인코딩 문제일 수 있어서 latin1로 재시도
+        const r2 = new FileReader()
+        r2.onload = ev2 => {
+          const t2 = ev2.target?.result as string
+          const p2 = parseCSV(t2)
+          if (p2.length > 0) { setPreview(p2); setSaved(false) }
+          else alert('파싱 실패: CSV 헤더를 인식하지 못했습니다.\n브라우저 콘솔(F12)에서 [CSV Header] 로그를 확인 후 알려주세요.')
+        }
+        r2.readAsText(file, 'latin1')
+      } else {
+        setPreview(parsed)
+        setSaved(false)
+      }
     }
     reader.readAsText(file, 'utf-8')
+    // 같은 파일 재업로드 가능하도록 초기화
+    e.target.value = ''
   }
 
   async function saveBaseline() {
