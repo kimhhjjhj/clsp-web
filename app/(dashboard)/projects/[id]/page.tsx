@@ -552,7 +552,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             {/* ── 4단계: 분석 대시보드 ─────────────────────── */}
             <TabsContent value="analytics" className="mt-0 overflow-auto">
               <div className="p-6">
-                <ProgressDashboard projectId={id} cpmResult={cpmResult} />
+                <ProgressDashboard projectId={id} projectName={project?.name} cpmResult={cpmResult} />
               </div>
             </TabsContent>
 

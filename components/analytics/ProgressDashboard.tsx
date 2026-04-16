@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { TrendingUp, BarChart3, Users } from 'lucide-react'
+import { TrendingUp, BarChart3, Users, FileDown } from 'lucide-react'
 import type { CPMSummary } from '@/lib/types'
+import { generateWeeklyReport } from '@/lib/engine/report-pdf'
 
 interface WeeklyRecord {
   year: number; weekNo: number; taskName: string; category: string | null
@@ -11,11 +12,15 @@ interface WeeklyRecord {
 
 interface Props {
   projectId: string
+  projectName?: string
   cpmResult: CPMSummary | null
 }
 
-export default function ProgressDashboard({ projectId, cpmResult }: Props) {
+export default function ProgressDashboard({ projectId, projectName, cpmResult }: Props) {
   const [history, setHistory] = useState<WeeklyRecord[]>([])
+  const [issues, setIssues]   = useState('')
+  const [nextPlan, setNextPlan] = useState('')
+  const [reportWeek, setReportWeek] = useState<{ year: number; weekNo: number } | null>(null)
   const sCurveRef  = useRef<HTMLCanvasElement>(null)
   const deviationRef = useRef<HTMLCanvasElement>(null)
 
@@ -123,6 +128,20 @@ export default function ProgressDashboard({ projectId, cpmResult }: Props) {
 
   useEffect(() => { drawSCurve(); drawDeviation() }, [drawSCurve, drawDeviation])
 
+  function downloadReport(year: number, weekNo: number) {
+    const rows = history.filter(h => h.year === year && h.weekNo === weekNo)
+      .map(h => ({ taskName: h.taskName, category: h.category ?? '', plannedRate: h.plannedRate, actualRate: h.actualRate }))
+    if (rows.length === 0) { alert('해당 주차 데이터가 없습니다.'); return }
+    const doc = generateWeeklyReport({
+      project: { name: projectName ?? '프로젝트', },
+      year, weekNo, rows,
+      allHistory: history.map(h => ({ ...h, category: h.category ?? '' })),
+      issues: issues || undefined,
+      nextPlan: nextPlan || undefined,
+    })
+    doc.save(`주간보고서_${year}년_${weekNo}주차.pdf`)
+  }
+
   // 공종별 실적 생산성 비교
   const catStats = new Map<string, { planned: number; actual: number; count: number }>()
   for (const item of history) {
@@ -149,8 +168,50 @@ export default function ProgressDashboard({ projectId, cpmResult }: Props) {
   const latestDeviation = deviation[deviation.length - 1] ?? 0
   const totalWeeks = weeks.length
 
+  // 주차 목록 (고유)
+  const weekList = Array.from(new Map(history.map(h => [`${h.year}-${h.weekNo}`, { year: h.year, weekNo: h.weekNo }])).values())
+    .sort((a,b) => a.year !== b.year ? a.year - b.year : a.weekNo - b.weekNo)
+  const latestWeek = weekList[weekList.length - 1]
+
   return (
     <div className="space-y-5">
+      {/* 주간보고서 생성 */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+          <FileDown size={15} className="text-[#2563eb]" /> 주간보고서 자동생성 (PDF)
+        </h3>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="text-xs font-semibold text-gray-500">주요 이슈</label>
+            <textarea rows={2} value={issues} onChange={e => setIssues(e.target.value)}
+              className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+              placeholder="이번 주 주요 이슈 및 특이사항" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500">차주 계획</label>
+            <textarea rows={2} value={nextPlan} onChange={e => setNextPlan(e.target.value)}
+              className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+              placeholder="다음 주 주요 작업 계획" />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {weekList.map(w => (
+            <button key={`${w.year}-${w.weekNo}`}
+              onClick={() => downloadReport(w.year, w.weekNo)}
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:border-blue-300">
+              <FileDown size={12} className="text-[#2563eb]" />
+              {w.year}년 {w.weekNo}주차
+            </button>
+          ))}
+          {latestWeek && (
+            <button onClick={() => downloadReport(latestWeek.year, latestWeek.weekNo)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#2563eb] text-white rounded-lg text-xs font-semibold hover:bg-[#1d4ed8]">
+              <FileDown size={13} /> 최신 주차 다운로드
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* KPI */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white border border-gray-200 rounded-xl p-4">
