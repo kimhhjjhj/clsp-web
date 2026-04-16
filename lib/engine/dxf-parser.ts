@@ -266,12 +266,15 @@ function findLineLoops(segsM: DxfSegment[]): DxfLoop[] {
       // 닫힘 확인
       if (chain.length >= 3 && d2(nx, ny, fx, fy) < TOL2) {
         const area = shoelaceArea(chain)
-        if (area >= 1) {
+        const perim = polyPerim(chain, true)
+        // 얇은 띠 형태 제거 (벽 두께 루프): compactness = 4π·A/P² < 0.04
+        const compactness = (4 * Math.PI * area) / (perim * perim)
+        if (area >= 1 && compactness >= 0.04) {
           loops.push({
             layer: segs[si].layer,
             pts: [...chain],
             area,
-            perim: polyPerim(chain, true),
+            perim,
           })
         }
         break
@@ -293,6 +296,7 @@ export function parseDxf(rawText: string): DxfResult {
   const entities = parseEntities(text.split('\n'))
 
   const allSegs: DxfSegment[] = []
+  const lineSegs: DxfSegment[] = []   // LINE 엔티티만 (greedy chain 전용)
   const textEntities: RawEntity[] = []
   let maxCoord = 0
 
@@ -310,7 +314,9 @@ export function parseDxf(rawText: string): DxfResult {
     }
 
     for (let k = 0; k < pts.length - 1; k++) {
-      allSegs.push({ x1: pts[k][0], y1: pts[k][1], x2: pts[k + 1][0], y2: pts[k + 1][1], layer })
+      const seg = { x1: pts[k][0], y1: pts[k][1], x2: pts[k + 1][0], y2: pts[k + 1][1], layer }
+      allSegs.push(seg)
+      if (type === 'LINE') lineSegs.push(seg)
     }
     if (isClosed(pts, flags) && pts.length >= 2) {
       allSegs.push({ x1: pts[pts.length - 1][0], y1: pts[pts.length - 1][1], x2: pts[0][0], y2: pts[0][1], layer })
@@ -347,8 +353,9 @@ export function parseDxf(rawText: string): DxfResult {
   // ── 세그먼트 → m 변환 (전체 반환, 필터링 없음) ──
   const segsM = allSegs.map(s => ({ x1: s.x1 * uf, y1: s.y1 * uf, x2: s.x2 * uf, y2: s.y2 * uf, layer: s.layer }))
 
-  // ── 독립 선분들로 만들어진 닫힌 루프 추가 ──
-  const lineLoops = findLineLoops(segsM)
+  // ── 독립 LINE 선분들로 만들어진 닫힌 루프 추가 ──
+  const lineSegsM = lineSegs.map(s => ({ x1: s.x1 * uf, y1: s.y1 * uf, x2: s.x2 * uf, y2: s.y2 * uf, layer: s.layer }))
+  const lineLoops = findLineLoops(lineSegsM)
   for (const ll of lineLoops) {
     // 기존 폴리라인 루프와 중복 체크 (centroid 기반)
     const cx = ll.pts.reduce((s, [x]) => s + x, 0) / ll.pts.length
