@@ -141,11 +141,11 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       H - PAD - (wy - v.oy) * sc + py,
     ]
 
-    // ── 세그먼트 (얇고 흐리게) ──
-    ctx.lineWidth = 0.5
+    // ── 세그먼트 (레이어 색상, 선명하게) ──
+    ctx.lineWidth = 1.0
     for (const seg of segments) {
       const hue = Math.abs(hashStr(seg.layer)) % 360
-      ctx.strokeStyle = `hsla(${hue}, 40%, 55%, 0.25)`
+      ctx.strokeStyle = `hsla(${hue}, 70%, 70%, 0.75)`
       const [sx1, sy1] = toScr(seg.x1, seg.y1)
       const [sx2, sy2] = toScr(seg.x2, seg.y2)
       ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2); ctx.stroke()
@@ -220,9 +220,14 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       ctx.fillText(`건물 ${l.area.toFixed(1)}m²`, 178, ly + 4)
     }
 
-    // ── 통계 ──
+    // ── 통계 + 상위 면적 목록 ──
     ctx.font = '9px sans-serif'; ctx.fillStyle = '#475569'; ctx.textAlign = 'left'
     ctx.fillText(`${loops.length} polygons  ×${zoom.toFixed(1)}`, 8, 14)
+    // 상위 5개 면적 표시 (디버그용)
+    ctx.fillStyle = '#334155'
+    loops.slice(0, 5).forEach((l, i) => {
+      ctx.fillText(`[${i}] ${l.layer}  ${l.area.toFixed(1)}m²`, 8, 26 + i * 11)
+    })
   }, [segments, loops, getView, zoom, hoveredIdx, selectedSiteIdx, selectedBldgIdx, selectMode])
 
   const drawRef = useRef<() => void>(() => {})
