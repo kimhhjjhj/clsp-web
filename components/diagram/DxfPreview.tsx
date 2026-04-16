@@ -269,23 +269,18 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       }
 
       // 미완성 선분 (마지막 확정점 → cursor)
+      let runningTotal = totalDist
       if (!done && cursor && pts.length > 0) {
         const [ax, ay] = toScr(pts[pts.length - 1][0], pts[pts.length - 1][1])
         const [bx, by] = toScr(cursor[0], cursor[1])
         ctx.strokeStyle = 'rgba(0,210,255,0.4)'
         ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke()
         const d = Math.hypot(cursor[0] - pts[pts.length - 1][0], cursor[1] - pts[pts.length - 1][1])
-        const running = totalDist + d
+        runningTotal = totalDist + d
         const mx = (ax + bx) / 2, my = (ay + by) / 2
         ctx.font = '10px sans-serif'; const lbl = formatDist(d); const tw = ctx.measureText(lbl).width
         ctx.fillStyle = 'rgba(0,12,28,0.7)'; ctx.fillRect(mx - tw / 2 - 4, my - 14, tw + 8, 15)
         ctx.fillStyle = 'rgba(0,210,255,0.55)'; ctx.textAlign = 'center'; ctx.fillText(lbl, mx, my - 3); ctx.textAlign = 'left'
-        // 합계 미리보기 (cursor 옆)
-        const [cx2, cy2] = toScr(cursor[0], cursor[1])
-        const sumLbl = `합계 ${formatDist(running)}`; const stw = ctx.measureText(sumLbl).width
-        ctx.font = 'bold 10px sans-serif'
-        ctx.fillStyle = 'rgba(0,12,28,0.88)'; ctx.fillRect(cx2 + 10, cy2 - 16, stw + 10, 17)
-        ctx.fillStyle = 'rgba(0,210,255,0.85)'; ctx.fillText(sumLbl, cx2 + 15, cy2 - 4)
       }
       ctx.setLineDash([])
 
@@ -300,7 +295,6 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       if (!done && cursor) {
         const [sx, sy] = toScr(cursor[0], cursor[1])
         if (snapped) {
-          // 노란 스냅 링
           ctx.beginPath(); ctx.arc(sx, sy, 9, 0, Math.PI * 2)
           ctx.strokeStyle = 'rgba(255,215,0,0.95)'; ctx.lineWidth = 2; ctx.stroke()
           ctx.beginPath(); ctx.arc(sx, sy, 2.5, 0, Math.PI * 2)
@@ -311,15 +305,32 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
         }
       }
 
-      // 완료 시 총 거리 배너
-      if (done && totalDist > 0) {
-        ctx.font = 'bold 12px sans-serif'
-        const lbl = `총 거리: ${formatDist(totalDist)}  (${pts.length - 1}구간)`
-        const tw = ctx.measureText(lbl).width
-        ctx.fillStyle = 'rgba(0,10,25,0.93)'; ctx.fillRect(W / 2 - tw / 2 - 12, H - 52, tw + 24, 28)
-        ctx.fillStyle = 'rgba(0,210,255,1)'; ctx.textAlign = 'center'; ctx.fillText(lbl, W / 2, H - 33); ctx.textAlign = 'left'
-        ctx.font = '9px sans-serif'; ctx.fillStyle = 'rgba(0,180,220,0.6)'
-        ctx.fillText('클릭하면 새 측정 시작', W / 2 - ctx.measureText('클릭하면 새 측정 시작').width / 2 + 1, H - 20)
+      // ── 합계 패널 (측정 중 + 완료 모두, 우측 하단 고정) ──
+      const showTotal = done ? totalDist : runningTotal
+      if ((pts.length > 1 || (!done && cursor && pts.length > 0)) && showTotal > 0) {
+        const panelLbl = done
+          ? `합계  ${formatDist(totalDist)}  (${pts.length - 1}구간)`
+          : `합계  ${formatDist(runningTotal)}`
+        ctx.font = 'bold 11px sans-serif'
+        const tw = ctx.measureText(panelLbl).width
+        const px2 = W - tw - 28, py2 = H - 46
+        // 배경
+        ctx.fillStyle = done ? 'rgba(0,40,60,0.95)' : 'rgba(0,12,28,0.88)'
+        ctx.beginPath()
+        const r2 = 6
+        ctx.roundRect(px2 - 8, py2 - 2, tw + 24, 28, r2)
+        ctx.fill()
+        // 테두리
+        ctx.strokeStyle = done ? 'rgba(0,210,255,0.7)' : 'rgba(0,210,255,0.3)'
+        ctx.lineWidth = done ? 1.5 : 1; ctx.stroke()
+        // 텍스트
+        ctx.fillStyle = done ? 'rgba(0,210,255,1)' : 'rgba(0,210,255,0.8)'
+        ctx.textAlign = 'left'; ctx.fillText(panelLbl, px2, py2 + 16)
+        if (done) {
+          ctx.font = '9px sans-serif'; ctx.fillStyle = 'rgba(0,180,220,0.55)'
+          ctx.fillText('클릭 → 새 측정', px2, py2 + 28)
+        }
+        ctx.textAlign = 'left'
       }
     }
 
