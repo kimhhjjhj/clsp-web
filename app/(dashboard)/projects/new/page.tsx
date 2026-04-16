@@ -249,8 +249,8 @@ export default function NewProjectPage() {
       if (!res.ok) {
         setBhError(data.error ?? '시추공 검색 실패')
       } else {
-        setBoreholes(data.boreholes ?? [])
-        if (data.boreholes?.length === 0) setBhError('500m 반경 내 시추공 데이터가 없습니다.')
+        setBoreholes(data ?? [])
+        if (!data?.length) setBhError('500m 반경 내 시추공 데이터가 없습니다.')
       }
     } catch {
       setBhError('네트워크 오류')
@@ -728,7 +728,7 @@ export default function NewProjectPage() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="ground" className="text-xs font-semibold text-gray-500">지상 층수 <span className="text-red-500">*</span></Label>
-                      <Input id="ground" type="number" min={1} placeholder="25" value={form.ground} onChange={e => set('ground', e.target.value)} onFocus={e => e.target.select()}
+                      <Input id="ground" type="number" min={1} value={form.ground} onChange={e => set('ground', e.target.value)} onFocus={e => e.target.select()}
                         className="h-11 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] text-sm font-semibold text-center transition-colors" />
                     </div>
                     <div className="space-y-2">
