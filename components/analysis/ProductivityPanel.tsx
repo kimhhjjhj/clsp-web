@@ -33,6 +33,7 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ProductivityResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function setMult(taskId: string, value: number) {
     setMultipliers(prev => {
@@ -49,12 +50,13 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
     setError(null)
   }
 
-  async function run() {
+  async function run(mults?: Map<string, number>) {
     if (!cpmTasks) return
     setLoading(true)
     setError(null)
     try {
-      const adjustments = Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier }))
+      const target = mults ?? multipliers
+      const adjustments = Array.from(target.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier }))
       const res = await fetch(`/api/projects/${projectId}/productivity`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,6 +69,14 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
       setError(e?.message ?? '네트워크 오류')
     } finally { setLoading(false) }
   }
+
+  // 슬라이더 변경 시 300ms 디바운스 후 자동 계산
+  useEffect(() => {
+    if (!cpmTasks) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => { run(multipliers) }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [multipliers]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!cpmTasks || cpmTasks.length === 0) {
     return (
@@ -119,10 +129,10 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
               className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-200">
               <RotateCcw size={11} /> 초기화
             </button>
-            <button onClick={run} disabled={loading}
+            <button onClick={() => run()} disabled={loading}
               className="flex items-center gap-1.5 px-4 py-1.5 bg-[#2563eb] text-white rounded-lg text-xs font-semibold hover:bg-[#1d4ed8] disabled:opacity-50">
               {loading ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
-              적용 & 재계산
+              {loading ? '계산 중...' : '재계산'}
             </button>
           </div>
         </div>
