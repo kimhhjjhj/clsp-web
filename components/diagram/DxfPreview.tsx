@@ -93,6 +93,17 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     return [(sx - PAD - px) / sc + v.ox, (H - PAD - sy + py) / sc + v.oy]
   }, [getView, zoom])
 
+  // 파일 로드 시 자동 맞춤
+  useEffect(() => {
+    setZoom(1)
+    panRef.current = { x: 0, y: 0 }
+    setSelectedSiteIdx(null)
+    setSelectedBldgIdx(null)
+    setHoveredIdx(null)
+    setSelectMode(null)
+    forceRender(n => n + 1)
+  }, [bbox])
+
   // 선에 가장 가까운 폴리곤 우선, fallback은 가장 작은 포함 폴리곤
   const hitTest = useCallback((sx: number, sy: number): number => {
     const v = getView()
