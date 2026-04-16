@@ -1,23 +1,21 @@
 'use client'
 
-import React, { useRef, useCallback, useState } from 'react'
+import React, { useRef, useCallback, useState, useEffect } from 'react'
 import type { CPMResult } from '@/lib/types'
 
-// ── Types ──────────────────────────────────────────────────────────────
 export type GanttViewMode = 'day' | 'week' | 'month'
 
 interface GanttChartProps {
   tasks: CPMResult[]
   totalDuration: number
-  startDate?: string          // YYYY-MM-DD, optional
+  startDate?: string
   viewMode: GanttViewMode
 }
 
-// ── Constants ──────────────────────────────────────────────────────────
 const PX_PER_DAY: Record<GanttViewMode, number> = { day: 28, week: 8, month: 3 }
-const ROW_H = 36   // px — task row height
-const CAT_H = 40   // px — category header row height
-const HDR_H = 52   // px — timeline header height
+const ROW_H = 40
+const CAT_H = 44
+const HDR_H = 44
 
 const CATEGORY_COLORS: Record<string, string> = {
   '공사준비': '#64748b',
@@ -30,12 +28,20 @@ const CATEGORY_COLORS: Record<string, string> = {
   '부대공사': '#ef4444',
 }
 
-// 좌측 패널 컬럼 구성
-// WBS(56) | 공종명(1fr) | 기간(52) | 시작일(78) | 완료일(78) | 선행(72) | 후행(72)
-const LEFT_W = 620
-const COL_TEMPLATE = '56px 1fr 52px 78px 78px 72px 72px'
+// ── Column definitions ────────────────────────────────────────────────
+type ColKey = 'wbs' | 'name' | 'duration' | 'start' | 'end' | 'pred' | 'succ'
+const COL_DEFAULTS: Record<ColKey, number> = {
+  wbs: 72, name: 200, duration: 58, start: 82, end: 82, pred: 110, succ: 110,
+}
+const COL_MIN: Record<ColKey, number> = {
+  wbs: 40, name: 100, duration: 44, start: 60, end: 60, pred: 60, succ: 60,
+}
+const COL_LABELS: Record<ColKey, string> = {
+  wbs: 'WBS', name: '공종명', duration: '기간', start: '시작일', end: '완료일', pred: '선행', succ: '후행',
+}
+const COL_KEYS: ColKey[] = ['wbs', 'name', 'duration', 'start', 'end', 'pred', 'succ']
 
-// ── Helpers ────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────
 function groupBy<T>(arr: T[], key: (x: T) => string): [string, T[]][] {
   const map = new Map<string, T[]>()
   for (const item of arr) {
@@ -52,11 +58,11 @@ function addDays(dateStr: string, days: number): Date {
   return d
 }
 
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
+function fmtShort(d: Date): string {
+  return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
-function fmtDateFull(d: Date): string {
+function fmtFull(d: Date): string {
   return d.toLocaleDateString('ko-KR', { year: '2-digit', month: 'short', day: 'numeric' })
 }
 
@@ -64,18 +70,63 @@ function fmtMonth(d: Date): string {
   return d.toLocaleDateString('ko-KR', { year: '2-digit', month: 'short' })
 }
 
-// ── Main Component ─────────────────────────────────────────────────────
+// ── ResizeHandle ──────────────────────────────────────────────────────
+function ResizeHandle({ onResize }: { onResize: (dx: number) => void }) {
+  const startX = useRef(0)
+  const dragging = useRef(false)
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    dragging.current = true
+    startX.current = e.clientX
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return
+      onResize(ev.clientX - startX.current)
+      startX.current = ev.clientX
+    }
+    const onUp = () => {
+      dragging.current = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      className="absolute right-0 top-0 bottom-0 w-3 flex items-center justify-center cursor-col-resize group z-10 select-none"
+    >
+      <div className="w-px h-5 bg-border group-hover:bg-blue-400 group-hover:w-0.5 transition-all" />
+    </div>
+  )
+}
+
+// ── Main Component ────────────────────────────────────────────────────
 export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttChartProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [colWidths, setColWidths] = useState<Record<ColKey, number>>({ ...COL_DEFAULTS })
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null)
+
   const leftRef  = useRef<HTMLDivElement>(null)
   const rightRef = useRef<HTMLDivElement>(null)
   const syncing  = useRef(false)
 
   const pxPerDay   = PX_PER_DAY[viewMode]
   const totalWidth = Math.max(totalDuration * pxPerDay + 120, 800)
+  const leftTotalW = COL_KEYS.reduce((s, k) => s + colWidths[k], 0)
 
-  // ── Sync vertical scroll ──
-  const onLeftScroll  = useCallback(() => {
+  function resizeCol(col: ColKey, dx: number) {
+    setColWidths(prev => ({
+      ...prev,
+      [col]: Math.max(COL_MIN[col], prev[col] + dx),
+    }))
+  }
+
+  // ── Sync scroll ──
+  const onLeftScroll = useCallback(() => {
     if (syncing.current) return
     syncing.current = true
     if (rightRef.current && leftRef.current)
@@ -91,7 +142,7 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
     requestAnimationFrame(() => { syncing.current = false })
   }, [])
 
-  // ── Row list ──
+  // ── Rows ──
   type CatRow  = { kind: 'cat';  cat: string; tasks: CPMResult[] }
   type TaskRow = { kind: 'task'; task: CPMResult }
   type Row = CatRow | TaskRow
@@ -110,41 +161,41 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
   // ── Today line ──
   let todayX: number | null = null
   if (startDate) {
-    const diffDays = Math.floor((Date.now() - new Date(startDate).getTime()) / 86400000)
-    if (diffDays >= 0 && diffDays <= totalDuration) todayX = diffDays * pxPerDay
+    const diff = Math.floor((Date.now() - new Date(startDate).getTime()) / 86400000)
+    if (diff >= 0 && diff <= totalDuration) todayX = diff * pxPerDay
   }
 
-  // ── Timeline header cells ──
-  type HeaderCell = { label: string; subLabel?: string; left: number; width: number }
+  // ── Header cells ──
+  type HeaderCell = { label: string; left: number; width: number }
 
   function buildHeaderCells(): HeaderCell[] {
     const cells: HeaderCell[] = []
     if (viewMode === 'day') {
       let d = 0
       while (d <= totalDuration) {
-        const label = startDate
-          ? fmtDateFull(addDays(startDate, d))
-          : `Day ${d + 1}`
-        cells.push({ label, left: d * pxPerDay, width: 7 * pxPerDay })
+        cells.push({
+          label: startDate ? fmtFull(addDays(startDate, d)) : `Day ${d + 1}`,
+          left: d * pxPerDay, width: 7 * pxPerDay,
+        })
         d += 7
       }
     } else if (viewMode === 'week') {
       const totalWeeks = Math.ceil(totalDuration / 7)
       for (let w = 0; w < totalWeeks; w++) {
-        const dayOffset = w * 7
-        const label = startDate
-          ? fmtMonth(addDays(startDate, dayOffset))
-          : `W${w + 1}`
-        cells.push({ label, left: dayOffset * pxPerDay, width: 7 * pxPerDay })
+        const off = w * 7
+        cells.push({
+          label: startDate ? fmtMonth(addDays(startDate, off)) : `W${w + 1}`,
+          left: off * pxPerDay, width: 7 * pxPerDay,
+        })
       }
     } else {
       const totalMonths = Math.ceil(totalDuration / 30)
       for (let m = 0; m < totalMonths; m++) {
-        const dayOffset = m * 30
-        const label = startDate
-          ? fmtMonth(addDays(startDate, dayOffset))
-          : `M${m + 1}`
-        cells.push({ label, left: dayOffset * pxPerDay, width: 30 * pxPerDay })
+        const off = m * 30
+        cells.push({
+          label: startDate ? fmtMonth(addDays(startDate, off)) : `M${m + 1}`,
+          left: off * pxPerDay, width: 30 * pxPerDay,
+        })
       }
     }
     return cells
@@ -152,43 +203,53 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
 
   const headerCells = buildHeaderCells()
 
-  // ── Tooltip label ──
-  function barLabel(task: CPMResult): string {
-    const dur = Math.round(task.duration)
-    if (startDate) {
-      const s = fmtDateFull(addDays(startDate, task.ES))
-      const e = fmtDateFull(addDays(startDate, task.EF))
-      return `${task.name}\n${dur}일  (${s} → ${e})\nTF: ${task.TF}일`
-    }
-    return `${task.name}\n${dur}일  (D${task.ES}→D${task.EF})\nTF: ${task.TF}일`
-  }
-
-  // ── Row top-offset lookup ──
+  // ── Row tops ──
   const rowTops: number[] = []
   let acc = 0
-  for (const r of rows) {
-    rowTops.push(acc)
-    acc += r.kind === 'cat' ? CAT_H : ROW_H
+  for (const r of rows) { rowTops.push(acc); acc += r.kind === 'cat' ? CAT_H : ROW_H }
+
+  // ── Cell render helper ──
+  function Cell({ col, children, align = 'left', muted = false, mono = false, critical = false }:
+    { col: ColKey; children: React.ReactNode; align?: 'left'|'right'|'center'; muted?: boolean; mono?: boolean; critical?: boolean }) {
+    return (
+      <div
+        className={[
+          'flex items-center overflow-hidden px-3',
+          align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : '',
+          muted ? 'text-muted-foreground' : '',
+          mono ? 'font-mono' : '',
+          critical ? 'text-orange-500' : '',
+        ].filter(Boolean).join(' ')}
+        style={{ width: colWidths[col], flexShrink: 0 }}
+      >
+        {children}
+      </div>
+    )
   }
 
   return (
-    <div className="flex h-full border border-border rounded-lg overflow-hidden bg-background">
+    <div className="flex h-full border border-border rounded-xl overflow-hidden bg-background shadow-sm">
 
-      {/* ── LEFT PANEL ─────────────────────────────── */}
-      <div className="flex flex-col flex-shrink-0 border-r border-border" style={{ width: LEFT_W }}>
+      {/* ── LEFT PANEL ───────────────────────────── */}
+      <div className="flex flex-col flex-shrink-0 border-r border-border" style={{ width: leftTotalW }}>
 
         {/* Header */}
         <div
-          className="flex-shrink-0 grid border-b border-border bg-muted/50"
-          style={{ height: HDR_H, gridTemplateColumns: COL_TEMPLATE }}
+          className="flex-shrink-0 flex border-b border-border bg-muted/40"
+          style={{ height: HDR_H }}
         >
-          <div className="flex items-end pb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">WBS</div>
-          <div className="flex items-end pb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">공종명</div>
-          <div className="flex items-end pb-2 px-2 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">기간</div>
-          <div className="flex items-end pb-2 px-2 text-[10px] font-semibold text-muted-foreground">시작일</div>
-          <div className="flex items-end pb-2 px-2 text-[10px] font-semibold text-muted-foreground">완료일</div>
-          <div className="flex items-end pb-2 px-2 text-[10px] font-semibold text-muted-foreground">선행</div>
-          <div className="flex items-end pb-2 px-2 text-[10px] font-semibold text-muted-foreground">후행</div>
+          {COL_KEYS.map(col => (
+            <div
+              key={col}
+              className="relative flex items-center px-3 select-none"
+              style={{ width: colWidths[col], flexShrink: 0 }}
+            >
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide truncate">
+                {COL_LABELS[col]}
+              </span>
+              <ResizeHandle onResize={dx => resizeCol(col, dx)} />
+            </div>
+          ))}
         </div>
 
         {/* Rows */}
@@ -201,107 +262,113 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
           {rows.map((row, i) => {
             if (row.kind === 'cat') {
               const color = CATEGORY_COLORS[row.cat] ?? '#6b7280'
-              const crit  = row.tasks.filter(t => t.isCritical).length
               const isCol = collapsed.has(row.cat)
+              const crit  = row.tasks.filter(t => t.isCritical).length
               return (
                 <div
                   key={`cl-${row.cat}`}
-                  className="flex items-center gap-2 px-3 border-b border-border cursor-pointer select-none hover:bg-muted/40 transition-colors"
-                  style={{ height: CAT_H }}
+                  className="flex items-center border-b border-border cursor-pointer select-none hover:bg-accent/60 transition-colors"
+                  style={{ height: CAT_H, minWidth: leftTotalW }}
                   onClick={() => setCollapsed(prev => {
-                    const next = new Set(prev)
-                    next.has(row.cat) ? next.delete(row.cat) : next.add(row.cat)
-                    return next
+                    const next = new Set(prev); next.has(row.cat) ? next.delete(row.cat) : next.add(row.cat); return next
                   })}
                 >
-                  <span className="text-[10px] text-muted-foreground w-3">{isCol ? '▶' : '▼'}</span>
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
-                  <span className="text-xs font-semibold flex-1 truncate">{row.cat}</span>
-                  <span className="text-[10px] text-muted-foreground">({row.tasks.length})</span>
-                  {crit > 0 && (
-                    <span className="text-[10px] font-medium text-clsp-orange ml-1">CP {crit}</span>
-                  )}
+                  <div className="flex items-center gap-2 px-3 flex-1 min-w-0">
+                    <span className="text-[10px] text-muted-foreground/60">{isCol ? '▶' : '▼'}</span>
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                    <span className="text-[12px] font-semibold text-foreground truncate">{row.cat}</span>
+                    <span className="text-[11px] text-muted-foreground ml-1">({row.tasks.length})</span>
+                    {crit > 0 && <span className="text-[11px] font-semibold text-orange-500 ml-1">● CP {crit}</span>}
+                  </div>
                 </div>
               )
             }
 
-            // task row
-            const task = row.task
-            const isCrit = task.isCritical
-            const dur = Math.round(task.duration)
-            const startStr = startDate ? fmtDate(addDays(startDate, task.ES)) : `D${task.ES}`
-            const endStr   = startDate ? fmtDate(addDays(startDate, task.EF)) : `D${task.EF}`
-            const predStr  = task.predecessors?.join(', ') ?? ''
-            const succStr  = task.successors?.join(', ') ?? ''
+            const task     = row.task
+            const isCrit   = task.isCritical
+            const dur      = Math.round(task.duration)
+            const startStr = startDate ? fmtShort(addDays(startDate, task.ES)) : `D${task.ES}`
+            const endStr   = startDate ? fmtShort(addDays(startDate, task.EF)) : `D${task.EF}`
+            const predStr  = task.predecessors?.join(', ') || '-'
+            const succStr  = task.successors?.join(', ') || '-'
+            const isHover  = hoveredRow === task.taskId
 
             return (
               <div
                 key={`tl-${task.taskId}`}
-                className="grid border-b border-border/60"
+                className="flex border-b border-border/50 transition-colors cursor-default"
                 style={{
                   height: ROW_H,
-                  gridTemplateColumns: COL_TEMPLATE,
-                  background: isCrit ? 'rgba(251,146,60,0.06)' : undefined,
+                  minWidth: leftTotalW,
+                  background: isHover
+                    ? isCrit ? 'rgba(251,146,60,0.12)' : 'hsl(var(--accent)/0.6)'
+                    : isCrit ? 'rgba(251,146,60,0.05)' : undefined,
                 }}
+                onMouseEnter={() => setHoveredRow(task.taskId)}
+                onMouseLeave={() => setHoveredRow(null)}
               >
-                <div className="flex items-center px-3 font-mono text-[9px] text-muted-foreground/50 truncate">
-                  {task.wbsCode ?? ''}
-                </div>
-                <div className={`flex items-center px-2 pl-5 text-[11px] truncate ${isCrit ? 'text-clsp-orange' : 'text-foreground/80'}`}>
-                  {task.name}
-                </div>
-                <div className={`flex items-center justify-end px-2 font-mono text-[11px] ${isCrit ? 'text-clsp-orange' : 'text-muted-foreground'}`}>
-                  {dur}d
-                </div>
-                <div className="flex items-center px-2 text-[10px] text-muted-foreground truncate">
-                  {startStr}
-                </div>
-                <div className="flex items-center px-2 text-[10px] text-muted-foreground truncate">
-                  {endStr}
-                </div>
-                <div className="flex items-center px-2 text-[10px] text-muted-foreground/70 truncate" title={predStr}>
-                  {predStr || '-'}
-                </div>
-                <div className="flex items-center px-2 text-[10px] text-muted-foreground/70 truncate" title={succStr}>
-                  {succStr || '-'}
-                </div>
+                <Cell col="wbs" mono muted>
+                  <span className="text-[10px] opacity-60 truncate">{task.wbsCode ?? ''}</span>
+                </Cell>
+                <Cell col="name" critical={isCrit}>
+                  <span className={`text-[12px] truncate font-medium ${isCrit ? 'text-orange-500' : 'text-foreground/85'}`}>
+                    {task.name}
+                  </span>
+                </Cell>
+                <Cell col="duration" align="center">
+                  <span className={`text-[12px] font-semibold tabular-nums ${isCrit ? 'text-orange-500' : 'text-foreground/70'}`}>
+                    {dur}d
+                  </span>
+                </Cell>
+                <Cell col="start" muted>
+                  <span className="text-[11px] tabular-nums text-foreground/60">{startStr}</span>
+                </Cell>
+                <Cell col="end" muted>
+                  <span className="text-[11px] tabular-nums text-foreground/60">{endStr}</span>
+                </Cell>
+                <Cell col="pred" muted>
+                  <span className="text-[11px] text-foreground/50 truncate" title={predStr}>{predStr}</span>
+                </Cell>
+                <Cell col="succ" muted>
+                  <span className="text-[11px] text-foreground/50 truncate" title={succStr}>{succStr}</span>
+                </Cell>
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* ── RIGHT PANEL ────────────────────────────── */}
+      {/* ── RIGHT PANEL ──────────────────────────── */}
       <div className="flex flex-col flex-1 overflow-hidden">
 
-        {/* Timeline header (sticky top) */}
+        {/* Timeline header */}
         <div
-          className="flex-shrink-0 relative border-b border-border bg-muted/50 overflow-x-hidden"
-          style={{ height: HDR_H, minWidth: 0 }}
+          className="flex-shrink-0 relative border-b border-border bg-muted/40 overflow-x-hidden"
+          style={{ height: HDR_H }}
           id="gantt-header-scroll"
         >
           <div className="relative h-full" style={{ width: totalWidth }}>
             {headerCells.map((cell, i) => (
               <div
                 key={i}
-                className="absolute inset-y-0 border-r border-border/40 flex items-end pb-2 px-2"
+                className="absolute inset-y-0 border-r border-border/30 flex items-center px-3"
                 style={{ left: cell.left, width: cell.width }}
               >
-                <span className="text-[10px] text-muted-foreground font-mono truncate">{cell.label}</span>
+                <span className="text-[11px] text-muted-foreground font-medium truncate">{cell.label}</span>
               </div>
             ))}
             {todayX !== null && (
-              <div className="absolute top-0 bottom-0 w-px bg-red-500 z-10" style={{ left: todayX }} />
+              <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: todayX }} />
             )}
           </div>
         </div>
 
-        {/* Bars scroll area */}
+        {/* Bars */}
         <div
           ref={rightRef}
           className="flex-1 overflow-auto"
           style={{ height: 0 }}
-          onScroll={(e) => {
+          onScroll={e => {
             const hdr = document.getElementById('gantt-header-scroll')
             if (hdr) hdr.scrollLeft = (e.target as HTMLDivElement).scrollLeft
             onRightScroll()
@@ -309,24 +376,16 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
         >
           <div className="relative" style={{ width: totalWidth, height: totalRowsHeight }}>
 
-            {/* Vertical grid lines */}
+            {/* Grid lines */}
             {headerCells.map((cell, i) => (
-              <div
-                key={i}
-                className="absolute top-0 bottom-0 border-r border-border/20"
-                style={{ left: cell.left }}
-              />
+              <div key={i} className="absolute top-0 bottom-0 border-r border-border/15" style={{ left: cell.left }} />
             ))}
 
-            {/* Today line */}
+            {/* Today */}
             {todayX !== null && (
-              <div
-                className="absolute top-0 bottom-0 w-px bg-red-500/40 z-10"
-                style={{ left: todayX }}
-              />
+              <div className="absolute top-0 bottom-0 w-0.5 bg-red-400/50 z-10" style={{ left: todayX }} />
             )}
 
-            {/* Rows + bars */}
             {rows.map((row, i) => {
               const top    = rowTops[i]
               const height = row.kind === 'cat' ? CAT_H : ROW_H
@@ -335,54 +394,54 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
                 return (
                   <div
                     key={`cr-${row.cat}`}
-                    className="absolute left-0 right-0 border-b border-border bg-muted/20"
+                    className="absolute left-0 right-0 border-b border-border bg-muted/15"
                     style={{ top, height }}
                   />
                 )
               }
 
-              const task  = row.task
-              const dur   = Math.round(task.duration)
-              const barL  = task.ES * pxPerDay
-              const barW  = Math.max(dur * pxPerDay, 6)
-              const color = CATEGORY_COLORS[task.category] ?? '#3b82f6'
-              const bg    = task.isCritical ? '#f97316' : color
-              const isCrit = task.isCritical
+              const task   = row.task
+              const dur    = Math.round(task.duration)
+              const barL   = task.ES * pxPerDay
+              const barW   = Math.max(dur * pxPerDay, 8)
+              const color  = CATEGORY_COLORS[task.category] ?? '#3b82f6'
+              const bg     = task.isCritical ? '#f97316' : color
+              const isHov  = hoveredRow === task.taskId
 
               return (
                 <div
                   key={`br-${task.taskId}`}
-                  className="absolute left-0 right-0 border-b border-border/40 flex items-center"
-                  style={{ top, height, background: isCrit ? 'rgba(251,146,60,0.05)' : undefined }}
+                  className="absolute left-0 right-0 border-b border-border/30 flex items-center"
+                  style={{
+                    top, height,
+                    background: isHov
+                      ? task.isCritical ? 'rgba(251,146,60,0.12)' : 'hsl(var(--accent)/0.6)'
+                      : task.isCritical ? 'rgba(251,146,60,0.05)' : undefined,
+                  }}
+                  onMouseEnter={() => setHoveredRow(task.taskId)}
+                  onMouseLeave={() => setHoveredRow(null)}
                 >
-                  {/* Float (slack) bar */}
+                  {/* Float bar */}
                   {task.TF > 0 && (
                     <div
-                      className="absolute h-1.5 rounded opacity-20"
+                      className="absolute rounded-full opacity-15"
                       style={{
-                        left: barL,
-                        width: (dur + task.TF) * pxPerDay,
-                        background: bg,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
+                        left: barL, width: (dur + task.TF) * pxPerDay,
+                        height: 8, background: bg, top: '50%', transform: 'translateY(-50%)',
                       }}
                     />
                   )}
                   {/* Main bar */}
                   <div
-                    className="absolute rounded flex items-center overflow-hidden cursor-pointer"
+                    className="absolute rounded-md flex items-center overflow-hidden shadow-sm"
                     style={{
-                      left: barL,
-                      width: barW,
-                      height: 22,
-                      background: bg,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
+                      left: barL, width: barW, height: 24,
+                      background: bg, top: '50%', transform: 'translateY(-50%)',
                     }}
-                    title={barLabel(task)}
+                    title={`${task.name}\n${dur}일${startDate ? `\n${fmtFull(addDays(startDate, task.ES))} → ${fmtFull(addDays(startDate, task.EF))}` : ''}\nTF: ${task.TF}일`}
                   >
-                    {barW > 32 && (
-                      <span className="px-2 text-white text-[9px] font-medium truncate">
+                    {barW > 36 && (
+                      <span className="px-2 text-white text-[10px] font-semibold truncate drop-shadow-sm">
                         {dur}d
                       </span>
                     )}
