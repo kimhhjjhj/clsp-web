@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Building2, ChevronRight, Play, AlertTriangle,
   ChevronDown, ChevronUp, Pencil, Layers, Grid3x3,
-  CalendarDays, BarChart3,
+  CalendarDays, BarChart3, Dice5, SlidersHorizontal, FileDown,
 } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
+import MonteCarloPanel from '@/components/analysis/MonteCarloPanel'
+import ProductivityPanel from '@/components/analysis/ProductivityPanel'
+import { generateReport } from '@/lib/engine/report-pdf'
 import type { CPMSummary, CPMResult } from '@/lib/types'
 
 interface Project {
@@ -52,6 +55,26 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [calculating, setCalculating] = useState(false)
   const [expanded, setExpanded]     = useState<Set<string>>(new Set())
   const [ganttView, setGanttView]   = useState<GanttViewMode>('week')
+  const [mcResult, setMcResult]     = useState<{ original: number; mean: number; p80: number; p95: number; stdDev: number; iterations: number } | null>(null)
+
+  function downloadPdf() {
+    if (!project || !cpmResult) return
+    const doc = generateReport({
+      project: {
+        name: project.name,
+        client: project.client,
+        location: project.location,
+        ground: project.ground,
+        basement: project.basement,
+        bldgArea: project.bldgArea,
+        startDate: project.startDate,
+      },
+      cpm: cpmResult,
+      mode: currentMode,
+      monteCarlo: mcResult ?? undefined,
+    })
+    doc.save(`CLSP_${project.name.replace(/\s+/g, '_')}_Report.pdf`)
+  }
 
   useEffect(() => {
     fetch(`/api/projects/${id}`)
@@ -149,6 +172,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               수정
             </Link>
 
+            {cpmResult && (
+              <Button variant="outline" size="sm" onClick={downloadPdf}>
+                <FileDown size={13} className="mr-1.5" />
+                보고서 출력
+              </Button>
+            )}
+
             {/* Mode toggle */}
             <div className="flex items-center gap-0.5 bg-muted rounded-lg p-1 text-xs">
               <button
@@ -219,6 +249,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </TabsTrigger>
                 <TabsTrigger value="wbs" className="text-xs">WBS 공정표</TabsTrigger>
                 <TabsTrigger value="critical" className="text-xs">크리티컬 패스</TabsTrigger>
+                <TabsTrigger value="montecarlo" className="text-xs gap-1.5">
+                  <Dice5 size={13} />몬테카를로
+                </TabsTrigger>
+                <TabsTrigger value="productivity" className="text-xs gap-1.5">
+                  <SlidersHorizontal size={13} />생산성 조정
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -492,6 +528,30 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     </Table>
                   </CardContent>
                 </Card>
+              </div>
+            </TabsContent>
+
+            {/* ── MONTE CARLO TAB ──────────────────────── */}
+            <TabsContent value="montecarlo" className="mt-0 overflow-auto">
+              <div className="p-8">
+                <MonteCarloPanel projectId={id} mode={currentMode} hasCpmResult={!!cpmResult} onResult={setMcResult} />
+              </div>
+            </TabsContent>
+
+            {/* ── PRODUCTIVITY TAB ─────────────────────── */}
+            <TabsContent value="productivity" className="mt-0 overflow-auto">
+              <div className="p-8">
+                <ProductivityPanel
+                  projectId={id}
+                  mode={currentMode}
+                  cpmTasks={cpmResult ? cpmResult.tasks.map(t => ({
+                    taskId: t.taskId,
+                    name: t.name,
+                    category: t.category,
+                    duration: t.duration,
+                    isCritical: t.isCritical,
+                  })) : null}
+                />
               </div>
             </TabsContent>
 
