@@ -469,9 +469,8 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
           setMeasureDone(false); setMeasurePtsCnt(1); drawRef.current(); return
         }
 
-        if (isDouble && measurePtsRef.current.length > 0) {
-          // 더블클릭: 직전 단일클릭으로 추가된 점 제거 후 완료
-          measurePtsRef.current = measurePtsRef.current.slice(0, -1)
+        if (isDouble && measurePtsRef.current.length > 1) {
+          // 더블클릭: 첫 번째 mouseup에서 추가된 점 그대로 유지하고 완료
           measureCursorRef.current = null; measureDoneRef.current = true
           setMeasureDone(true); setMeasurePtsCnt(measurePtsRef.current.length); drawRef.current(); return
         }
