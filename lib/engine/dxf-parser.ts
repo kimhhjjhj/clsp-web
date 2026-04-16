@@ -141,6 +141,8 @@ function applyInsert(
 }
 
 // ── 실제 엔티티 목록 파싱 (ENTITIES 섹션 및 BLOCK 내부 공용) ──
+const MAX_ENTITIES = 80_000   // INSERT 폭발 방지
+
 function parseEntityList(
   lines: string[],
   startI: number,
@@ -287,9 +289,13 @@ function parseEntityList(
         else if (c === '50') rot = parseFloat(v) || 0
         i += 2
       }
-      if (blockName && blocks.has(blockName)) {
+      if (blockName && blocks.has(blockName) && entities.length < MAX_ENTITIES) {
         const resolved = applyInsert(blocks.get(blockName)!, ix, iy, sx, sy, rot, layer)
-        entities.push(...resolved)
+        // spread 대신 for loop — resolved가 매우 크면 push(...arr) 스택 오버플로우
+        for (const e of resolved) {
+          if (entities.length >= MAX_ENTITIES) break
+          entities.push(e)
+        }
       }
     }
     else i += 2
