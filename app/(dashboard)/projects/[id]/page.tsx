@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, use } from 'react'
+import React, { useEffect, useState, use, useRef } from 'react'
 import Link from 'next/link'
 import {
   Building2, ChevronRight, Play, AlertTriangle,
@@ -19,6 +19,7 @@ import ProductivityPanel from '@/components/analysis/ProductivityPanel'
 import { generateReport } from '@/lib/engine/report-pdf'
 import type { CPMSummary, CPMResult } from '@/lib/types'
 import { getWorkRate } from '@/lib/engine/wbs'
+import WBSTable, { type WBSTableHandle } from '@/components/wbs/WBSTable'
 
 interface Project {
   id: string
@@ -43,6 +44,17 @@ const CATEGORY_COLORS: Record<string, string> = {
   '부대공사': 'bg-red-600',
 }
 
+const CATEGORY_COLORS_HEX: Record<string, string> = {
+  '공사준비': '#64748b',
+  '토목공사': '#ca8a04',
+  '골조공사': '#2563eb',
+  '마감공사': '#059669',
+  '설비공사': '#0891b2',
+  '전기공사': '#7c3aed',
+  '외부공사': '#16a34a',
+  '부대공사': '#dc2626',
+}
+
 type WBSMode = 'cp' | 'full'
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -55,6 +67,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading]       = useState(true)
   const [calculating, setCalculating] = useState(false)
   const [expanded, setExpanded]     = useState<Set<string>>(new Set())
+  const wbsTableRef = useRef<WBSTableHandle>(null)
   const [ganttView, setGanttView]   = useState<GanttViewMode>('week')
   const [mcResult, setMcResult]     = useState<{ original: number; mean: number; p80: number; p95: number; stdDev: number; iterations: number } | null>(null)
 
@@ -388,80 +401,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       <span>WBS 공정 목록 <span className="text-xs font-normal text-muted-foreground">({cpmResult.tasks.length}개 공종)</span></span>
                       <div className="flex gap-2 text-xs">
                         <button
-                          onClick={() => setExpanded(new Set(cpmResult.tasks.map(t => t.category)))}
+                          onClick={() => wbsTableRef.current?.expandAll()}
                           className="text-muted-foreground hover:text-foreground"
                         >전체 펼치기</button>
                         <span className="text-muted-foreground">|</span>
                         <button
-                          onClick={() => setExpanded(new Set())}
+                          onClick={() => wbsTableRef.current?.collapseAll()}
                           className="text-muted-foreground hover:text-foreground"
                         >전체 접기</button>
                       </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[260px]">공종명</TableHead>
-                          <TableHead className="w-16 text-right text-xs">물량</TableHead>
-                          <TableHead className="w-12 text-center text-xs">단위</TableHead>
-                          <TableHead className="w-28 text-xs">생산성</TableHead>
-                          <TableHead className="text-right w-14 text-xs font-semibold text-blue-600">W.D</TableHead>
-                          <TableHead className="text-center w-20 text-xs text-gray-500">공종별 가동률</TableHead>
-                          <TableHead className="text-right w-14 text-xs font-semibold text-gray-500">C.D</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {byCategory && Object.entries(byCategory).map(([cat, tasks]) => {
-                          const isExpanded = expanded.has(cat)
-                          const critCount  = tasks.filter(t => t.isCritical).length
-                          const color      = CATEGORY_COLORS[cat] ?? 'bg-gray-600'
-                          return (
-                            <React.Fragment key={cat}>
-                              <TableRow
-                                className="cursor-pointer hover:bg-muted/50 bg-muted/20"
-                                onClick={() => toggleCat(cat)}
-                              >
-                                <TableCell className="font-medium" colSpan={7}>
-                                  <div className="flex items-center gap-2">
-                                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                    <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
-                                    {cat}
-                                    <span className="text-xs text-muted-foreground font-normal">({tasks.length}개)</span>
-                                    {critCount > 0 && <Badge className="bg-clsp-orange text-white border-0 text-[10px] px-1 ml-1">CP {critCount}</Badge>}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                              {isExpanded && tasks.map(task => {
-                                const wr = getWorkRate(task.category)
-                                const wrLabel = wr === null ? '—' : `${(wr * 100).toFixed(1)}%`
-                                return (
-                                <TableRow key={task.taskId} className={task.isCritical ? 'bg-clsp-orange/5' : ''}>
-                                  <TableCell className="pl-10">
-                                    <div className={task.isCritical ? 'text-clsp-orange' : ''}>
-                                      <div className="text-sm font-medium">{task.name}</div>
-                                      {task.wbsCode && (
-                                        <div className="text-[10px] text-muted-foreground font-mono">{task.wbsCode}</div>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                                    {task.quantity != null ? task.quantity.toLocaleString() : '—'}
-                                  </TableCell>
-                                  <TableCell className="text-center text-xs text-muted-foreground">{task.unit ?? '—'}</TableCell>
-                                  <TableCell className="text-xs text-muted-foreground">{fmtProductivity(task)}</TableCell>
-                                  <TableCell className="text-right font-mono text-sm font-medium text-blue-700">{Math.round(task.duration)}</TableCell>
-                                  <TableCell className="text-center font-mono text-xs text-muted-foreground">{wrLabel}</TableCell>
-                                  <TableCell className="text-right font-mono text-sm text-muted-foreground">{Math.round(task.duration * 7 / 5)}</TableCell>
-                                </TableRow>
-                                )
-                              })}
-                            </React.Fragment>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
+                    {byCategory && (
+                      <WBSTable
+                        ref={wbsTableRef}
+                        byCategory={byCategory}
+                        fmtProductivity={fmtProductivity}
+                        categoryColors={Object.fromEntries(
+                          Object.keys(byCategory).map(cat => [cat, CATEGORY_COLORS_HEX[cat] ?? '#94a3b8'])
+                        )}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               </div>
