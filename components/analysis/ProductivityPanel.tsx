@@ -81,6 +81,31 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
 
   return (
     <div className="space-y-5">
+      {/* KPI — 결과 있을 때 최상단 표시 */}
+      {result && (
+        <div className="grid grid-cols-4 gap-3">
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase">원본 공기</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{result.originalDuration}일</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase">조정 후 공기</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{result.adjustedDuration}일</p>
+          </div>
+          <div className={`border rounded-xl p-4 ${result.difference < 0 ? 'bg-green-50 border-green-200' : result.difference > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase">차이</p>
+            <p className={`text-xl font-bold mt-1 flex items-center gap-1 ${result.difference < 0 ? 'text-green-600' : result.difference > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+              {result.difference < 0 ? <TrendingDown size={18} /> : result.difference > 0 ? <TrendingUp size={18} /> : null}
+              {result.difference > 0 ? '+' : ''}{result.difference}일
+            </p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase">수정 태스크</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{result.modifiedCount}개</p>
+          </div>
+        </div>
+      )}
+
       {/* 슬라이더 테이블 */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -161,28 +186,6 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
       {/* 비교 결과 */}
       {result && (
         <>
-          {/* KPI */}
-          <div className="grid grid-cols-4 gap-3">
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase">원본 공기</p>
-              <p className="text-xl font-bold text-gray-900 mt-1">{result.originalDuration}일</p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase">조정 후 공기</p>
-              <p className="text-xl font-bold text-gray-900 mt-1">{result.adjustedDuration}일</p>
-            </div>
-            <div className={`border rounded-xl p-4 ${result.difference < 0 ? 'bg-green-50 border-green-200' : result.difference > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase">차이</p>
-              <p className={`text-xl font-bold mt-1 flex items-center gap-1 ${result.difference < 0 ? 'text-green-600' : result.difference > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                {result.difference < 0 ? <TrendingDown size={18} /> : result.difference > 0 ? <TrendingUp size={18} /> : null}
-                {result.difference > 0 ? '+' : ''}{result.difference}일
-              </p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase">수정 태스크</p>
-              <p className="text-xl font-bold text-gray-900 mt-1">{result.modifiedCount}개</p>
-            </div>
-          </div>
 
           {/* 비교 바 차트 */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
