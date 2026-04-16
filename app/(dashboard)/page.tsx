@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Building2, Clock, ChevronRight, Trash2 } from 'lucide-react'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Plus, Building2, ChevronRight, Trash2, LayoutGrid, TrendingUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 interface Project {
@@ -39,117 +36,209 @@ export default function DashboardPage() {
     setProjects(prev => prev.filter(p => p.id !== id))
   }
 
+  const avgFloors = projects.length
+    ? Math.round(projects.reduce((s, p) => s + p.ground, 0) / projects.length)
+    : 0
+  const avgArea = projects.length
+    ? Math.round(projects.reduce((s, p) => s + (p.bldgArea ?? 0), 0) / projects.length)
+    : 0
+
   return (
-    <div className="p-8">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">프로젝트 목록</h1>
-          <p className="text-sm text-muted-foreground mt-1">공동주택 개략공기 산정 프로젝트를 관리합니다</p>
+    <div className="flex flex-col h-full">
+
+      {/* 프로젝트 타이틀바 */}
+      <div className="h-14 bg-card border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <h2 className="text-base font-semibold text-foreground">전체 프로젝트</h2>
+          <Badge variant="secondary" className="text-xs">{projects.length}개</Badge>
         </div>
-        <Link href="/projects/new" className={cn(buttonVariants(), 'no-underline')}>
-          <Plus size={16} className="mr-2" />
+        <Link
+          href="/projects/new"
+          className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-clsp-navy text-white text-sm font-medium hover:bg-clsp-navy/90 transition-colors no-underline"
+        >
+          <Plus size={14} />
           새 프로젝트
         </Link>
       </div>
 
-      {/* 통계 카드 */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground mb-1">전체 프로젝트</p>
-            <p className="text-2xl font-bold">{projects.length}<span className="text-sm font-normal text-muted-foreground ml-1">개</span></p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground mb-1">평균 연면적</p>
-            <p className="text-2xl font-bold">
-              {projects.length
-                ? Math.round(projects.reduce((s, p) => s + (p.bldgArea ?? 0), 0) / projects.length).toLocaleString()
-                : '—'}
+      {/* 본문 */}
+      <div className="flex-1 overflow-auto p-6">
+
+        {/* 통계 카드 */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-card rounded-lg border border-border p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">전체 프로젝트</p>
+              <div className="w-7 h-7 rounded-md bg-clsp-navy/10 flex items-center justify-center">
+                <LayoutGrid size={13} className="text-clsp-navy" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-foreground">
+              {projects.length}
+              <span className="text-sm font-normal text-muted-foreground ml-1">개</span>
+            </p>
+          </div>
+
+          <div className="bg-card rounded-lg border border-border p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">평균 연면적</p>
+              <div className="w-7 h-7 rounded-md bg-clsp-orange/10 flex items-center justify-center">
+                <TrendingUp size={13} className="text-clsp-orange" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-foreground">
+              {avgArea ? avgArea.toLocaleString() : '—'}
               <span className="text-sm font-normal text-muted-foreground ml-1">m²</span>
             </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground mb-1">평균 규모</p>
-            <p className="text-2xl font-bold">
-              {projects.length ? Math.round(projects.reduce((s, p) => s + p.ground, 0) / projects.length) : '—'}
+          </div>
+
+          <div className="bg-card rounded-lg border border-border p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">평균 규모</p>
+              <div className="w-7 h-7 rounded-md bg-clsp-navy/10 flex items-center justify-center">
+                <Building2 size={13} className="text-clsp-navy" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-foreground">
+              {avgFloors || '—'}
               <span className="text-sm font-normal text-muted-foreground ml-1">층</span>
             </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Separator className="mb-6" />
-
-      {/* 프로젝트 목록 */}
-      {loading ? (
-        <div className="text-center text-muted-foreground py-20">불러오는 중...</div>
-      ) : projects.length === 0 ? (
-        <div className="text-center py-20">
-          <Building2 className="mx-auto text-muted-foreground/30 mb-4" size={48} />
-          <p className="text-muted-foreground mb-4">아직 프로젝트가 없습니다</p>
-          <Link href="/projects/new" className={cn(buttonVariants(), 'no-underline')}>
-            <Plus size={16} className="mr-2" />
-            첫 프로젝트 만들기
-          </Link>
+          </div>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {projects.map(project => (
-            <Card key={project.id} className="group hover:border-border/80 transition-colors">
-              <CardContent className="pt-0 pb-0">
-                <div className="flex items-center gap-4 py-4">
-                  {/* 아이콘 */}
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Building2 size={20} className="text-primary" />
-                  </div>
 
-                  {/* 정보 */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold truncate">{project.name}</h3>
-                      {project.type && <Badge variant="secondary" className="text-[11px]">{project.type}</Badge>}
-                    </div>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                      {project.location && <span>{project.location}</span>}
-                      <span>지상 {project.ground}F / 지하 {project.basement}F</span>
-                      {project.bldgArea && <span>연면적 {project.bldgArea.toLocaleString()}m²</span>}
-                    </div>
-                  </div>
+        {/* 테이블 헤더 */}
+        <div className="grid grid-cols-[40px_1fr_80px_100px_90px_110px_80px] gap-3 px-4 py-2.5 bg-muted/40 rounded-t-lg border border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+          <div />
+          <div>프로젝트명</div>
+          <div className="text-center">규모</div>
+          <div className="text-center">연면적</div>
+          <div className="text-center">공종 수</div>
+          <div className="text-center">생성일</div>
+          <div />
+        </div>
 
-                  {/* 태스크 수 */}
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock size={13} />
-                    <span>{project._count.tasks}개 공종</span>
-                  </div>
+        {/* 프로젝트 목록 */}
+        {loading ? (
+          <div className="text-center text-muted-foreground py-20 bg-card border border-t-0 border-border rounded-b-lg">
+            불러오는 중...
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="text-center py-20 bg-card border border-t-0 border-border rounded-b-lg">
+            <div className="w-14 h-14 rounded-2xl bg-clsp-navy/5 border border-border flex items-center justify-center mx-auto mb-4">
+              <Building2 size={24} className="text-clsp-navy/30" />
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">아직 프로젝트가 없습니다</p>
+            <Link
+              href="/projects/new"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-clsp-navy text-white text-sm font-medium hover:bg-clsp-navy/90 transition-colors no-underline"
+            >
+              <Plus size={14} />
+              첫 프로젝트 만들기
+            </Link>
+          </div>
+        ) : (
+          <div className="bg-card border border-t-0 border-border rounded-b-lg divide-y divide-border">
+            {projects.map(project => (
+              <div
+                key={project.id}
+                className="group grid grid-cols-[40px_1fr_80px_100px_90px_110px_80px] gap-3 items-center px-4 py-3.5 hover:bg-muted/30 transition-colors"
+              >
+                {/* 아이콘 */}
+                <div className="w-8 h-8 rounded-md bg-clsp-navy/10 flex items-center justify-center flex-shrink-0">
+                  <Building2 size={14} className="text-clsp-navy" />
+                </div>
 
-                  {/* 날짜 */}
-                  <div className="text-xs text-muted-foreground hidden md:block">
-                    {new Date(project.createdAt).toLocaleDateString('ko-KR')}
+                {/* 이름 */}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm truncate">{project.name}</span>
+                    {project.type && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5">{project.type}</Badge>
+                    )}
+                    {project._count.tasks > 0 && (
+                      <span className="text-[10px] text-clsp-orange font-semibold">CP</span>
+                    )}
                   </div>
+                  {(project.client || project.location) && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                      {[project.client, project.location].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                </div>
 
-                  {/* 삭제 */}
+                {/* 규모 */}
+                <div className="text-center text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{project.ground}</span>F
+                  {project.basement > 0 && <span className="text-[10px] ml-0.5">/ B{project.basement}</span>}
+                </div>
+
+                {/* 연면적 */}
+                <div className="text-center text-xs text-muted-foreground">
+                  {project.bldgArea ? (
+                    <><span className="font-medium text-foreground">{project.bldgArea.toLocaleString()}</span> m²</>
+                  ) : '—'}
+                </div>
+
+                {/* 공종 수 */}
+                <div className="text-center">
+                  <span className={cn(
+                    'text-xs font-medium px-2 py-0.5 rounded-full',
+                    project._count.tasks > 0
+                      ? 'bg-clsp-navy/10 text-clsp-navy'
+                      : 'bg-muted text-muted-foreground'
+                  )}>
+                    {project._count.tasks > 0 ? `${project._count.tasks}개` : '미산정'}
+                  </span>
+                </div>
+
+                {/* 날짜 */}
+                <div className="text-center text-[11px] text-muted-foreground">
+                  {new Date(project.createdAt).toLocaleDateString('ko-KR', { year: '2-digit', month: 'short', day: 'numeric' })}
+                </div>
+
+                {/* 액션 */}
+                <div className="flex items-center justify-end gap-1">
                   <button
-                    onClick={e => { e.preventDefault(); deleteProject(project.id, project.name) }}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive transition-all"
+                    onClick={() => deleteProject(project.id, project.name)}
+                    className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={13} />
                   </button>
-
-                  {/* 이동 */}
-                  <Link href={`/projects/${project.id}`} className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'no-underline')}>
-                    공기산정 <ChevronRight size={14} className="ml-1" />
+                  <Link
+                    href={`/projects/${project.id}`}
+                    className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-clsp-navy hover:bg-clsp-navy/10 transition-colors no-underline"
+                  >
+                    <ChevronRight size={14} />
                   </Link>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 푸터 범례 */}
+      <footer className="h-10 bg-card border-t border-border flex items-center justify-between px-6 flex-shrink-0">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded bg-clsp-navy" />
+            <span className="text-[11px] text-muted-foreground">일반 공종</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded bg-clsp-orange" />
+            <span className="text-[11px] text-clsp-orange font-medium">크리티컬 패스</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded bg-muted border border-border" />
+            <span className="text-[11px] text-muted-foreground">미산정</span>
+          </div>
         </div>
-      )}
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="font-semibold text-clsp-navy">CLSP SCHEDULER</span>
+          <span>·</span>
+          <span>공동주택 공기산정 플랫폼</span>
+        </div>
+      </footer>
     </div>
   )
 }

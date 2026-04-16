@@ -208,7 +208,7 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
                   <span className="text-xs font-semibold flex-1 truncate">{row.cat}</span>
                   <span className="text-[10px] text-muted-foreground">({row.tasks.length})</span>
                   {crit > 0 && (
-                    <span className="text-[10px] font-medium text-orange-400 ml-1">CP {crit}</span>
+                    <span className="text-[10px] font-medium text-clsp-orange ml-1">CP {crit}</span>
                   )}
                 </div>
               )
@@ -230,10 +230,10 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
                 <div className="flex items-center px-3 font-mono text-[9px] text-muted-foreground/50 truncate">
                   {task.wbsCode ?? ''}
                 </div>
-                <div className={`flex items-center px-2 pl-5 text-[11px] truncate ${isCrit ? 'text-orange-400' : 'text-foreground/80'}`}>
+                <div className={`flex items-center px-2 pl-5 text-[11px] truncate ${isCrit ? 'text-clsp-orange' : 'text-foreground/80'}`}>
                   {task.name}
                 </div>
-                <div className={`flex items-center justify-end px-2 font-mono text-[11px] ${isCrit ? 'text-orange-400' : 'text-muted-foreground'}`}>
+                <div className={`flex items-center justify-end px-2 font-mono text-[11px] ${isCrit ? 'text-clsp-orange' : 'text-muted-foreground'}`}>
                   {task.duration}d
                 </div>
               </div>

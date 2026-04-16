@@ -106,7 +106,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     <div className="flex flex-col h-full overflow-hidden">
 
       {/* ── Header (fixed top) ─────────────────────── */}
-      <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-border/60 bg-background/95">
+      <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-border bg-card">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
@@ -118,8 +118,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         {/* Project info + actions */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
-              <Building2 size={20} className="text-primary" />
+            <div className="w-11 h-11 bg-clsp-navy/10 rounded-xl flex items-center justify-center border border-clsp-navy/20">
+              <Building2 size={20} className="text-clsp-navy" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -135,7 +135,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 {project.location && <span>{project.location}</span>}
                 <span>지상 {project.ground}F / 지하 {project.basement}F</span>
                 {project.bldgArea && <span>연면적 {project.bldgArea.toLocaleString()}m²</span>}
-                {cpmResult && <span className="text-primary font-medium">총 공기 {cpmResult.totalDuration}일</span>}
+                {cpmResult && <span className="text-clsp-navy font-medium">총 공기 {cpmResult.totalDuration}일</span>}
               </div>
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
         {calculating && (
           <div className="flex flex-col items-center justify-center h-full">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+            <div className="w-8 h-8 border-2 border-clsp-navy border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-sm text-muted-foreground">WBS 자동 생성 및 CPM 계산 중...</p>
           </div>
         )}
@@ -228,16 +228,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <div className="flex-shrink-0 flex items-center justify-between px-8 py-3 border-b border-border/40 bg-background">
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-sm bg-blue-600 inline-block" />
-                    Standard
+                    <span className="w-3 h-3 rounded-sm bg-clsp-navy inline-block" />
+                    일반 공종
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-sm bg-orange-500 inline-block" />
-                    Critical Path
+                    <span className="w-3 h-3 rounded-sm bg-clsp-orange inline-block" />
+                    <span className="text-clsp-orange font-medium">크리티컬 패스</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-8 h-1.5 rounded bg-blue-600/20 inline-block" />
-                    Float
+                    <span className="w-8 h-1.5 rounded bg-clsp-navy/20 inline-block" />
+                    여유 시간
                   </div>
                 </div>
 
@@ -275,10 +275,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <TabsContent value="summary" className="mt-0 overflow-auto">
               <div className="p-8 space-y-4">
                 <div className="grid grid-cols-3 gap-4">
-                  <Card className="border-primary/30 bg-primary/5">
+                  <Card className="border-clsp-navy/30 bg-clsp-navy/5">
                     <CardContent className="pt-6">
                       <p className="text-xs text-muted-foreground mb-1">총 공사 기간</p>
-                      <p className="text-3xl font-bold text-primary">
+                      <p className="text-3xl font-bold text-clsp-navy">
                         {cpmResult.totalDuration}
                         <span className="text-sm font-normal text-muted-foreground ml-1">일</span>
                       </p>
@@ -301,7 +301,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <Card>
                     <CardContent className="pt-6">
                       <p className="text-xs text-muted-foreground mb-1">크리티컬 패스</p>
-                      <p className="text-3xl font-bold text-destructive">
+                      <p className="text-3xl font-bold text-clsp-orange">
                         {cpmResult.tasks.filter(t => t.isCritical).length}
                         <span className="text-sm font-normal text-muted-foreground ml-1">개 공종</span>
                       </p>
@@ -328,7 +328,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               </div>
                               <span className="text-xs text-muted-foreground w-16 text-right">{tasks.length}개</span>
                               {critCount > 0 && (
-                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">CP {critCount}</Badge>
+                                <Badge className="bg-clsp-orange text-white border-0 text-[10px] px-1.5 py-0">CP {critCount}</Badge>
                               )}
                             </div>
                           )
@@ -398,13 +398,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 </TableCell>
                                 <TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
                                 <TableCell className="text-center">
-                                  {critCount > 0 && <Badge variant="destructive" className="text-[10px] px-1">CP</Badge>}
+                                  {critCount > 0 && <Badge className="bg-clsp-orange text-white border-0 text-[10px] px-1">CP</Badge>}
                                 </TableCell>
                               </TableRow>
                               {isExpanded && tasks.map(task => (
-                                <TableRow key={task.taskId} className={task.isCritical ? 'bg-destructive/5' : ''}>
+                                <TableRow key={task.taskId} className={task.isCritical ? 'bg-clsp-orange/5' : ''}>
                                   <TableCell className="pl-10">
-                                    <div className={task.isCritical ? 'text-destructive' : ''}>
+                                    <div className={task.isCritical ? 'text-clsp-orange' : ''}>
                                       <div className="text-sm font-medium">{task.name}</div>
                                       {task.wbsCode && (
                                         <div className="text-[10px] text-muted-foreground font-mono">{task.wbsCode}</div>
@@ -421,11 +421,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                   <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.EF}</TableCell>
                                   <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.LS}</TableCell>
                                   <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.LF}</TableCell>
-                                  <TableCell className={`text-right font-mono text-sm font-bold ${task.TF === 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                  <TableCell className={`text-right font-mono text-sm font-bold ${task.TF === 0 ? 'text-clsp-orange' : 'text-muted-foreground'}`}>
                                     {task.TF}
                                   </TableCell>
                                   <TableCell className="text-center">
-                                    {task.isCritical && <span className="text-destructive">★</span>}
+                                    {task.isCritical && <span className="text-clsp-orange">★</span>}
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -445,7 +445,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <AlertTriangle size={15} className="text-destructive" />
+                      <AlertTriangle size={15} className="text-clsp-orange" />
                       크리티컬 패스 (Critical Path)
                     </CardTitle>
                   </CardHeader>
@@ -457,7 +457,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       {cpmResult.criticalPath.map((name, i) => (
                         <div key={i} className="flex items-center gap-1.5">
                           {i > 0 && <ChevronRight size={12} className="text-muted-foreground" />}
-                          <Badge variant="destructive" className="text-xs">{name}</Badge>
+                          <Badge className="bg-clsp-orange text-white border-0 text-xs">{name}</Badge>
                         </div>
                       ))}
                     </div>
@@ -474,9 +474,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       </TableHeader>
                       <TableBody>
                         {cpmResult.tasks.filter(t => t.isCritical).map(task => (
-                          <TableRow key={task.taskId} className="bg-destructive/5">
+                          <TableRow key={task.taskId} className="bg-clsp-orange/5">
                             <TableCell>
-                              <div className="font-medium text-destructive text-sm">{task.name}</div>
+                              <div className="font-medium text-clsp-orange text-sm">{task.name}</div>
                               {task.wbsCode && (
                                 <div className="text-[10px] text-muted-foreground font-mono">{task.wbsCode}</div>
                               )}
@@ -485,7 +485,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             <TableCell className="text-right font-mono font-medium">{task.duration}</TableCell>
                             <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.ES}</TableCell>
                             <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.EF}</TableCell>
-                            <TableCell className="text-right font-mono font-bold text-destructive">0</TableCell>
+                            <TableCell className="text-right font-mono font-bold text-clsp-orange">0</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
