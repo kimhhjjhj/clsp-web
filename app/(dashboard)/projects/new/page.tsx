@@ -27,7 +27,7 @@ interface FormData {
   groundCond: string
   // 지반정보 step
   wtBottom: string; waBottom: string; raBottom: string
-  excDepth: string; waterLevel: string
+  excDepth: string
   mode: 'cp' | 'full'
 }
 
@@ -55,7 +55,7 @@ const INITIAL: FormData = {
   ground: '', basement: '0', lowrise: '0', hasTransfer: false,
   siteArea: '', bldgArea: '', sitePerim: '', bldgPerim: '',
   groundCond: '보통',
-  wtBottom: '', waBottom: '', raBottom: '', excDepth: '', waterLevel: '',
+  wtBottom: '', waBottom: '', raBottom: '', excDepth: '',
   mode: 'cp',
 }
 
@@ -268,7 +268,6 @@ export default function NewProjectPage() {
       if (wa > 0) set('waBottom', wa.toFixed(1))
       if (rk > 0) set('raBottom', rk.toFixed(1))
     } else {
-      if (bh.wt != null) set('wtBottom', String(bh.wt))
       if (bh.wtr != null) set('waBottom', String(bh.wtr))
       if (bh.rk != null) set('raBottom', String(bh.rk))
     }
@@ -288,7 +287,6 @@ export default function NewProjectPage() {
         if (wa > 0) waVals.push(wa)
         if (rk > 0) rkVals.push(rk)
       } else {
-        if (bh.wt != null && bh.wt > 0) wtVals.push(bh.wt)
         if (bh.wtr != null && bh.wtr > 0) waVals.push(bh.wtr)
         if (bh.rk != null && bh.rk > 0) rkVals.push(bh.rk)
       }
@@ -332,7 +330,6 @@ export default function NewProjectPage() {
         waBottom: form.waBottom ? Number(form.waBottom) : undefined,
         raBottom: form.raBottom ? Number(form.raBottom) : undefined,
         excDepth: form.excDepth ? Number(form.excDepth) : undefined,
-        waterLevel: form.waterLevel ? Number(form.waterLevel) : undefined,
         mode: form.mode,
       }),
     })
@@ -852,11 +849,6 @@ export default function NewProjectPage() {
                           isAutoExc ? 'border-orange-200 bg-orange-50/40' : 'border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb]'
                         )} />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="waterLevel" className="text-xs font-semibold text-gray-500">지하수위 (m)</Label>
-                      <Input id="waterLevel" type="number" min={0} step={0.1} placeholder="예) 3.5" value={form.waterLevel} onChange={e => set('waterLevel', e.target.value)}
-                        className="h-10 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] text-sm transition-colors" />
-                    </div>
                   </div>
                 </div>
 
@@ -920,7 +912,7 @@ export default function NewProjectPage() {
                           <tr className="bg-gray-50/80 border-b border-gray-200">
                             <th className="px-3 py-2.5 text-left font-semibold text-gray-500 whitespace-nowrap">시추공</th>
                             <th className="px-3 py-2.5 text-right font-semibold text-gray-500 whitespace-nowrap">거리</th>
-                            <th className="px-3 py-2.5 text-right font-semibold text-amber-700 whitespace-nowrap">풍화토</th>
+
                             <th className="px-3 py-2.5 text-right font-semibold text-yellow-800 whitespace-nowrap">풍화암</th>
                             <th className="px-3 py-2.5 text-right font-semibold text-gray-600 whitespace-nowrap">연암</th>
                             <th className="px-3 py-2.5 text-right font-semibold text-gray-500 whitespace-nowrap">심도</th>
@@ -940,7 +932,7 @@ export default function NewProjectPage() {
                             >
                               <td className="px-3 py-2 font-mono text-[11px] text-gray-700 whitespace-nowrap">{bh.id}</td>
                               <td className="px-3 py-2 text-right text-gray-500">{bh.distance_m.toLocaleString()}m</td>
-                              <td className="px-3 py-2 text-right font-medium text-amber-700">{bh.wt_display ?? '-'}</td>
+
                               <td className="px-3 py-2 text-right font-medium text-yellow-800">{bh.wtr_display ?? '-'}</td>
                               <td className="px-3 py-2 text-right font-medium text-gray-600">{bh.rk_display ?? '-'}</td>
                               <td className="px-3 py-2 text-right text-gray-400">{bh.depth != null ? `${bh.depth}m` : '-'}</td>
