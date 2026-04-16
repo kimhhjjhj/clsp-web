@@ -76,6 +76,16 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
   const [selectedSiteIdx, setSelectedSiteIdx] = useState<number | null>(null)
   const [selectedBldgIdx, setSelectedBldgIdx] = useState<number | null>(null)
 
+  // 최신 값을 ref로 유지 (이벤트 핸들러에서 stale closure 방지)
+  const selectModeRef = useRef<'site' | 'bldg' | null>(null)
+  const loopsRef = useRef<Loop[]>(loops)
+  const bboxRef = useRef(bbox)
+  const zoomRef = useRef(zoom)
+  useEffect(() => { selectModeRef.current = selectMode }, [selectMode])
+  useEffect(() => { loopsRef.current = loops }, [loops])
+  useEffect(() => { bboxRef.current = bbox }, [bbox])
+  useEffect(() => { zoomRef.current = zoom }, [zoom])
+
   // ── 좌표 변환 ──
   const getView = useCallback(() => {
     if (!bbox) return { ox: 0, oy: 0, dw: 1, dh: 1, sc: 1 }
@@ -84,14 +94,6 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     const PAD = 32
     return { ox: minX, oy: minY, dw, dh, sc: Math.min((W - PAD * 2) / dw, (H - PAD * 2) / dh) }
   }, [bbox])
-
-  const toWorld = useCallback((sx: number, sy: number): [number, number] => {
-    const v = getView()
-    const sc = v.sc * zoom
-    const PAD = 32
-    const px = panRef.current.x, py = panRef.current.y
-    return [(sx - PAD - px) / sc + v.ox, (H - PAD - sy + py) / sc + v.oy]
-  }, [getView, zoom])
 
   // 파일 로드 시 자동 맞춤
   useEffect(() => {
@@ -103,32 +105,6 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     setSelectMode(null)
     forceRender(n => n + 1)
   }, [bbox])
-
-  // 선에 가장 가까운 폴리곤 우선, fallback은 가장 작은 포함 폴리곤
-  const hitTest = useCallback((sx: number, sy: number): number => {
-    const v = getView()
-    const sc = v.sc * zoom
-    const [wx, wy] = toWorld(sx, sy)
-    const edgeThreshold = 10 / sc  // 10 화면픽셀 → 월드 단위
-
-    let edgeBestIdx = -1
-    let edgeBestDist = edgeThreshold
-    for (let i = 0; i < loops.length; i++) {
-      const d = minEdgeDist(wx, wy, loops[i].pts)
-      if (d < edgeBestDist) { edgeBestDist = d; edgeBestIdx = i }
-    }
-    if (edgeBestIdx >= 0) return edgeBestIdx
-
-    // 선에서 멀면 가장 작은 포함 폴리곤 선택
-    let smallestIdx = -1
-    let smallestArea = Infinity
-    for (let i = 0; i < loops.length; i++) {
-      if (pointInPolygon(wx, wy, loops[i].pts) && loops[i].area < smallestArea) {
-        smallestArea = loops[i].area; smallestIdx = i
-      }
-    }
-    return smallestIdx
-  }, [getView, zoom, loops, toWorld])
 
   // ── Canvas 렌더링 ──
   const draw = useCallback(() => {
@@ -258,14 +234,48 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     return () => el.removeEventListener('wheel', onWheel)
   }, [onWheel])
 
-  // ── Mouse: drag pan + hover + click select ──
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return; e.preventDefault()
-    isDragging.current = true; dragMoved.current = false
-    lastPos.current = { x: e.clientX, y: e.clientY }
-  }, [])
-
+  // ── Mouse: drag pan + hover + click select (stable — empty deps) ──
   useEffect(() => {
+    const el = containerRef.current; if (!el) return
+
+    // ref에서 최신 값을 읽는 hitTest (stale closure 없음)
+    const doHitTest = (sx: number, sy: number): number => {
+      const b = bboxRef.current
+      if (!b) return -1
+      const [minX, minY, maxX, maxY] = b
+      const dw = maxX - minX || 1, dh = maxY - minY || 1
+      const PAD = 32
+      const baseSc = Math.min((W - PAD * 2) / dw, (H - PAD * 2) / dh)
+      const sc = baseSc * zoomRef.current
+      const ox = minX, oy = minY
+      const px = panRef.current.x, py = panRef.current.y
+      const wx = (sx - PAD - px) / sc + ox
+      const wy = (H - PAD - sy + py) / sc + oy
+      const loops = loopsRef.current
+      const edgeThreshold = 10 / sc
+
+      let edgeBestIdx = -1, edgeBestDist = edgeThreshold
+      for (let i = 0; i < loops.length; i++) {
+        const d = minEdgeDist(wx, wy, loops[i].pts)
+        if (d < edgeBestDist) { edgeBestDist = d; edgeBestIdx = i }
+      }
+      if (edgeBestIdx >= 0) return edgeBestIdx
+
+      let smallestIdx = -1, smallestArea = Infinity
+      for (let i = 0; i < loops.length; i++) {
+        if (pointInPolygon(wx, wy, loops[i].pts) && loops[i].area < smallestArea) {
+          smallestArea = loops[i].area; smallestIdx = i
+        }
+      }
+      return smallestIdx
+    }
+
+    const onDown = (e: MouseEvent) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      isDragging.current = true; dragMoved.current = false
+      lastPos.current = { x: e.clientX, y: e.clientY }
+    }
     const onMove = (e: MouseEvent) => {
       if (isDragging.current) {
         const dx = e.clientX - lastPos.current.x, dy = e.clientY - lastPos.current.y
@@ -275,36 +285,39 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
         forceRender(n => n + 1)
         return
       }
-      if (!selectMode) return
+      if (!selectModeRef.current) return
       const canvas = canvasRef.current; if (!canvas) return
       const rect = canvas.getBoundingClientRect()
-      const idx = hitTest(e.clientX - rect.left, e.clientY - rect.top)
+      const idx = doHitTest(e.clientX - rect.left, e.clientY - rect.top)
       setHoveredIdx(idx >= 0 ? idx : null)
     }
     const onUp = (e: MouseEvent) => {
       if (!isDragging.current) return
       isDragging.current = false
-      if (!dragMoved.current && selectMode) {
+      if (!dragMoved.current && selectModeRef.current) {
         const canvas = canvasRef.current; if (!canvas) return
         const rect = canvas.getBoundingClientRect()
-        const idx = hitTest(e.clientX - rect.left, e.clientY - rect.top)
+        const idx = doHitTest(e.clientX - rect.left, e.clientY - rect.top)
         if (idx >= 0) {
-          if (selectMode === 'site') { setSelectedSiteIdx(idx); onSiteSelect?.(loops[idx]) }
-          else { setSelectedBldgIdx(idx); onBldgSelect?.(loops[idx]) }
+          const loop = loopsRef.current[idx]
+          if (selectModeRef.current === 'site') { setSelectedSiteIdx(idx); onSiteSelect?.(loop) }
+          else { setSelectedBldgIdx(idx); onBldgSelect?.(loop) }
         }
       }
     }
-    const onLeave = () => { if (!selectMode) return; setHoveredIdx(null) }
+    const onLeave = () => setHoveredIdx(null)
+
+    el.addEventListener('mousedown', onDown)
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-    const canvas = canvasRef.current
-    canvas?.addEventListener('mouseleave', onLeave)
+    el.addEventListener('mouseleave', onLeave)
     return () => {
+      el.removeEventListener('mousedown', onDown)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
-      canvas?.removeEventListener('mouseleave', onLeave)
+      el.removeEventListener('mouseleave', onLeave)
     }
-  }, [selectMode, loops, hitTest, onSiteSelect, onBldgSelect])
+  }, [onSiteSelect, onBldgSelect])  // onSiteSelect/onBldgSelect만 — 나머지는 ref로 읽음
 
   const resetView = useCallback(() => { setZoom(1); panRef.current = { x: 0, y: 0 }; forceRender(n => n + 1) }, [])
 
@@ -355,7 +368,6 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       <div
         ref={containerRef}
         style={{ width: W, height: H, cursor: cursorStyle, userSelect: 'none' }}
-        onMouseDown={onMouseDown}
       >
         <canvas ref={canvasRef} style={{ width: W, height: H, display: 'block' }} />
       </div>
