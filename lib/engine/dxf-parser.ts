@@ -221,99 +221,63 @@ function getUnitFactor(maxCoord: number): number {
 }
 
 // ── 독립 선분들에서 닫힌 루프 재구성 ──────────────────────
-// rightmost-turn 알고리즘: 각 directed edge에서 가장 오른쪽으로 꺾는
-// 다음 엣지를 따라가면 내부 면(CCW)만 수집됨.
-// 외부 무한 면은 CW → signed area < 0 → 제거.
-
-function signedArea(pts: [number, number][]): number {
-  const n = pts.length; if (n < 3) return 0; let s = 0
-  for (let i = 0; i < n; i++) {
-    const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % n]
-    s += x1 * y2 - x2 * y1
-  }
-  return s / 2
-}
+// greedy chain: 끝점끼리 이어 붙여 닫히면 루프로 인식.
+// 단순 폐합 폴리곤(건물외곽 등)에 효과적.
 
 function findLineLoops(segsM: DxfSegment[]): DxfLoop[] {
   if (segsM.length < 3) return []
 
-  const TOL = 0.05   // 5cm 스냅 허용오차 (미터 단위)
-  const snap = (v: number) => Math.round(v / TOL) * TOL
-  const ptKey = (x: number, y: number) => `${snap(x)},${snap(y)}`
+  const TOL2 = 0.1 * 0.1   // 10cm²  (거리 제곱 비교용)
+  const d2 = (ax: number, ay: number, bx: number, by: number) =>
+    (ax - bx) ** 2 + (ay - by) ** 2
 
-  // 인접 그래프 구축
-  interface AdjNode { x: number; y: number; neighbors: string[] }
-  const nodes = new Map<string, AdjNode>()
-
-  const ensure = (x: number, y: number) => {
-    const k = ptKey(x, y)
-    if (!nodes.has(k)) nodes.set(k, { x: snap(x), y: snap(y), neighbors: [] })
-    return k
-  }
-
-  for (const s of segsM) {
-    const k1 = ensure(s.x1, s.y1)
-    const k2 = ensure(s.x2, s.y2)
-    if (k1 === k2) continue
-    const n1 = nodes.get(k1)!, n2 = nodes.get(k2)!
-    if (!n1.neighbors.includes(k2)) n1.neighbors.push(k2)
-    if (!n2.neighbors.includes(k1)) n2.neighbors.push(k1)
-  }
-
-  const visited = new Set<string>()
-  const dirKey = (a: string, b: string) => `${a}|${b}`
+  const segs = segsM.map(s => ({ ...s, used: false }))
   const loops: DxfLoop[] = []
 
-  for (const [startKey, startNode] of nodes) {
-    for (const nextKey of startNode.neighbors) {
-      if (visited.has(dirKey(startKey, nextKey))) continue
+  for (let si = 0; si < segs.length; si++) {
+    if (segs[si].used) continue
 
-      // 면 추적
-      const chain: [number, number][] = [[startNode.x, startNode.y]]
-      let prevKey = startKey
-      let curKey = nextKey
-      let closed = false
+    const chain: [number, number][] = [
+      [segs[si].x1, segs[si].y1],
+      [segs[si].x2, segs[si].y2],
+    ]
+    segs[si].used = true
 
-      for (let step = 0; step <= nodes.size; step++) {
-        visited.add(dirKey(prevKey, curKey))
-        const curNode = nodes.get(curKey)!
-        chain.push([curNode.x, curNode.y])
+    for (let iter = 0; iter < segs.length; iter++) {
+      const [lx, ly] = chain[chain.length - 1]
+      const [fx, fy] = chain[0]
 
-        if (curKey === startKey) { closed = true; break }
-
-        // 다음 엣지: 가장 오른쪽 꺾기 (most clockwise)
-        const prevNode = nodes.get(prevKey)!
-        const inAngle = Math.atan2(curNode.y - prevNode.y, curNode.x - prevNode.x)
-        const candidates = curNode.neighbors.filter(k => k !== prevKey)
-        if (candidates.length === 0) break
-
-        let bestKey = candidates[0], bestScore = -Infinity
-        for (const k of candidates) {
-          const n = nodes.get(k)!
-          const outAngle = Math.atan2(n.y - curNode.y, n.x - curNode.x)
-          // inAngle 기준 시계방향 회전량이 클수록 더 오른쪽
-          let da = inAngle - outAngle + Math.PI
-          while (da < 0) da += 2 * Math.PI
-          while (da >= 2 * Math.PI) da -= 2 * Math.PI
-          if (da > bestScore) { bestScore = da; bestKey = k }
-        }
-        prevKey = curKey
-        curKey = bestKey
+      // 현재 끝점과 가장 가까운 미사용 세그먼트 탐색
+      let bestJ = -1, bestFlip = false, bestDist = TOL2
+      for (let j = 0; j < segs.length; j++) {
+        if (segs[j].used) continue
+        const d1 = d2(lx, ly, segs[j].x1, segs[j].y1)
+        const d2v = d2(lx, ly, segs[j].x2, segs[j].y2)
+        if (d1 < bestDist) { bestDist = d1; bestJ = j; bestFlip = false }
+        if (d2v < bestDist) { bestDist = d2v; bestJ = j; bestFlip = true }
       }
 
-      if (!closed || chain.length < 4) continue
-      const pts = chain.slice(0, -1)  // 마지막(=시작점 중복) 제거
-      const sa = signedArea(pts)
-      if (sa <= 0) continue          // CW = 외부 무한면 → 제거
-      if (sa < 1) continue           // 1m² 미만 무시
+      if (bestJ === -1) break
 
-      // 레이어: 해당 시작 엣지의 세그먼트 레이어
-      const layer = segsM.find(s =>
-        ptKey(s.x1, s.y1) === startKey && ptKey(s.x2, s.y2) === nextKey ||
-        ptKey(s.x2, s.y2) === startKey && ptKey(s.x1, s.y1) === nextKey
-      )?.layer ?? 'LINE'
+      const nx = bestFlip ? segs[bestJ].x1 : segs[bestJ].x2
+      const ny = bestFlip ? segs[bestJ].y1 : segs[bestJ].y2
+      segs[bestJ].used = true
 
-      loops.push({ layer, pts, area: sa, perim: polyPerim(pts, true) })
+      // 닫힘 확인
+      if (chain.length >= 3 && d2(nx, ny, fx, fy) < TOL2) {
+        const area = shoelaceArea(chain)
+        if (area >= 1) {
+          loops.push({
+            layer: segs[si].layer,
+            pts: [...chain],
+            area,
+            perim: polyPerim(chain, true),
+          })
+        }
+        break
+      }
+
+      chain.push([nx, ny])
     }
   }
 
