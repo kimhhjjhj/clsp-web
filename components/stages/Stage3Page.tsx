@@ -28,7 +28,7 @@ export default function Stage3Page({ projectId }: Props) {
   const [dailies, setDailies] = useState<DailyRecord[]>([])
   const gaugeRef = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => {
+  function loadData() {
     Promise.all([
       fetch(`/api/projects/${projectId}/weekly-progress`).then(r => r.json()).catch(() => []),
       fetch(`/api/projects/${projectId}/daily-reports`).then(r => r.json()).catch(() => []),
@@ -36,7 +36,9 @@ export default function Stage3Page({ projectId }: Props) {
       setWeeklies(Array.isArray(w) ? w : [])
       setDailies(Array.isArray(d) ? d : [])
     })
-  }, [projectId])
+  }
+
+  useEffect(() => { loadData() }, [projectId])
 
   // 최신 실적률 계산
   const latestWeekKey = weeklies.length > 0
@@ -195,7 +197,7 @@ export default function Stage3Page({ projectId }: Props) {
       <div className="flex-1 overflow-hidden flex gap-0">
         {/* 좌: 주간실적 */}
         <div className="w-1/2 overflow-auto border-r border-gray-200 bg-gray-50 p-4">
-          <WeeklyProgressPanel projectId={projectId} cpmResult={null} />
+          <WeeklyProgressPanel projectId={projectId} cpmResult={null} onSaved={loadData} />
         </div>
 
         {/* 우: 달력 미니뷰 + 일일작업일보 */}
@@ -236,7 +238,7 @@ export default function Stage3Page({ projectId }: Props) {
           </div>
 
           {/* 작업일보 패널 */}
-          <DailyReportPanel projectId={projectId} />
+          <DailyReportPanel projectId={projectId} onSaved={loadData} />
         </div>
       </div>
     </div>

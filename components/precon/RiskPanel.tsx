@@ -20,7 +20,7 @@ const STATUS_COLOR: Record<string, string> = {
   identified: '#f97316', reviewing: '#2563eb', closed: '#16a34a',
 }
 
-export default function RiskPanel({ projectId }: { projectId: string }) {
+export default function RiskPanel({ projectId, onUpdate }: { projectId: string; onUpdate?: () => void }) {
   const [items, setItems] = useState<RO[]>([])
   const [form, setForm] = useState<Omit<RO, 'id'>>(EMPTY)
   const [editId, setEditId] = useState<string | null>(null)
@@ -45,13 +45,13 @@ export default function RiskPanel({ projectId }: { projectId: string }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
       })
     }
-    setForm(EMPTY); setEditId(null); setShowForm(false); load()
+    setForm(EMPTY); setEditId(null); setShowForm(false); load(); onUpdate?.()
   }
 
   async function del(id: string) {
     if (!confirm('삭제하시겠습니까?')) return
     await fetch(`/api/projects/${projectId}/risks/${id}`, { method: 'DELETE' })
-    load()
+    load(); onUpdate?.()
   }
 
   function startEdit(item: RO) {

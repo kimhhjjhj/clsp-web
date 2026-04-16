@@ -19,7 +19,7 @@ const EMPTY_FORM = {
   equipment: '', content: '', notes: '', photos: '',
 }
 
-export default function DailyReportPanel({ projectId }: { projectId: string }) {
+export default function DailyReportPanel({ projectId, onSaved }: { projectId: string; onSaved?: () => void }) {
   const [reports, setReports] = useState<DailyReport[]>([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState<string | null>(null)
@@ -45,14 +45,14 @@ export default function DailyReportPanel({ projectId }: { projectId: string }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       })
     }
-    setForm(EMPTY_FORM); setEditId(null); setShowForm(false); load()
+    setForm(EMPTY_FORM); setEditId(null); setShowForm(false); load(); onSaved?.()
   }
 
   async function del(id: string) {
     if (!confirm('삭제하시겠습니까?')) return
     await fetch(`/api/projects/${projectId}/daily-reports/${id}`, { method: 'DELETE' })
     if (selected?.id === id) setSelected(null)
-    load()
+    load(); onSaved?.()
   }
 
   function startEdit(r: DailyReport) {

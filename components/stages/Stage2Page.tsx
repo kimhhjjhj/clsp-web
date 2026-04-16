@@ -20,12 +20,14 @@ export default function Stage2Page({ projectId }: Props) {
   const [risks, setRisks] = useState<RO[]>([])
   const heatmapRef = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => {
+  function loadRisks() {
     fetch(`/api/projects/${projectId}/risks`)
       .then(r => r.json())
       .then((data: RO[]) => setRisks(data))
       .catch(() => {})
-  }, [projectId])
+  }
+
+  useEffect(() => { loadRisks() }, [projectId])
 
   // 히트맵 Canvas 그리기
   useEffect(() => {
@@ -106,7 +108,7 @@ export default function Stage2Page({ projectId }: Props) {
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <RiskPanel projectId={projectId} />
+              <RiskPanel projectId={projectId} onUpdate={loadRisks} />
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">

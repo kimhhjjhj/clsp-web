@@ -16,6 +16,7 @@ interface WeekRecord {
 interface Props {
   projectId: string
   cpmResult: CPMSummary | null
+  onSaved?: () => void
 }
 
 function getISOWeek(d: Date): { year: number; week: number } {
@@ -29,7 +30,7 @@ function getISOWeek(d: Date): { year: number; week: number } {
   }
 }
 
-export default function WeeklyProgressPanel({ projectId, cpmResult }: Props) {
+export default function WeeklyProgressPanel({ projectId, cpmResult, onSaved }: Props) {
   const now = getISOWeek(new Date())
   const [year, setYear]     = useState(now.year)
   const [weekNo, setWeekNo] = useState(now.week)
@@ -76,6 +77,7 @@ export default function WeeklyProgressPanel({ projectId, cpmResult }: Props) {
       body: JSON.stringify({ year, weekNo, rows }),
     })
     setLoading(false)
+    onSaved?.()
   }
 
   // S-Curve 그리기
