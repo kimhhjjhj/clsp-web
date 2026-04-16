@@ -22,7 +22,9 @@ function convertDwgToDxf(dwgBuffer: Buffer): Promise<string> {
 
     proc.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(`Python 변환 실패: ${errorOutput}`))
+        // stderr 첫 줄만 사용자에게 전달 (너무 긴 스택트레이스 제거)
+        const firstLine = errorOutput.split('\n').find(l => l.trim()) ?? errorOutput
+        reject(new Error(firstLine.trim()))
       } else {
         resolve(dxfOutput)
       }
