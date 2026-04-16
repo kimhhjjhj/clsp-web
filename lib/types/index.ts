@@ -54,6 +54,8 @@ export interface CPMResult {
   TF: number  // Total Float
   FF: number  // Free Float
   isCritical: boolean
+  predecessors: string[]  // 선행 task 이름 목록
+  successors: string[]    // 후행 task 이름 목록
 }
 
 export interface CPMSummary {

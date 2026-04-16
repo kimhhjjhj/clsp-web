@@ -34,6 +34,8 @@ export function calculateCPM(tasks: WBSTask[]): CPMSummary {
       TF: 0,
       FF: 0,
       isCritical: false,
+      predecessors: [],
+      successors: [],
     })
   }
 
@@ -112,6 +114,13 @@ export function calculateCPM(tasks: WBSTask[]): CPMSummary {
     } else {
       r.FF = totalDuration - r.EF
     }
+  }
+
+  // 선행/후행 이름 채우기
+  for (const t of tasks) {
+    const r = results.get(t.id)!
+    r.predecessors = t.predecessors.map(predId => taskMap.get(predId)?.name ?? predId)
+    r.successors   = (adjList.get(t.id) ?? []).map(succId => taskMap.get(succId)?.name ?? succId)
   }
 
   // 크리티컬 패스 순서대로

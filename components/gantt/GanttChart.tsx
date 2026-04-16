@@ -30,6 +30,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   '부대공사': '#ef4444',
 }
 
+// 좌측 패널 컬럼 구성
+// WBS(56) | 공종명(1fr) | 기간(52) | 시작일(78) | 완료일(78) | 선행(72) | 후행(72)
+const LEFT_W = 620
+const COL_TEMPLATE = '56px 1fr 52px 78px 78px 72px 72px'
+
 // ── Helpers ────────────────────────────────────────────────────────────
 function groupBy<T>(arr: T[], key: (x: T) => string): [string, T[]][] {
   const map = new Map<string, T[]>()
@@ -48,6 +53,10 @@ function addDays(dateStr: string, days: number): Date {
 }
 
 function fmtDate(d: Date): string {
+  return d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
+}
+
+function fmtDateFull(d: Date): string {
   return d.toLocaleDateString('ko-KR', { year: '2-digit', month: 'short', day: 'numeric' })
 }
 
@@ -111,17 +120,15 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
   function buildHeaderCells(): HeaderCell[] {
     const cells: HeaderCell[] = []
     if (viewMode === 'day') {
-      // Top: month groups, Bottom: individual days (every 7)
       let d = 0
       while (d <= totalDuration) {
         const label = startDate
-          ? fmtDate(addDays(startDate, d))
+          ? fmtDateFull(addDays(startDate, d))
           : `Day ${d + 1}`
         cells.push({ label, left: d * pxPerDay, width: 7 * pxPerDay })
         d += 7
       }
     } else if (viewMode === 'week') {
-      // weeks
       const totalWeeks = Math.ceil(totalDuration / 7)
       for (let w = 0; w < totalWeeks; w++) {
         const dayOffset = w * 7
@@ -131,7 +138,6 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
         cells.push({ label, left: dayOffset * pxPerDay, width: 7 * pxPerDay })
       }
     } else {
-      // months
       const totalMonths = Math.ceil(totalDuration / 30)
       for (let m = 0; m < totalMonths; m++) {
         const dayOffset = m * 30
@@ -148,12 +154,13 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
 
   // ── Tooltip label ──
   function barLabel(task: CPMResult): string {
+    const dur = Math.round(task.duration)
     if (startDate) {
-      const s = fmtDate(addDays(startDate, task.ES))
-      const e = fmtDate(addDays(startDate, task.EF))
-      return `${task.name}\n${task.duration}일  (${s} → ${e})\nTF: ${task.TF}일`
+      const s = fmtDateFull(addDays(startDate, task.ES))
+      const e = fmtDateFull(addDays(startDate, task.EF))
+      return `${task.name}\n${dur}일  (${s} → ${e})\nTF: ${task.TF}일`
     }
-    return `${task.name}\n${task.duration}일  (D${task.ES}→D${task.EF})\nTF: ${task.TF}일`
+    return `${task.name}\n${dur}일  (D${task.ES}→D${task.EF})\nTF: ${task.TF}일`
   }
 
   // ── Row top-offset lookup ──
@@ -168,16 +175,20 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
     <div className="flex h-full border border-border rounded-lg overflow-hidden bg-background">
 
       {/* ── LEFT PANEL ─────────────────────────────── */}
-      <div className="flex flex-col w-[460px] flex-shrink-0 border-r border-border">
+      <div className="flex flex-col flex-shrink-0 border-r border-border" style={{ width: LEFT_W }}>
 
         {/* Header */}
         <div
           className="flex-shrink-0 grid border-b border-border bg-muted/50"
-          style={{ height: HDR_H, gridTemplateColumns: '56px 1fr 60px' }}
+          style={{ height: HDR_H, gridTemplateColumns: COL_TEMPLATE }}
         >
           <div className="flex items-end pb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">WBS</div>
           <div className="flex items-end pb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">공종명</div>
           <div className="flex items-end pb-2 px-2 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">기간</div>
+          <div className="flex items-end pb-2 px-2 text-[10px] font-semibold text-muted-foreground">시작일</div>
+          <div className="flex items-end pb-2 px-2 text-[10px] font-semibold text-muted-foreground">완료일</div>
+          <div className="flex items-end pb-2 px-2 text-[10px] font-semibold text-muted-foreground">선행</div>
+          <div className="flex items-end pb-2 px-2 text-[10px] font-semibold text-muted-foreground">후행</div>
         </div>
 
         {/* Rows */}
@@ -185,7 +196,7 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
           ref={leftRef}
           className="flex-1 overflow-y-auto overflow-x-hidden"
           onScroll={onLeftScroll}
-          style={{ height: 0 }}  /* flex child needs explicit height 0 to scroll */
+          style={{ height: 0 }}
         >
           {rows.map((row, i) => {
             if (row.kind === 'cat') {
@@ -217,13 +228,19 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
             // task row
             const task = row.task
             const isCrit = task.isCritical
+            const dur = Math.round(task.duration)
+            const startStr = startDate ? fmtDate(addDays(startDate, task.ES)) : `D${task.ES}`
+            const endStr   = startDate ? fmtDate(addDays(startDate, task.EF)) : `D${task.EF}`
+            const predStr  = task.predecessors?.join(', ') ?? ''
+            const succStr  = task.successors?.join(', ') ?? ''
+
             return (
               <div
                 key={`tl-${task.taskId}`}
                 className="grid border-b border-border/60"
                 style={{
                   height: ROW_H,
-                  gridTemplateColumns: '56px 1fr 60px',
+                  gridTemplateColumns: COL_TEMPLATE,
                   background: isCrit ? 'rgba(251,146,60,0.06)' : undefined,
                 }}
               >
@@ -234,7 +251,19 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
                   {task.name}
                 </div>
                 <div className={`flex items-center justify-end px-2 font-mono text-[11px] ${isCrit ? 'text-clsp-orange' : 'text-muted-foreground'}`}>
-                  {task.duration}d
+                  {dur}d
+                </div>
+                <div className="flex items-center px-2 text-[10px] text-muted-foreground truncate">
+                  {startStr}
+                </div>
+                <div className="flex items-center px-2 text-[10px] text-muted-foreground truncate">
+                  {endStr}
+                </div>
+                <div className="flex items-center px-2 text-[10px] text-muted-foreground/70 truncate" title={predStr}>
+                  {predStr || '-'}
+                </div>
+                <div className="flex items-center px-2 text-[10px] text-muted-foreground/70 truncate" title={succStr}>
+                  {succStr || '-'}
                 </div>
               </div>
             )
@@ -251,7 +280,6 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
           style={{ height: HDR_H, minWidth: 0 }}
           id="gantt-header-scroll"
         >
-          {/* inner div has full timeline width */}
           <div className="relative h-full" style={{ width: totalWidth }}>
             {headerCells.map((cell, i) => (
               <div
@@ -274,7 +302,6 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
           className="flex-1 overflow-auto"
           style={{ height: 0 }}
           onScroll={(e) => {
-            // sync header horizontal scroll
             const hdr = document.getElementById('gantt-header-scroll')
             if (hdr) hdr.scrollLeft = (e.target as HTMLDivElement).scrollLeft
             onRightScroll()
@@ -305,7 +332,6 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
               const height = row.kind === 'cat' ? CAT_H : ROW_H
 
               if (row.kind === 'cat') {
-                const color = CATEGORY_COLORS[row.cat] ?? '#6b7280'
                 return (
                   <div
                     key={`cr-${row.cat}`}
@@ -316,8 +342,9 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
               }
 
               const task  = row.task
+              const dur   = Math.round(task.duration)
               const barL  = task.ES * pxPerDay
-              const barW  = Math.max(task.duration * pxPerDay, 6)
+              const barW  = Math.max(dur * pxPerDay, 6)
               const color = CATEGORY_COLORS[task.category] ?? '#3b82f6'
               const bg    = task.isCritical ? '#f97316' : color
               const isCrit = task.isCritical
@@ -328,13 +355,13 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
                   className="absolute left-0 right-0 border-b border-border/40 flex items-center"
                   style={{ top, height, background: isCrit ? 'rgba(251,146,60,0.05)' : undefined }}
                 >
-                  {/* Float (slack) bar — light background from ES to LS */}
+                  {/* Float (slack) bar */}
                   {task.TF > 0 && (
                     <div
                       className="absolute h-1.5 rounded opacity-20"
                       style={{
                         left: barL,
-                        width: (task.duration + task.TF) * pxPerDay,
+                        width: (dur + task.TF) * pxPerDay,
                         background: bg,
                         top: '50%',
                         transform: 'translateY(-50%)',
@@ -343,7 +370,7 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
                   )}
                   {/* Main bar */}
                   <div
-                    className="absolute rounded flex items-center overflow-hidden cursor-pointer group"
+                    className="absolute rounded flex items-center overflow-hidden cursor-pointer"
                     style={{
                       left: barL,
                       width: barW,
@@ -356,7 +383,7 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
                   >
                     {barW > 32 && (
                       <span className="px-2 text-white text-[9px] font-medium truncate">
-                        {task.duration}d
+                        {dur}d
                       </span>
                     )}
                   </div>
