@@ -20,6 +20,12 @@ import { generateReport } from '@/lib/engine/report-pdf'
 import type { CPMSummary, CPMResult } from '@/lib/types'
 import { getWorkRate } from '@/lib/engine/wbs'
 import WBSTable, { type WBSTableHandle } from '@/components/wbs/WBSTable'
+import RiskPanel from '@/components/precon/RiskPanel'
+import AccelerationPanel from '@/components/precon/AccelerationPanel'
+import BaselineImportPanel from '@/components/precon/BaselineImportPanel'
+import WeeklyProgressPanel from '@/components/construction/WeeklyProgressPanel'
+import DailyReportPanel from '@/components/construction/DailyReportPanel'
+import ProgressDashboard from '@/components/analytics/ProgressDashboard'
 
 interface Project {
   id: string
@@ -254,23 +260,23 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             {/* Tab list */}
             <div className="flex-shrink-0 px-8 pt-4 border-b border-border/40">
-              <TabsList className="h-9">
-                <TabsTrigger value="wbs" className="text-xs gap-1.5">
-                  <BarChart3 size={13} />WBS 공정표
-                </TabsTrigger>
-                <TabsTrigger value="summary" className="text-xs gap-1.5">
-                  <BarChart3 size={13} />CPM 결과
-                </TabsTrigger>
+              <TabsList className="h-9 flex-wrap">
+                {/* 1단계 */}
+                <TabsTrigger value="wbs" className="text-xs gap-1.5"><BarChart3 size={13} />WBS 공정표</TabsTrigger>
+                <TabsTrigger value="summary" className="text-xs gap-1.5"><BarChart3 size={13} />CPM 결과</TabsTrigger>
                 <TabsTrigger value="critical" className="text-xs">크리티컬 패스</TabsTrigger>
-                <TabsTrigger value="gantt" className="text-xs gap-1.5">
-                  <CalendarDays size={13} />공정표 (Gantt)
-                </TabsTrigger>
-                <TabsTrigger value="montecarlo" className="text-xs gap-1.5">
-                  <Dice5 size={13} />몬테카를로
-                </TabsTrigger>
-                <TabsTrigger value="productivity" className="text-xs gap-1.5">
-                  <SlidersHorizontal size={13} />생산성 조정
-                </TabsTrigger>
+                <TabsTrigger value="gantt" className="text-xs gap-1.5"><CalendarDays size={13} />공정표 (Gantt)</TabsTrigger>
+                <TabsTrigger value="montecarlo" className="text-xs gap-1.5"><Dice5 size={13} />몬테카를로</TabsTrigger>
+                <TabsTrigger value="productivity" className="text-xs gap-1.5"><SlidersHorizontal size={13} />생산성 조정</TabsTrigger>
+                {/* 2단계: 프리콘 */}
+                <TabsTrigger value="risk" className="text-xs gap-1.5"><AlertTriangle size={13} />R&amp;O</TabsTrigger>
+                <TabsTrigger value="acceleration" className="text-xs gap-1.5"><Layers size={13} />공기단축</TabsTrigger>
+                <TabsTrigger value="baseline" className="text-xs gap-1.5"><Grid3x3 size={13} />베이스라인</TabsTrigger>
+                {/* 3단계: 실시공 */}
+                <TabsTrigger value="weekly" className="text-xs gap-1.5"><CalendarDays size={13} />주간실적</TabsTrigger>
+                <TabsTrigger value="daily" className="text-xs gap-1.5"><Pencil size={13} />작업일보</TabsTrigger>
+                {/* 4단계: 분석 */}
+                <TabsTrigger value="analytics" className="text-xs gap-1.5"><BarChart3 size={13} />분석 대시보드</TabsTrigger>
               </TabsList>
             </div>
 
@@ -505,6 +511,48 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     isCritical: t.isCritical,
                   })) : null}
                 />
+              </div>
+            </TabsContent>
+
+            {/* ── 2단계: R&O ──────────────────────────────── */}
+            <TabsContent value="risk" className="mt-0 overflow-auto">
+              <div className="p-6">
+                <RiskPanel projectId={id} />
+              </div>
+            </TabsContent>
+
+            {/* ── 2단계: 공기단축 ──────────────────────────── */}
+            <TabsContent value="acceleration" className="mt-0 overflow-auto">
+              <div className="p-6">
+                <AccelerationPanel projectId={id} cpmResult={cpmResult} />
+              </div>
+            </TabsContent>
+
+            {/* ── 2단계: 베이스라인 ─────────────────────────── */}
+            <TabsContent value="baseline" className="mt-0 overflow-auto">
+              <div className="p-6">
+                <BaselineImportPanel projectId={id} />
+              </div>
+            </TabsContent>
+
+            {/* ── 3단계: 주간실적 ──────────────────────────── */}
+            <TabsContent value="weekly" className="mt-0 overflow-auto">
+              <div className="p-6">
+                <WeeklyProgressPanel projectId={id} cpmResult={cpmResult} />
+              </div>
+            </TabsContent>
+
+            {/* ── 3단계: 작업일보 ──────────────────────────── */}
+            <TabsContent value="daily" className="mt-0 overflow-auto">
+              <div className="p-6">
+                <DailyReportPanel projectId={id} />
+              </div>
+            </TabsContent>
+
+            {/* ── 4단계: 분석 대시보드 ─────────────────────── */}
+            <TabsContent value="analytics" className="mt-0 overflow-auto">
+              <div className="p-6">
+                <ProgressDashboard projectId={id} cpmResult={cpmResult} />
               </div>
             </TabsContent>
 

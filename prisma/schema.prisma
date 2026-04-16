@@ -26,9 +26,14 @@ model Project {
   bldgArea    Float?
   wtBottom    Float?
   waBottom    Float?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tasks       Task[]
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  tasks                  Task[]
+  risks                  RiskOpportunity[]
+  accelerations          ScheduleAcceleration[]
+  baselineTasks          BaselineTask[]
+  weeklyProgress         WeeklyProgress[]
+  dailyReports           DailyReport[]
 }
 
 model Task {
@@ -46,4 +51,85 @@ model Task {
   predecessors String?
   note         String?
   project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// ── 2단계: 프리콘 ──────────────────────────────────────────
+
+model RiskOpportunity {
+  id          String   @id @default(cuid())
+  projectId   String
+  type        String   // "risk" | "opportunity"
+  category    String   // 공종
+  content     String
+  impactType  String   // "schedule" | "cost"
+  impactDays  Float?   // 공기영향(일)
+  impactCost  Float?   // 원가영향(만원)
+  probability Float    // 0~100(%)
+  response    String?
+  owner       String?
+  status      String   @default("identified") // "identified"|"reviewing"|"closed"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ScheduleAcceleration {
+  id          String   @id @default(cuid())
+  projectId   String
+  category    String
+  method      String
+  days        Float
+  costRate    Float    // 비용증가율(%)
+  condition   String?
+  reference   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model BaselineTask {
+  id           String   @id @default(cuid())
+  projectId    String
+  mspId        String?
+  wbsCode      String?
+  name         String
+  duration     Float
+  start        String?
+  finish       String?
+  predecessors String?
+  level        Int      @default(0)
+  createdAt    DateTime @default(now())
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// ── 3단계: 실시공 관리 ────────────────────────────────────
+
+model WeeklyProgress {
+  id          String   @id @default(cuid())
+  projectId   String
+  year        Int
+  weekNo      Int
+  taskName    String
+  category    String?
+  plannedRate Float    @default(0)
+  actualRate  Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model DailyReport {
+  id          String   @id @default(cuid())
+  projectId   String
+  date        String
+  weather     String?
+  temperature Float?
+  workers     Json?
+  equipment   String?
+  content     String?
+  notes       String?
+  photos      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
