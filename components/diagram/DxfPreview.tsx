@@ -243,7 +243,7 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     const my = e.clientY - rect.top
     const PAD = 32
     const zoomOld = zoomRef.current
-    const zoomNew = clamp(zoomOld * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 0.05, 30)
+    const zoomNew = clamp(zoomOld * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 0.05, 500)
     const ratio = zoomNew / zoomOld
     // 마우스 위치의 월드 좌표가 줌 전후 동일하도록 pan 보정
     panRef.current = {
@@ -371,11 +371,11 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => setZoom(z => clamp(z / 1.25, 0.05, 30))}
+          <button onClick={() => setZoom(z => clamp(z / 1.25, 0.05, 500))}
             className="w-6 h-6 rounded bg-slate-700 text-slate-200 hover:bg-slate-600 text-sm flex items-center justify-center">−</button>
           <button onClick={resetView}
             className="h-6 px-1.5 rounded bg-slate-700 text-[10px] text-slate-300 hover:bg-slate-600 font-mono min-w-[38px] text-center">맞춤</button>
-          <button onClick={() => setZoom(z => clamp(z * 1.25, 0.05, 30))}
+          <button onClick={() => setZoom(z => clamp(z * 1.25, 0.05, 500))}
             className="w-6 h-6 rounded bg-slate-700 text-slate-200 hover:bg-slate-600 text-sm flex items-center justify-center">+</button>
         </div>
       </div>
