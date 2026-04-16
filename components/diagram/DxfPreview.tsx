@@ -81,10 +81,14 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
   const loopsRef = useRef<Loop[]>(loops)
   const bboxRef = useRef(bbox)
   const zoomRef = useRef(zoom)
+  const onSiteSelectRef = useRef(onSiteSelect)
+  const onBldgSelectRef = useRef(onBldgSelect)
   useEffect(() => { selectModeRef.current = selectMode }, [selectMode])
   useEffect(() => { loopsRef.current = loops }, [loops])
   useEffect(() => { bboxRef.current = bbox }, [bbox])
   useEffect(() => { zoomRef.current = zoom }, [zoom])
+  useEffect(() => { onSiteSelectRef.current = onSiteSelect }, [onSiteSelect])
+  useEffect(() => { onBldgSelectRef.current = onBldgSelect }, [onBldgSelect])
 
   // ── 좌표 변환 ──
   const getView = useCallback(() => {
@@ -300,8 +304,8 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
         const idx = doHitTest(e.clientX - rect.left, e.clientY - rect.top)
         if (idx >= 0) {
           const loop = loopsRef.current[idx]
-          if (selectModeRef.current === 'site') { setSelectedSiteIdx(idx); onSiteSelect?.(loop) }
-          else { setSelectedBldgIdx(idx); onBldgSelect?.(loop) }
+          if (selectModeRef.current === 'site') { setSelectedSiteIdx(idx); onSiteSelectRef.current?.(loop) }
+          else { setSelectedBldgIdx(idx); onBldgSelectRef.current?.(loop) }
         }
       }
     }
@@ -317,7 +321,7 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       window.removeEventListener('mouseup', onUp)
       el.removeEventListener('mouseleave', onLeave)
     }
-  }, [onSiteSelect, onBldgSelect])  // onSiteSelect/onBldgSelect만 — 나머지는 ref로 읽음
+  }, [])  // 완전 stable — 모든 변하는 값은 ref로 읽음
 
   const resetView = useCallback(() => { setZoom(1); panRef.current = { x: 0, y: 0 }; forceRender(n => n + 1) }, [])
 
