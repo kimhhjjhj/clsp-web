@@ -744,12 +744,12 @@ export default function NewProjectPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="basement" className="text-xs font-semibold text-gray-500">지하 층수</Label>
-                      <Input id="basement" type="number" min={0} placeholder="2" value={form.basement} onChange={e => set('basement', e.target.value)}
+                      <Input id="basement" type="number" min={0} placeholder="2" value={form.basement} onChange={e => set('basement', e.target.value)} onFocus={e => e.target.select()}
                         className="h-11 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] text-sm font-semibold text-center transition-colors" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lowrise" className="text-xs font-semibold text-gray-500">저층부</Label>
-                      <Input id="lowrise" type="number" min={0} placeholder="0" value={form.lowrise} onChange={e => set('lowrise', e.target.value)}
+                      <Input id="lowrise" type="number" min={0} placeholder="0" value={form.lowrise} onChange={e => set('lowrise', e.target.value)} onFocus={e => e.target.select()}
                         className="h-11 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] text-sm font-semibold text-center transition-colors" />
                     </div>
                   </div>
