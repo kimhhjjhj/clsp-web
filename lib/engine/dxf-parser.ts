@@ -247,20 +247,34 @@ function findLineLoops(segsM: DxfSegment[]): DxfLoop[] {
       const [lx, ly] = chain[chain.length - 1]
       const [fx, fy] = chain[0]
 
-      // 현재 끝점과 가장 가까운 미사용 세그먼트 탐색
-      let bestJ = -1, bestFlip = false, bestDist = TOL2
+      // 허용오차 내 모든 후보 수집
+      const cands: { j: number; flip: boolean; nx: number; ny: number }[] = []
       for (let j = 0; j < segs.length; j++) {
         if (segs[j].used) continue
-        const d1 = d2(lx, ly, segs[j].x1, segs[j].y1)
-        const d2v = d2(lx, ly, segs[j].x2, segs[j].y2)
-        if (d1 < bestDist) { bestDist = d1; bestJ = j; bestFlip = false }
-        if (d2v < bestDist) { bestDist = d2v; bestJ = j; bestFlip = true }
+        if (d2(lx, ly, segs[j].x1, segs[j].y1) < TOL2) cands.push({ j, flip: false, nx: segs[j].x2, ny: segs[j].y2 })
+        else if (d2(lx, ly, segs[j].x2, segs[j].y2) < TOL2) cands.push({ j, flip: true,  nx: segs[j].x1, ny: segs[j].y1 })
       }
+      if (cands.length === 0) break
 
-      if (bestJ === -1) break
-
-      const nx = bestFlip ? segs[bestJ].x1 : segs[bestJ].x2
-      const ny = bestFlip ? segs[bestJ].y1 : segs[bestJ].y2
+      // 분기점: 현재 진행 방향과 가장 일직선(최소 꺾임)인 선분 우선,
+      //         그 다음 더 긴 선분 우선 (짧은 코너 마감선 회피)
+      let bestJ = cands[0].j, bestFlip = cands[0].flip
+      let nx = cands[0].nx, ny = cands[0].ny
+      if (cands.length > 1 && chain.length >= 2) {
+        const [px, py] = chain[chain.length - 2]
+        const curAngle = Math.atan2(ly - py, lx - px)
+        let bestScore = -Infinity
+        for (const c of cands) {
+          const outAngle = Math.atan2(c.ny - ly, c.nx - lx)
+          let da = Math.abs(outAngle - curAngle)
+          if (da > Math.PI) da = 2 * Math.PI - da  // 0~π로 정규화 (꺾임 각도)
+          const segLen = Math.sqrt(d2(lx, ly, c.nx, c.ny))
+          const score = -da * 10 + Math.log1p(segLen)  // 꺾임 최소 + 긴 선 선호
+          if (score > bestScore) { bestScore = score; bestJ = c.j; bestFlip = c.flip; nx = c.nx; ny = c.ny }
+        }
+      } else {
+        nx = cands[0].nx; ny = cands[0].ny
+      }
       segs[bestJ].used = true
 
       // 닫힘 확인
