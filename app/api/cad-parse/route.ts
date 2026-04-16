@@ -1,41 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { spawn } from 'child_process'
 import { parseDxf } from '@/lib/engine/dxf-parser'
-import { join } from 'path'
-
-function convertDwgToDxf(dwgBuffer: Buffer): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const pythonPath = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3')
-    const scriptPath = join(process.cwd(), 'scripts', 'dwg2dxf.py')
-
-    const proc = spawn(pythonPath, [scriptPath])
-    let dxfOutput = ''
-    let errorOutput = ''
-
-    proc.stdout!.on('data', (data) => {
-      dxfOutput += data.toString()
-    })
-
-    proc.stderr!.on('data', (data) => {
-      errorOutput += data.toString()
-    })
-
-    proc.on('close', (code) => {
-      if (code !== 0) {
-        // stderr 첫 줄만 사용자에게 전달 (너무 긴 스택트레이스 제거)
-        const firstLine = errorOutput.split('\n').find(l => l.trim()) ?? errorOutput
-        reject(new Error(firstLine.trim()))
-      } else {
-        resolve(dxfOutput)
-      }
-    })
-
-    // stdin으로 binary 데이터 전송
-    const base64 = dwgBuffer.toString('base64')
-    proc.stdin!.write(base64)
-    proc.stdin!.end()
-  })
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,18 +11,15 @@ export async function POST(req: NextRequest) {
     }
 
     const fileName = (file as File).name.toLowerCase()
-    const isDwg = fileName.endsWith('.dwg')
 
-    let dxfText: string
-
-    if (isDwg) {
-      // DWG → DXF 변환
-      const buffer = Buffer.from(await (file as File).arrayBuffer())
-      dxfText = await convertDwgToDxf(buffer)
-    } else {
-      // DXF 직접 파싱
-      dxfText = await (file as File).text()
+    if (fileName.endsWith('.dwg')) {
+      return NextResponse.json(
+        { error: 'DWG 형식은 지원되지 않습니다. AutoCAD 또는 LibreCAD에서 "다른 이름으로 저장 → DXF"로 내보낸 후 업로드하세요.' },
+        { status: 400 }
+      )
     }
+
+    const dxfText = await (file as File).text()
 
     if (!dxfText.trim()) {
       return NextResponse.json({ error: '파일 내용이 비어있습니다.' }, { status: 400 })

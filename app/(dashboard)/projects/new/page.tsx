@@ -179,6 +179,11 @@ export default function NewProjectPage() {
   async function handleDxfUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.name.toLowerCase().endsWith('.dwg')) {
+      setDxfError('DWG 형식은 지원되지 않습니다. AutoCAD 또는 LibreCAD에서 "다른 이름으로 저장 → DXF"로 내보낸 후 업로드하세요.')
+      if (dxfInputRef.current) dxfInputRef.current.value = ''
+      return
+    }
     setIsDxfLoading(true)
     setDxfError('')
     try {
@@ -714,7 +719,7 @@ export default function NewProjectPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                      <input ref={dxfInputRef} type="file" accept=".dxf,.dwg" className="hidden" onChange={handleDxfUpload} />
+                      <input ref={dxfInputRef} type="file" accept=".dxf" className="hidden" onChange={handleDxfUpload} />
                       <button
                         type="button"
                         onClick={() => dxfInputRef.current?.click()}
@@ -722,7 +727,7 @@ export default function NewProjectPage() {
                         className="flex items-center gap-2 h-9 px-4 rounded-xl border-2 border-dashed border-gray-300 text-xs font-medium text-gray-500 hover:border-[#2563eb] hover:text-[#2563eb] hover:bg-blue-50/50 transition-all"
                       >
                         {isDxfLoading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                        도면 업로드 (DXF/DWG)
+                        도면 업로드 (DXF)
                       </button>
                   </div>
                 </div>
