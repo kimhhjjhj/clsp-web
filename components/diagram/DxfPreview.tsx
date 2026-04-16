@@ -42,6 +42,25 @@ function pointInPolygon(px: number, py: number, pts: [number, number][]): boolea
   return inside
 }
 
+function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1, dy = y2 - y1
+  const lenSq = dx * dx + dy * dy
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1)
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq))
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
+}
+
+function minEdgeDist(px: number, py: number, pts: [number, number][]): number {
+  const n = pts.length
+  let min = Infinity
+  for (let i = 0; i < n; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % n]
+    const d = distToSegment(px, py, x1, y1, x2, y2)
+    if (d < min) min = d
+  }
+  return min
+}
+
 export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldgSelect }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -73,6 +92,32 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
     const px = panRef.current.x, py = panRef.current.y
     return [(sx - PAD - px) / sc + v.ox, (H - PAD - sy + py) / sc + v.oy]
   }, [getView, zoom])
+
+  // 선에 가장 가까운 폴리곤 우선, fallback은 가장 작은 포함 폴리곤
+  const hitTest = useCallback((sx: number, sy: number): number => {
+    const v = getView()
+    const sc = v.sc * zoom
+    const [wx, wy] = toWorld(sx, sy)
+    const edgeThreshold = 10 / sc  // 10 화면픽셀 → 월드 단위
+
+    let edgeBestIdx = -1
+    let edgeBestDist = edgeThreshold
+    for (let i = 0; i < loops.length; i++) {
+      const d = minEdgeDist(wx, wy, loops[i].pts)
+      if (d < edgeBestDist) { edgeBestDist = d; edgeBestIdx = i }
+    }
+    if (edgeBestIdx >= 0) return edgeBestIdx
+
+    // 선에서 멀면 가장 작은 포함 폴리곤 선택
+    let smallestIdx = -1
+    let smallestArea = Infinity
+    for (let i = 0; i < loops.length; i++) {
+      if (pointInPolygon(wx, wy, loops[i].pts) && loops[i].area < smallestArea) {
+        smallestArea = loops[i].area; smallestIdx = i
+      }
+    }
+    return smallestIdx
+  }, [getView, zoom, loops, toWorld])
 
   // ── Canvas 렌더링 ──
   const draw = useCallback(() => {
@@ -222,12 +267,8 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       if (!selectMode) return
       const canvas = canvasRef.current; if (!canvas) return
       const rect = canvas.getBoundingClientRect()
-      const [wx, wy] = toWorld(e.clientX - rect.left, e.clientY - rect.top)
-      let found = -1
-      for (let i = 0; i < loops.length; i++) {
-        if (pointInPolygon(wx, wy, loops[i].pts)) { found = i; break }
-      }
-      setHoveredIdx(found >= 0 ? found : null)
+      const idx = hitTest(e.clientX - rect.left, e.clientY - rect.top)
+      setHoveredIdx(idx >= 0 ? idx : null)
     }
     const onUp = (e: MouseEvent) => {
       if (!isDragging.current) return
@@ -235,13 +276,10 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       if (!dragMoved.current && selectMode) {
         const canvas = canvasRef.current; if (!canvas) return
         const rect = canvas.getBoundingClientRect()
-        const [wx, wy] = toWorld(e.clientX - rect.left, e.clientY - rect.top)
-        for (let i = 0; i < loops.length; i++) {
-          if (pointInPolygon(wx, wy, loops[i].pts)) {
-            if (selectMode === 'site') { setSelectedSiteIdx(i); onSiteSelect?.(loops[i]) }
-            else { setSelectedBldgIdx(i); onBldgSelect?.(loops[i]) }
-            break
-          }
+        const idx = hitTest(e.clientX - rect.left, e.clientY - rect.top)
+        if (idx >= 0) {
+          if (selectMode === 'site') { setSelectedSiteIdx(idx); onSiteSelect?.(loops[idx]) }
+          else { setSelectedBldgIdx(idx); onBldgSelect?.(loops[idx]) }
         }
       }
     }
@@ -255,7 +293,7 @@ export default function DxfPreview({ segments, loops, bbox, onSiteSelect, onBldg
       window.removeEventListener('mouseup', onUp)
       canvas?.removeEventListener('mouseleave', onLeave)
     }
-  }, [selectMode, loops, toWorld, onSiteSelect, onBldgSelect])
+  }, [selectMode, loops, hitTest, onSiteSelect, onBldgSelect])
 
   const resetView = useCallback(() => { setZoom(1); panRef.current = { x: 0, y: 0 }; forceRender(n => n + 1) }, [])
 

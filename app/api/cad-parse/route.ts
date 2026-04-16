@@ -5,7 +5,7 @@ import { join } from 'path'
 
 function convertDwgToDxf(dwgBuffer: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
-    const pythonPath = process.env.PYTHON_PATH || 'python3'
+    const pythonPath = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3')
     const scriptPath = join(process.cwd(), 'scripts', 'dwg2dxf.py')
 
     const proc = spawn(pythonPath, [scriptPath])
