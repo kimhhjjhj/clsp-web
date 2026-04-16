@@ -236,19 +236,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
         {/* Results */}
         {cpmResult && (
-          <Tabs defaultValue="gantt" className="h-full flex flex-col">
+          <Tabs defaultValue="wbs" className="h-full flex flex-col">
 
             {/* Tab list */}
             <div className="flex-shrink-0 px-8 pt-4 border-b border-border/40">
               <TabsList className="h-9">
+                <TabsTrigger value="wbs" className="text-xs gap-1.5">
+                  <BarChart3 size={13} />WBS 공정표
+                </TabsTrigger>
+                <TabsTrigger value="summary" className="text-xs gap-1.5">
+                  <BarChart3 size={13} />CPM 결과
+                </TabsTrigger>
+                <TabsTrigger value="critical" className="text-xs">크리티컬 패스</TabsTrigger>
                 <TabsTrigger value="gantt" className="text-xs gap-1.5">
                   <CalendarDays size={13} />공정표 (Gantt)
                 </TabsTrigger>
-                <TabsTrigger value="summary" className="text-xs gap-1.5">
-                  <BarChart3 size={13} />결과 요약
-                </TabsTrigger>
-                <TabsTrigger value="wbs" className="text-xs">WBS 공정표</TabsTrigger>
-                <TabsTrigger value="critical" className="text-xs">크리티컬 패스</TabsTrigger>
                 <TabsTrigger value="montecarlo" className="text-xs gap-1.5">
                   <Dice5 size={13} />몬테카를로
                 </TabsTrigger>
@@ -400,11 +402,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[280px]">공종명</TableHead>
+                          <TableHead className="w-[260px]">공종명</TableHead>
                           <TableHead className="w-12 text-center text-xs">단위</TableHead>
                           <TableHead className="w-16 text-right text-xs">물량</TableHead>
                           <TableHead className="w-28 text-xs">생산성/소요기간</TableHead>
-                          <TableHead className="text-right w-16">기간(일)</TableHead>
+                          <TableHead className="text-right w-14 text-xs font-semibold text-blue-600">W.D</TableHead>
+                          <TableHead className="text-right w-14 text-xs font-semibold text-gray-500">C.D</TableHead>
                           <TableHead className="text-right w-12 text-xs">ES</TableHead>
                           <TableHead className="text-right w-12 text-xs">EF</TableHead>
                           <TableHead className="text-right w-12 text-xs">LS</TableHead>
@@ -432,7 +435,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     <span className="text-xs text-muted-foreground font-normal">({tasks.length}개)</span>
                                   </div>
                                 </TableCell>
-                                <TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
+                                <TableCell /><TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
                                 <TableCell className="text-center">
                                   {critCount > 0 && <Badge className="bg-clsp-orange text-white border-0 text-[10px] px-1">CP</Badge>}
                                 </TableCell>
@@ -452,7 +455,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     {task.quantity != null ? task.quantity.toLocaleString() : '—'}
                                   </TableCell>
                                   <TableCell className="text-xs text-muted-foreground">{fmtProductivity(task)}</TableCell>
-                                  <TableCell className="text-right font-mono text-sm font-medium">{task.duration}</TableCell>
+                                  <TableCell className="text-right font-mono text-sm font-medium text-blue-700">{Math.round(task.duration)}</TableCell>
+                                  <TableCell className="text-right font-mono text-sm text-muted-foreground">{Math.round(task.duration * 7 / 5)}</TableCell>
                                   <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.ES}</TableCell>
                                   <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.EF}</TableCell>
                                   <TableCell className="text-right font-mono text-xs text-muted-foreground">{task.LS}</TableCell>
