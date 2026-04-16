@@ -187,7 +187,7 @@ export default function NewProjectPage() {
       const res = await fetch('/api/cad-parse', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) {
-        setDxfError(data.error ?? 'DXF 파싱 실패')
+        setDxfError(data.details ?? data.error ?? '파싱 실패')
       } else {
         // 설계개요 자동입력 (면적/둘레는 폴리곤 직접 선택으로 입력)
         if (data.designInfo) {

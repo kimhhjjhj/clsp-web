@@ -70,57 +70,127 @@ interface RawEntity {
   type: string; layer: string; pts: [number, number][]; flags: number; text?: string
 }
 
-function parseEntities(lines: string[]): RawEntity[] {
-  const entities: RawEntity[] = []
+// ARC → 근사 폴리라인 변환 (호 당 최대 72점, 최소 8점)
+function arcToPts(cx: number, cy: number, r: number, sa: number, ea: number, closed = false): [number, number][] {
+  let span = ((ea - sa) + 360) % 360
+  if (span === 0) span = closed ? 360 : 0
+  const n = Math.max(8, Math.ceil(span / 5))  // 5° 당 1점
+  const pts: [number, number][] = []
+  for (let k = 0; k <= n; k++) {
+    const ang = (sa + (span * k / n)) * Math.PI / 180
+    pts.push([cx + r * Math.cos(ang), cy + r * Math.sin(ang)])
+  }
+  return pts
+}
+
+// 블록 정의 파싱 (BLOCKS 섹션)
+type BlockDef = { base: [number, number]; ents: RawEntity[] }
+
+function parseBlocks(lines: string[]): Map<string, BlockDef> {
+  const blocks = new Map<string, BlockDef>()
   let secStart = -1, secEnd = lines.length
   for (let i = 0; i < lines.length - 1; i++) {
-    if (lines[i].trim() === '2' && lines[i + 1].trim() === 'ENTITIES') secStart = i + 2
+    if (lines[i].trim() === '2' && lines[i + 1].trim() === 'BLOCKS') secStart = i + 2
     if (secStart !== -1 && lines[i].trim() === '0' && lines[i + 1].trim() === 'ENDSEC') { secEnd = i; break }
   }
-  if (secStart === -1) secStart = 0
+  if (secStart === -1) return blocks
 
   let i = secStart
   while (i < secEnd - 1) {
     const code = lines[i]?.trim(), val = lines[i + 1]?.trim() ?? ''
-
-    // ── TEXT/MTEXT ──
-    if (code === '0' && (val === 'TEXT' || val === 'MTEXT')) {
-      const etype = val; let layer = '', text = ''; let x: number | null = null, y: number | null = null
+    if (code === '0' && val === 'BLOCK') {
       i += 2
-      const textParts: string[] = []
+      let name = ''; let bx = 0, by = 0
       while (i < secEnd - 1) {
         const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
         if (c === '0') break
+        if (c === '2' && !name) name = v
+        else if (c === '10') bx = parseFloat(v) || 0
+        else if (c === '20') by = parseFloat(v) || 0
+        i += 2
+      }
+      const ents = parseEntityList(lines, i, secEnd, blocks, true)
+      // parseEntityList가 ENDBLK까지 소비하므로 i는 그대로 (루프 밖에서 다음 반복)
+      if (name) blocks.set(name, { base: [bx, by], ents: ents.ents })
+      i = ents.end
+    } else i += 2
+  }
+  return blocks
+}
+
+// INSERT 엔티티 적용: 블록 엔티티를 삽입점/회전/스케일에 맞게 변환
+function applyInsert(
+  bdef: BlockDef,
+  ix: number, iy: number,
+  sx: number, sy: number,
+  rot: number,  // degrees
+  layer: string,
+): RawEntity[] {
+  const cosR = Math.cos(rot * Math.PI / 180)
+  const sinR = Math.sin(rot * Math.PI / 180)
+  const [bx, by] = bdef.base
+  const xform = (px: number, py: number): [number, number] => {
+    const lx = (px - bx) * sx, ly = (py - by) * sy
+    return [ix + lx * cosR - ly * sinR, iy + lx * sinR + ly * cosR]
+  }
+  return bdef.ents.map(e => ({
+    ...e,
+    layer: e.layer || layer,
+    pts: e.pts.map(([px, py]) => xform(px, py)),
+  }))
+}
+
+// ── 실제 엔티티 목록 파싱 (ENTITIES 섹션 및 BLOCK 내부 공용) ──
+function parseEntityList(
+  lines: string[],
+  startI: number,
+  endI: number,
+  blocks: Map<string, BlockDef>,
+  stopAtEndBlk = false,
+): { ents: RawEntity[]; end: number } {
+  const entities: RawEntity[] = []
+  let i = startI
+
+  while (i < endI - 1) {
+    const code = lines[i]?.trim(), val = lines[i + 1]?.trim() ?? ''
+
+    if (stopAtEndBlk && code === '0' && val === 'ENDBLK') { i += 2; break }
+
+    // ── TEXT / MTEXT ──
+    if (code === '0' && (val === 'TEXT' || val === 'MTEXT')) {
+      const etype = val; let layer = '', text = ''; let x: number | null = null, y: number | null = null
+      i += 2
+      const parts: string[] = []
+      while (i < endI - 1) {
+        const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
+        if (c === '0') break
         if (c === '8') layer = v
-        if (c === '1' || c === '3') textParts.push(v)
+        if (c === '1' || c === '3') parts.push(v)
         if (c === '10') x = parseFloat(v)
         else if (c === '20') y = parseFloat(v)
         i += 2
       }
-      text = textParts.join(' ')
-      if (text.trim() && x !== null && y !== null) {
+      text = parts.join(' ')
+      if (text.trim() && x !== null && y !== null)
         entities.push({ type: etype, layer, pts: [[x, y]], flags: 0, text })
-      }
     }
-    // ── LWPOLYLINE / POLYLINE / LINE ──
-    else if (code === '0' && (val === 'LWPOLYLINE' || val === 'POLYLINE' || val === 'LINE')) {
+    // ── LINE / LWPOLYLINE / POLYLINE ──
+    else if (code === '0' && (val === 'LINE' || val === 'LWPOLYLINE' || val === 'POLYLINE')) {
       const etype = val; let layer = '', flags = 0; const pts: [number, number][] = []; let cx: number | null = null
       i += 2
       if (etype === 'POLYLINE') {
-        // POLYLINE header
-        while (i < secEnd - 1) {
+        while (i < endI - 1) {
           const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
           if (c === '0') break
           if (c === '8') layer = v
-          if (c === '70') { try { flags = parseInt(v) } catch (_e) { /* ignore */ } }
+          if (c === '70') { try { flags = parseInt(v) } catch { /* */ } }
           i += 2
         }
-        // VERTEX sub-entities
-        while (i < secEnd - 1) {
+        while (i < endI - 1) {
           const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
           if (c === '0' && v === 'VERTEX') {
             i += 2; let vx: number | null = null, vy: number | null = null
-            while (i < secEnd - 1) {
+            while (i < endI - 1) {
               const vc = lines[i]?.trim(), vv = lines[i + 1]?.trim() ?? ''
               if (vc === '0') break
               if (vc === '10') vx = parseFloat(vv)
@@ -133,12 +203,11 @@ function parseEntities(lines: string[]): RawEntity[] {
           else i += 2
         }
       } else {
-        // LWPOLYLINE / LINE
-        while (i < secEnd - 1) {
+        while (i < endI - 1) {
           const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
           if (c === '0') break
           if (c === '8') layer = v
-          else if (c === '70') { try { flags = parseInt(v) } catch (_e) { /* ignore */ } }
+          else if (c === '70') { try { flags = parseInt(v) } catch { /* */ } }
           else if (c === '10') cx = parseFloat(v)
           else if (c === '20') { if (cx !== null) { pts.push([cx, parseFloat(v)]); cx = null } }
           else if (c === '11') cx = parseFloat(v)
@@ -147,9 +216,99 @@ function parseEntities(lines: string[]): RawEntity[] {
         }
       }
       if (pts.length >= 2) entities.push({ type: etype, layer, pts, flags })
-    } else i += 2
+    }
+    // ── ARC ──
+    else if (code === '0' && val === 'ARC') {
+      let layer = ''; let cx = 0, cy = 0, r = 0, sa = 0, ea = 360
+      i += 2
+      while (i < endI - 1) {
+        const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
+        if (c === '0') break
+        if (c === '8') layer = v
+        else if (c === '10') cx = parseFloat(v)
+        else if (c === '20') cy = parseFloat(v)
+        else if (c === '40') r = parseFloat(v)
+        else if (c === '50') sa = parseFloat(v)
+        else if (c === '51') ea = parseFloat(v)
+        i += 2
+      }
+      if (r > 0) {
+        const pts = arcToPts(cx, cy, r, sa, ea)
+        if (pts.length >= 2) entities.push({ type: 'ARC', layer, pts, flags: 0 })
+      }
+    }
+    // ── CIRCLE ──
+    else if (code === '0' && val === 'CIRCLE') {
+      let layer = ''; let cx = 0, cy = 0, r = 0
+      i += 2
+      while (i < endI - 1) {
+        const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
+        if (c === '0') break
+        if (c === '8') layer = v
+        else if (c === '10') cx = parseFloat(v)
+        else if (c === '20') cy = parseFloat(v)
+        else if (c === '40') r = parseFloat(v)
+        i += 2
+      }
+      if (r > 0) {
+        const pts = arcToPts(cx, cy, r, 0, 0, true)
+        entities.push({ type: 'CIRCLE', layer, pts, flags: 1 })  // flags=1 → closed
+      }
+    }
+    // ── SPLINE (제어점/핏포인트 → 폴리라인 근사) ──
+    else if (code === '0' && val === 'SPLINE') {
+      let layer = ''; const fitPts: [number, number][] = []; let fx: number | null = null
+      i += 2
+      while (i < endI - 1) {
+        const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
+        if (c === '0') break
+        if (c === '8') layer = v
+        // 핏포인트: group 11/21 (control: 10/20)
+        else if (c === '11') fx = parseFloat(v)
+        else if (c === '21') { if (fx !== null) { fitPts.push([fx, parseFloat(v)]); fx = null } }
+        i += 2
+      }
+      if (fitPts.length >= 2) entities.push({ type: 'SPLINE', layer, pts: fitPts, flags: 0 })
+    }
+    // ── INSERT (블록 참조) ──
+    else if (code === '0' && val === 'INSERT') {
+      let layer = '', blockName = ''
+      let ix = 0, iy = 0, sx = 1, sy = 1, rot = 0
+      i += 2
+      while (i < endI - 1) {
+        const c = lines[i]?.trim(), v = lines[i + 1]?.trim() ?? ''
+        if (c === '0') break
+        if (c === '2') blockName = v
+        else if (c === '8') layer = v
+        else if (c === '10') ix = parseFloat(v)
+        else if (c === '20') iy = parseFloat(v)
+        else if (c === '41') sx = parseFloat(v) || 1
+        else if (c === '42') sy = parseFloat(v) || 1
+        else if (c === '50') rot = parseFloat(v) || 0
+        i += 2
+      }
+      if (blockName && blocks.has(blockName)) {
+        const resolved = applyInsert(blocks.get(blockName)!, ix, iy, sx, sy, rot, layer)
+        entities.push(...resolved)
+      }
+    }
+    else i += 2
   }
-  return entities
+  return { ents: entities, end: i }
+}
+
+function parseEntities(lines: string[]): RawEntity[] {
+  // BLOCKS 먼저 파싱 (INSERT 해석에 필요)
+  const blocks = parseBlocks(lines)
+
+  let secStart = -1, secEnd = lines.length
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (lines[i].trim() === '2' && lines[i + 1].trim() === 'ENTITIES') secStart = i + 2
+    if (secStart !== -1 && lines[i].trim() === '0' && lines[i + 1].trim() === 'ENDSEC') { secEnd = i; break }
+  }
+  if (secStart === -1) secStart = 0
+
+  return parseEntityList(lines, secStart, secEnd, blocks, false).ents
 }
 
 // ── 설계개요 추출 ──────────────────────────────────
