@@ -195,16 +195,16 @@ export async function POST(req: NextRequest) {
     const results: BoreholeResult[] = nearest.map((bh, i) => {
       const raw = (layerMap.get(bh.id) ?? []).sort((a, b) => a.end - b.end)
 
-      let wt: number | null = null   // 풍화토 하단 = 풍화암 시작
-      let wtr: number | null = null  // 풍화암 하단 = 풍화암 끝
+      let wt: number | null = null   // 풍화토 하단 = 토질층 중 가장 깊은 end
+      let wtr: number | null = null  // 풍화암 하단 = 풍화암층 중 가장 깊은 end
       const layers: BoreholeResult['layers'] = []
 
       for (const l of raw) {
         layers.push({ soil_type: l.nm || '미상', depth_from: l.start, depth_to: l.end })
-        if (l.nm.includes('풍화암')) {
-          if (wt === null) wt = l.start   // 첫 번째 풍화암 시작 = 풍화토 하단
-          wtr = l.end                      // 풍화암 끝 = 풍화암 하단 (마지막 값 사용)
-        }
+        // 토질층이면 계속 갱신 → 마지막 토질층 end = 풍화토 하단
+        if (isSoilLike(l.nm)) wt = l.end
+        // 풍화암층이면 계속 갱신 → 마지막 풍화암층 end = 풍화암 하단
+        if (l.nm.includes('풍화암')) wtr = l.end
       }
 
       return {
