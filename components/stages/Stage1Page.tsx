@@ -8,6 +8,7 @@ import WBSTable, { type WBSTableHandle } from '@/components/wbs/WBSTable'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import MonteCarloPanel from '@/components/analysis/MonteCarloPanel'
 import ProductivityPanel from '@/components/analysis/ProductivityPanel'
+import CompanyStandardsPanel from '@/components/analysis/CompanyStandardsPanel'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -29,7 +30,7 @@ interface Props {
 }
 
 type WBSMode = 'cp' | 'full'
-type ActivePanel = 'wbs' | 'gantt' | 'montecarlo' | 'productivity' | 'critical' | 'summary'
+type ActivePanel = 'wbs' | 'gantt' | 'montecarlo' | 'productivity' | 'standards' | 'critical' | 'summary'
 
 const CATEGORY_COLORS_HEX: Record<string, string> = {
   '공사준비': '#64748b',
@@ -122,6 +123,7 @@ export default function Stage1Page({ projectId, project }: Props) {
     { id: 'gantt', label: '공정표(Gantt)' },
     { id: 'montecarlo', label: '몬테카를로' },
     { id: 'productivity', label: '생산성 조정' },
+    { id: 'standards', label: '회사 실적 표준' },
   ]
 
   return (
@@ -487,6 +489,21 @@ export default function Stage1Page({ projectId, project }: Props) {
                     mode={currentMode}
                     hasCpmResult={!!cpmResult}
                     onResult={setMcResult}
+                  />
+                </div>
+              )}
+
+              {/* 회사 실적 표준 */}
+              {activePanel === 'standards' && (
+                <div className="p-6">
+                  <CompanyStandardsPanel
+                    cpmTasks={cpmResult ? cpmResult.tasks.map(t => ({
+                      taskId: t.taskId,
+                      name: t.name,
+                      category: t.category,
+                      duration: t.duration,
+                      isCritical: t.isCritical,
+                    })) : null}
                   />
                 </div>
               )}
