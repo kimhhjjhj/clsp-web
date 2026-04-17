@@ -4,13 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, Save, Download, Upload, ZoomIn, ZoomOut, Loader2,
   Link2, Unlink, Edit3, ChevronRight, Palette, GanttChartSquare, Workflow,
-  Undo2, Redo2,
+  Undo2, Redo2, Image as ImageIcon, Sparkles,
 } from 'lucide-react'
 import {
   type ProcessMap, type ProcessMapLane, type ProcessMapCard, type ProcessMapLink,
   EMPTY_MAP, DEFAULT_LANES, genId,
 } from '@/lib/process-map/types'
 import { analyzeProcessMap } from '@/lib/process-map/analyzer'
+import { autoLayout } from '@/lib/process-map/auto-layout'
+import { exportToPng } from '@/lib/process-map/export-png'
 import FlowCanvas from './FlowCanvas'
 import { AlertTriangle, Zap } from 'lucide-react'
 
@@ -356,6 +358,28 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
             {importing ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
             베이스라인에서 가져오기
           </button>
+          {viewMode === 'flow' && (
+            <button
+              onClick={() => {
+                if (!confirm('모든 카드를 위상 정렬 기반으로 자동 배치합니다. 현재 x,y 위치가 덮어쓰기됩니다.')) return
+                setMap(autoLayout(map))
+                markDirty()
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-100 border border-indigo-200 text-indigo-800 text-xs font-semibold rounded-lg hover:bg-indigo-200"
+              title="위상 정렬 기반 카드 자동 배치"
+            ><Sparkles size={12} /> 자동 배치</button>
+          )}
+          <button
+            onClick={() => {
+              exportToPng(map, {
+                title: `프로세스맵 — ${new Date().toISOString().slice(0, 10)}`,
+                highlightCritical: analysis.criticalPath,
+                conflictCardIds: new Set(analysis.conflicts.flatMap(c => c.cardIds)),
+              }, `process-map-${new Date().toISOString().slice(0, 10)}.png`)
+            }}
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200"
+            title="PNG 이미지로 내보내기"
+          ><ImageIcon size={12} /> PNG 저장</button>
           {viewMode === 'timeline' && (
             <div className="inline-flex items-center gap-1 text-xs text-gray-500">
               <button onClick={() => setDayWidth(w => Math.max(MIN_DAY_W, w - 2))} className="p-1 hover:bg-gray-100 rounded"><ZoomOut size={12} /></button>
