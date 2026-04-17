@@ -4,12 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, Save, Download, Upload, ZoomIn, ZoomOut, Loader2,
   Link2, Unlink, Edit3, ChevronRight, Palette, GanttChartSquare, Workflow,
-  Undo2, Redo2, Image as ImageIcon, Sparkles, MessageSquare,
+  Undo2, Redo2, Image as ImageIcon, Sparkles, MessageSquare, LayoutGrid, HelpCircle,
 } from 'lucide-react'
 import {
   type ProcessMap, type ProcessMapLane, type ProcessMapCard, type ProcessMapLink, type CardComment,
-  EMPTY_MAP, DEFAULT_LANES, genId,
+  EMPTY_MAP, DEFAULT_LANES, LECTURE_DEFAULT_LANES, genId,
 } from '@/lib/process-map/types'
+import PullPlanBoard from './PullPlanBoard'
 import { analyzeProcessMap } from '@/lib/process-map/analyzer'
 import { autoLayout } from '@/lib/process-map/auto-layout'
 import { exportToPng } from '@/lib/process-map/export-png'
@@ -45,7 +46,7 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
   const [linkingFrom, setLinkingFrom] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'timeline' | 'flow'>('timeline')
+  const [viewMode, setViewMode] = useState<'pull' | 'timeline' | 'flow'>('pull')
   const boardRef = useRef<HTMLDivElement>(null)
 
   // ── Undo/Redo 히스토리 (throttle 방식) ──────────────────
@@ -328,11 +329,18 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
       {/* 뷰 토글 */}
       <div className="flex items-center gap-0.5 bg-gray-100 p-0.5 rounded-lg w-fit">
         <button
+          onClick={() => setViewMode('pull')}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+            viewMode === 'pull' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+          }`}
+          title="동양건설 강의자료 기준 — 주 단위, 협력사 주도, 마일스톤 역산"
+        ><LayoutGrid size={13} /> Pull Planning (협력사 주도)</button>
+        <button
           onClick={() => setViewMode('timeline')}
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
             viewMode === 'timeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
           }`}
-        ><GanttChartSquare size={13} /> 타임라인 (스윔레인)</button>
+        ><GanttChartSquare size={13} /> 타임라인 (일 단위)</button>
         <button
           onClick={() => setViewMode('flow')}
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
@@ -345,10 +353,25 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <button
+            onClick={() => {
+              if (map.lanes.length > 0 && !confirm('기존 레인을 모두 유지하고 강의자료 기본 레인(시공사+토목+철골+골조+마감+지원)을 추가합니다. 계속할까요?')) return
+              const existingNames = new Set(map.lanes.map(l => l.name))
+              const presetLanes = LECTURE_DEFAULT_LANES
+                .filter(p => !existingNames.has(p.name))
+                .map(p => ({ id: genId('lane'), ...p, order: p.order + map.lanes.length }))
+              setMap(m => ({ ...m, lanes: [...m.lanes, ...presetLanes] }))
+              markDirty()
+            }}
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 border border-amber-200 text-amber-800 text-xs font-semibold rounded-lg hover:bg-amber-200"
+            title="강의자료 기준 기본 레인 세트 (시공사/토목/철골/골조/마감/전기·통신/기계·설비/소방/가설·안전)"
+          >
+            <LayoutGrid size={12} /> 강의자료 프리셋 적용
+          </button>
+          <button
             onClick={addLane}
             className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-200 text-xs font-semibold rounded-lg hover:bg-gray-50"
           >
-            <Plus size={12} /> 레인(협력사) 추가
+            <Plus size={12} /> 레인 추가
           </button>
           <button
             onClick={importBaseline}
@@ -453,6 +476,20 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
             </details>
           )}
         </div>
+      )}
+
+      {/* 보드 (Pull Planning) — 강의자료 기준 */}
+      {viewMode === 'pull' && (
+        <PullPlanBoard
+          map={map}
+          setMap={setMap}
+          startDate={startDate}
+          onEditCard={setEditingCard}
+          markDirty={markDirty}
+          analysis={analysis}
+          linkingFrom={linkingFrom}
+          setLinkingFrom={setLinkingFrom}
+        />
       )}
 
       {/* 보드 (타임라인) */}
@@ -679,6 +716,9 @@ function CardEditorModal({
   const [note, setNote] = useState(card.note ?? '')
   const [status, setStatus] = useState(card.status ?? 'planned')
   const [assignee, setAssignee] = useState(card.assignee ?? '')
+  const [kind, setKind] = useState(card.kind ?? card.shape ?? 'task')
+  const [askType, setAskType] = useState(card.askType ?? 'predecessor')
+  const [requestTo, setRequestTo] = useState(card.requestTo ?? '')
   const [comments, setComments] = useState<CardComment[]>(card.comments ?? [])
   const [newAuthor, setNewAuthor] = useState('')
   const [newText, setNewText] = useState('')
@@ -713,6 +753,50 @@ function CardEditorModal({
       <div className="bg-white rounded-xl p-5 w-full max-w-lg max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Edit3 size={13} /> 카드 편집</h3>
         <div className="space-y-2.5">
+          {/* 종류 (task/ask/milestone 등) */}
+          <div>
+            <label className="text-xs text-gray-500 font-semibold">종류</label>
+            <div className="mt-1 grid grid-cols-5 gap-1">
+              {[
+                { k: 'task', label: '작업', bg: 'bg-blue-100 text-blue-800' },
+                { k: 'ask', label: '요청', bg: 'bg-amber-100 text-amber-800' },
+                { k: 'milestone', label: '마일스톤', bg: 'bg-orange-100 text-orange-800' },
+                { k: 'decision', label: '결정', bg: 'bg-purple-100 text-purple-800' },
+                { k: 'note', label: '메모', bg: 'bg-yellow-100 text-yellow-800' },
+              ].map(o => (
+                <button
+                  key={o.k}
+                  onClick={() => setKind(o.k as any)}
+                  className={`px-2 py-1.5 rounded text-[11px] font-semibold border transition-colors ${
+                    kind === o.k ? `${o.bg} border-current` : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >{o.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Ask 전용 옵션 */}
+          {kind === 'ask' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-amber-800 font-semibold">요청 유형</label>
+                  <select value={askType} onChange={e => setAskType(e.target.value as any)} className="mt-0.5 w-full border border-amber-200 rounded px-2 py-1.5 text-xs bg-white">
+                    <option value="predecessor">선행완료</option>
+                    <option value="material">자재납품</option>
+                    <option value="approval">승인/검측</option>
+                    <option value="info">정보/도면</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-amber-800 font-semibold">요청 대상</label>
+                  <input value={requestTo} onChange={e => setRequestTo(e.target.value)} placeholder="예: 형틀/다원이앤씨"
+                    className="mt-0.5 w-full border border-amber-200 rounded px-2 py-1.5 text-xs bg-white" />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-xs text-gray-500 font-semibold">작업명</label>
             <input value={title} onChange={e => setTitle(e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
@@ -817,7 +901,14 @@ function CardEditorModal({
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">취소</button>
             <button
-              onClick={() => onSave({ title, laneId, startDay, duration, note, status, assignee: assignee || undefined, comments })}
+              onClick={() => onSave({
+                title, laneId, startDay, duration, note, status,
+                assignee: assignee || undefined,
+                comments,
+                kind,
+                askType: kind === 'ask' ? askType : undefined,
+                requestTo: kind === 'ask' ? (requestTo || undefined) : undefined,
+              })}
               className="px-3 py-1.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >저장</button>
           </div>

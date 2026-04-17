@@ -5,7 +5,8 @@ import {
   Plus, Trash2, Link2, Edit3, Diamond, Circle, Square, StickyNote,
   MousePointer2, Hand, Maximize2, Map as MapIcon, Group, MessageSquare,
 } from 'lucide-react'
-import type { ProcessMap, ProcessMapCard, ProcessMapLane, ProcessMapLink, ProcessMapGroup, CardShape } from '@/lib/process-map/types'
+import type { ProcessMap, ProcessMapCard, ProcessMapLane, ProcessMapLink, ProcessMapGroup, CardKind } from '@/lib/process-map/types'
+type CardShape = CardKind
 import { genId, LINK_TYPE_LABEL } from '@/lib/process-map/types'
 import type { MapAnalysis } from '@/lib/process-map/analyzer'
 import { AlertTriangle } from 'lucide-react'
