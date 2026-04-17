@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, Save, Download, Upload, ZoomIn, ZoomOut, Loader2,
   Link2, Unlink, Edit3, ChevronRight, Palette, GanttChartSquare, Workflow,
-  Undo2, Redo2, Image as ImageIcon, Sparkles,
+  Undo2, Redo2, Image as ImageIcon, Sparkles, MessageSquare,
 } from 'lucide-react'
 import {
-  type ProcessMap, type ProcessMapLane, type ProcessMapCard, type ProcessMapLink,
+  type ProcessMap, type ProcessMapLane, type ProcessMapCard, type ProcessMapLink, type CardComment,
   EMPTY_MAP, DEFAULT_LANES, genId,
 } from '@/lib/process-map/types'
 import { analyzeProcessMap } from '@/lib/process-map/analyzer'
@@ -572,6 +572,11 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
                         {hasConflict && (
                           <AlertTriangle size={10} className="ml-1 text-red-200 flex-shrink-0" />
                         )}
+                        {card.comments && card.comments.length > 0 && (
+                          <span className="ml-1 inline-flex items-center gap-0.5 text-[9px] bg-black/30 px-1 rounded flex-shrink-0">
+                            <MessageSquare size={8} />{card.comments.length}
+                          </span>
+                        )}
                         {card.baselineTaskId && (
                           <span className="ml-1 text-[9px] bg-black/30 px-1 rounded flex-shrink-0">MSP</span>
                         )}
@@ -673,10 +678,39 @@ function CardEditorModal({
   const [duration, setDuration] = useState(card.duration)
   const [note, setNote] = useState(card.note ?? '')
   const [status, setStatus] = useState(card.status ?? 'planned')
+  const [assignee, setAssignee] = useState(card.assignee ?? '')
+  const [comments, setComments] = useState<CardComment[]>(card.comments ?? [])
+  const [newAuthor, setNewAuthor] = useState('')
+  const [newText, setNewText] = useState('')
+
+  function addComment() {
+    const text = newText.trim()
+    if (!text) return
+    const author = newAuthor.trim() || '미지정'
+    setComments(cs => [...cs, {
+      id: `cmt_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      author,
+      text,
+      createdAt: new Date().toISOString(),
+    }])
+    setNewText('')
+    // 발언자는 유지 (같은 사람이 연속 발언하는 경우 많음)
+  }
+
+  function removeComment(id: string) {
+    setComments(cs => cs.filter(c => c.id !== id))
+  }
+
+  function fmtTime(iso: string): string {
+    try {
+      const d = new Date(iso)
+      return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    } catch { return '' }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl p-5 w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-xl p-5 w-full max-w-lg max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Edit3 size={13} /> 카드 편집</h3>
         <div className="space-y-2.5">
           <div>
@@ -699,14 +733,20 @@ function CardEditorModal({
               <input type="number" min={1} value={duration} onChange={e => setDuration(Number(e.target.value))} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </div>
           </div>
-          <div>
-            <label className="text-xs text-gray-500 font-semibold">상태</label>
-            <select value={status} onChange={e => setStatus(e.target.value as any)} className="mt-1 w-full border border-gray-200 rounded-lg px-2 py-2 text-sm bg-white">
-              <option value="planned">계획</option>
-              <option value="in_progress">진행중</option>
-              <option value="done">완료</option>
-              <option value="blocked">차단</option>
-            </select>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">상태</label>
+              <select value={status} onChange={e => setStatus(e.target.value as any)} className="mt-1 w-full border border-gray-200 rounded-lg px-2 py-2 text-sm bg-white">
+                <option value="planned">계획</option>
+                <option value="in_progress">진행중</option>
+                <option value="done">완료</option>
+                <option value="blocked">차단</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">담당자</label>
+              <input value={assignee} onChange={e => setAssignee(e.target.value)} placeholder="예: 박소장/새한기업" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
           </div>
           <div>
             <label className="text-xs text-gray-500 font-semibold">메모</label>
@@ -717,13 +757,67 @@ function CardEditorModal({
               MSP 베이스라인 연동 카드 · 다음 import 시 기간이 덮어쓰일 수 있음
             </div>
           )}
+
+          {/* 코멘트 섹션 */}
+          <div className="pt-3 mt-2 border-t border-gray-100">
+            <label className="text-xs text-gray-500 font-semibold flex items-center gap-1">
+              <MessageSquare size={11} /> 회의 코멘트 · 협력사 발언 ({comments.length})
+            </label>
+
+            {/* 기존 코멘트 */}
+            {comments.length > 0 && (
+              <ul className="mt-2 space-y-1.5 max-h-52 overflow-auto">
+                {comments.map(c => (
+                  <li key={c.id} className="bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 text-xs">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-gray-700">{c.author}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-gray-400">{fmtTime(c.createdAt)}</span>
+                        <button onClick={() => removeComment(c.id)} className="text-gray-300 hover:text-red-600" title="삭제">
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 whitespace-pre-wrap leading-snug">{c.text}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* 신규 코멘트 입력 */}
+            <div className="mt-2 bg-blue-50/40 border border-blue-100 rounded-lg p-2 space-y-1.5">
+              <input
+                value={newAuthor}
+                onChange={e => setNewAuthor(e.target.value)}
+                placeholder="발언자 (예: 박소장/새한기업)"
+                className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs bg-white"
+              />
+              <textarea
+                value={newText}
+                onChange={e => setNewText(e.target.value)}
+                onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') addComment() }}
+                rows={2}
+                placeholder="의견 / 우려 / 조건 입력 (Ctrl+Enter로 추가)"
+                className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs bg-white resize-none"
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={addComment}
+                  disabled={!newText.trim()}
+                  className="text-[11px] px-2.5 py-1 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700 disabled:opacity-50"
+                >코멘트 추가</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex justify-between mt-4">
+
+        <div className="flex justify-between mt-4 pt-3 border-t border-gray-100">
           <button onClick={onDelete} className="text-xs text-red-600 flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded"><Trash2 size={11} /> 삭제</button>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">취소</button>
             <button
-              onClick={() => onSave({ title, laneId, startDay, duration, note, status })}
+              onClick={() => onSave({ title, laneId, startDay, duration, note, status, assignee: assignee || undefined, comments })}
               className="px-3 py-1.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >저장</button>
           </div>

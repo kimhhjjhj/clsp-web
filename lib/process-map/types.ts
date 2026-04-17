@@ -12,6 +12,13 @@ export interface ProcessMapLane {
 
 export type CardShape = 'task' | 'decision' | 'milestone' | 'start' | 'end' | 'note'
 
+export interface CardComment {
+  id: string
+  author: string       // 발언자 (예: "박소장/새한기업", "최과장/금강전기")
+  text: string
+  createdAt: string    // ISO
+}
+
 export interface ProcessMapCard {
   id: string
   laneId: string
@@ -27,6 +34,9 @@ export interface ProcessMapCard {
   shape?: CardShape       // 기본 'task'
   w?: number              // 폭 (기본 160)
   h?: number              // 높이 (기본 56)
+  // 회의 기록 — 협력사별 발언/코멘트 적층
+  comments?: CardComment[]
+  assignee?: string       // 주 담당자 ("회사/성명")
 }
 
 export interface ProcessMapLink {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, Link2, Edit3, Diamond, Circle, Square, StickyNote,
-  MousePointer2, Hand, Maximize2, Map as MapIcon, Group,
+  MousePointer2, Hand, Maximize2, Map as MapIcon, Group, MessageSquare,
 } from 'lucide-react'
 import type { ProcessMap, ProcessMapCard, ProcessMapLane, ProcessMapLink, ProcessMapGroup, CardShape } from '@/lib/process-map/types'
 import { genId, LINK_TYPE_LABEL } from '@/lib/process-map/types'
@@ -714,6 +714,7 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty, analysi
                   status={card.status}
                   isCritical={isCritical}
                   hasConflict={hasConflict}
+                  commentCount={card.comments?.length ?? 0}
                 />
                 {/* 연결 핸들 4방향 (선택 시만 표시) */}
                 {(selected || isConnecting) && (
@@ -1035,7 +1036,7 @@ function Minimap({
 
 // ── 도형 렌더러 ──────────────────────────────────
 function ShapeRenderer({
-  shape, title, color, width, height, selected, hasBaseline, status, isCritical, hasConflict,
+  shape, title, color, width, height, selected, hasBaseline, status, isCritical, hasConflict, commentCount,
 }: {
   shape: CardShape
   title: string
@@ -1047,6 +1048,7 @@ function ShapeRenderer({
   status?: string
   isCritical?: boolean
   hasConflict?: boolean
+  commentCount?: number
 }) {
   const borderColor = hasConflict ? '#dc2626' : selected ? '#2563eb' : isCritical ? '#ea580c' : 'transparent'
   const borderWidth = (selected || hasConflict) ? 2 : isCritical ? 2 : 0
@@ -1136,6 +1138,11 @@ function ShapeRenderer({
       )}
       {hasConflict && (
         <AlertTriangle size={12} className="absolute -top-1.5 -right-1.5 text-red-600 fill-white" />
+      )}
+      {!!commentCount && commentCount > 0 && (
+        <span className="absolute bottom-1 left-1 inline-flex items-center gap-0.5 bg-black/40 text-[8px] px-1 rounded">
+          <MessageSquare size={8} />{commentCount}
+        </span>
       )}
       {hasBaseline && (
         <span className="absolute top-1 right-1 bg-black/40 text-[8px] px-1 rounded">MSP</span>
