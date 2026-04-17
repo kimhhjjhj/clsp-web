@@ -138,43 +138,188 @@ export default function BaselineImportPanel({ projectId }: Props) {
 
   const displayTasks = preview.length > 0 ? preview : tasks
 
-  // 간단한 간트 Canvas 렌더
+  // ── CPM 계산: 선행작업 → ES(시작) ──────────────────────────
+  // MS Project 선행작업 포맷: "1", "2,3", "17FS", "17FS+3", "17SS" 등
+  function parsePredIds(preds: string | null): { id: string; lag: number }[] {
+    if (!preds) return []
+    return preds.split(/[,;]/)
+      .map(p => p.trim())
+      .filter(Boolean)
+      .map(p => {
+        // "17FS+3" → id="17", lag=3 / "17SS-2" → id="17", lag=-2
+        const m = p.match(/^(\d+)(?:FS|SS|FF|SF)?([+-]\d+)?$/i)
+        if (m) return { id: m[1], lag: parseInt(m[2] || '0', 10) }
+        // fallback: 숫자만 추출
+        const num = p.match(/\d+/)
+        return num ? { id: num[0], lag: 0 } : { id: '', lag: 0 }
+      })
+      .filter(x => x.id)
+  }
+
+  // mspId 또는 순번(1-based) 둘 다 매칭
+  const idIndex = new Map<string, number>()
+  displayTasks.forEach((t, i) => {
+    idIndex.set(String(i + 1), i)
+    if (t.mspId) idIndex.set(t.mspId, i)
+  })
+
+  // Forward pass — ES, EF 계산 (순환 방지 위해 topo 반복)
+  const ES = new Array(displayTasks.length).fill(0)
+  const EF = new Array(displayTasks.length).fill(0)
+  for (let iter = 0; iter < displayTasks.length + 2; iter++) {
+    let changed = false
+    displayTasks.forEach((t, i) => {
+      const preds = parsePredIds(t.predecessors)
+      let es = 0
+      for (const p of preds) {
+        const pi = idIndex.get(p.id)
+        if (pi != null && pi < displayTasks.length) {
+          es = Math.max(es, EF[pi] + p.lag)
+        }
+      }
+      if (es !== ES[i]) { ES[i] = es; changed = true }
+      EF[i] = ES[i] + t.duration
+    })
+    if (!changed) break
+  }
+  const projectDur = Math.max(...EF, 1)
+
+  // ── 간트 Canvas 렌더 ──────────────────────────────────────
   const drawGantt = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas || displayTasks.length === 0) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const ROW = 28, LW = 220, PR = 10
-    const W = 900, H = Math.max(200, displayTasks.length * ROW + 40)
+    const ROW = 26, LW = 240, HDR = 48, PR = 20
+    // 자동 px/day — 화면폭 900 기준
+    const chartW = 900 - LW - PR
+    const pxPerDay = Math.max(1.5, Math.min(10, chartW / projectDur))
+    const contentW = pxPerDay * projectDur
+    const W = LW + contentW + PR
+    const H = HDR + displayTasks.length * ROW + 20
     const dpr = window.devicePixelRatio || 1
     canvas.width = W * dpr; canvas.height = H * dpr
+    canvas.style.width = `${W}px`
     canvas.style.height = `${H}px`
     ctx.scale(dpr, dpr)
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H)
 
-    const maxDur = Math.max(...displayTasks.map(t => t.duration), 1)
-    const barW = W - LW - PR
+    // ── 헤더(시간축) ──────────────────────────
+    ctx.fillStyle = '#f8fafc'
+    ctx.fillRect(LW, 0, contentW, HDR)
+    // 월 구분 (30일 단위)
+    const monthStep = projectDur > 500 ? 90 : projectDur > 200 ? 30 : projectDur > 60 ? 14 : 7
+    ctx.font = '10px sans-serif'; ctx.textAlign = 'center'
+    for (let d = 0; d <= projectDur; d += monthStep) {
+      const x = LW + d * pxPerDay
+      ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke()
+      ctx.fillStyle = '#64748b'
+      ctx.fillText(`D+${d}`, x, HDR - 20)
+      // 주 단위 표시
+      ctx.fillStyle = '#94a3b8'
+      ctx.font = '9px sans-serif'
+      const weeks = Math.round(d / 7)
+      if (projectDur <= 500) ctx.fillText(`${weeks}주차`, x, HDR - 6)
+      ctx.font = '10px sans-serif'
+    }
+    // 헤더 하단 경계
+    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(0, HDR); ctx.lineTo(W, HDR); ctx.stroke()
 
+    // ── 행 배경 (홀짝) ─────────────────────────
+    displayTasks.forEach((_t, i) => {
+      const y = HDR + i * ROW
+      if (i % 2 === 1) {
+        ctx.fillStyle = '#fafafa'
+        ctx.fillRect(0, y, W, ROW)
+      }
+    })
+
+    // ── 작업 바 ─────────────────────────
     displayTasks.forEach((t, i) => {
-      const y = i * ROW + 8
-      ctx.fillStyle = '#374151'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right'
-      const label = t.name.length > 22 ? t.name.slice(0, 21) + '…' : t.name
-      ctx.fillText(label, LW - 6, y + 14)
+      const y = HDR + i * ROW
+      const es = ES[i], dur = t.duration
 
-      const bw = (t.duration / maxDur) * barW
-      ctx.fillStyle = '#3b82f6'
-      ctx.beginPath()
-      ctx.roundRect(LW, y + 2, Math.max(4, bw), 18, 3)
-      ctx.fill()
+      // 라벨
+      ctx.fillStyle = '#1e293b'
+      ctx.font = `${t.level > 0 ? '10.5' : '11.5'}px sans-serif`
+      ctx.textAlign = 'right'
+      const indent = '  '.repeat(t.level || 0)
+      const raw = indent + t.name
+      const label = raw.length > 28 ? raw.slice(0, 27) + '…' : raw
+      ctx.fillText(label, LW - 8, y + 17)
 
-      ctx.font = '9px sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#64748b'
-      ctx.fillText(`${t.duration}일`, LW + Math.max(4, bw) + 4, y + 14)
+      // 바 (마일스톤이면 다이아몬드)
+      const x = LW + es * pxPerDay
+      const bw = Math.max(3, dur * pxPerDay)
+      const isMilestone = dur <= 0.5
 
+      if (isMilestone) {
+        ctx.fillStyle = '#8b5cf6'
+        ctx.beginPath()
+        ctx.moveTo(x, y + 13)
+        ctx.lineTo(x + 6, y + 7)
+        ctx.lineTo(x + 12, y + 13)
+        ctx.lineTo(x + 6, y + 19)
+        ctx.closePath()
+        ctx.fill()
+      } else {
+        // 상위(요약) 작업이면 진한 색
+        const isSummary = t.level === 0 && dur > projectDur * 0.4
+        ctx.fillStyle = isSummary ? '#1e40af' : '#3b82f6'
+        ctx.beginPath()
+        ctx.roundRect(x, y + 6, bw, 14, 3)
+        ctx.fill()
+
+        // 기간 라벨 (바 오른쪽)
+        ctx.font = '9.5px sans-serif'
+        ctx.textAlign = 'left'
+        ctx.fillStyle = '#475569'
+        ctx.fillText(`${dur}일`, x + bw + 4, y + 17)
+      }
+
+      // 행 구분선
       ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 0.5
       ctx.beginPath(); ctx.moveTo(0, y + ROW); ctx.lineTo(W, y + ROW); ctx.stroke()
     })
-  }, [displayTasks])
+
+    // ── 의존성 화살표 ─────────────────────────
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 0.8
+    ctx.fillStyle = '#94a3b8'
+    displayTasks.forEach((t, i) => {
+      const preds = parsePredIds(t.predecessors)
+      for (const p of preds) {
+        const pi = idIndex.get(p.id)
+        if (pi == null || pi >= displayTasks.length) continue
+        const fromX = LW + EF[pi] * pxPerDay
+        const fromY = HDR + pi * ROW + 13
+        const toX   = LW + ES[i] * pxPerDay
+        const toY   = HDR + i * ROW + 13
+
+        // L자 꺾임 경로
+        ctx.beginPath()
+        ctx.moveTo(fromX, fromY)
+        ctx.lineTo(fromX + 4, fromY)
+        ctx.lineTo(fromX + 4, toY)
+        ctx.lineTo(toX - 2, toY)
+        ctx.stroke()
+
+        // 화살촉
+        ctx.beginPath()
+        ctx.moveTo(toX - 2, toY)
+        ctx.lineTo(toX - 6, toY - 3)
+        ctx.lineTo(toX - 6, toY + 3)
+        ctx.closePath()
+        ctx.fill()
+      }
+    })
+
+    // ── 좌측 라벨 영역 경계선 ─────────────────────────
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(LW, 0); ctx.lineTo(LW, H); ctx.stroke()
+  }, [displayTasks, ES, EF, idIndex, projectDur])
 
   useEffect(() => { drawGantt() }, [drawGantt])
 
@@ -216,8 +361,22 @@ export default function BaselineImportPanel({ projectId }: Props) {
             베이스라인 공정표 ({displayTasks.length}개 태스크)
             {preview.length > 0 && <span className="text-xs text-orange-600 font-normal">— 미저장 미리보기</span>}
           </h3>
-          <div className="overflow-auto max-h-[500px]">
-            <canvas ref={canvasRef} style={{ width: 900, maxWidth: '100%' }} />
+          <div className="overflow-auto max-h-[560px] border border-gray-100 rounded-lg">
+            <canvas ref={canvasRef} />
+          </div>
+          <div className="mt-2 flex items-center gap-4 text-[10px] text-gray-500">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-2 rounded-sm bg-[#3b82f6] inline-block" />일반 작업
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-2 rounded-sm bg-[#1e40af] inline-block" />요약 작업
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rotate-45 bg-[#8b5cf6] inline-block" />마일스톤
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-4 h-px bg-gray-400" />→ 의존관계
+            </div>
           </div>
         </div>
       )}
@@ -229,7 +388,7 @@ export default function BaselineImportPanel({ projectId }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0 border-b border-gray-100">
                 <tr>
-                  {['ID','WBS','작업명','기간','시작','완료','선행'].map(h => (
+                  {['ID','WBS','작업명','기간','ES','EF','시작','완료','선행'].map(h => (
                     <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>
                   ))}
                 </tr>
@@ -239,8 +398,10 @@ export default function BaselineImportPanel({ projectId }: Props) {
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="px-3 py-1.5 text-xs text-gray-400 font-mono">{t.mspId || i+1}</td>
                     <td className="px-3 py-1.5 text-xs text-gray-400 font-mono">{t.wbsCode || '—'}</td>
-                    <td className="px-3 py-1.5 text-gray-900">{t.name}</td>
+                    <td className="px-3 py-1.5 text-gray-900" style={{ paddingLeft: `${12 + (t.level || 0) * 14}px` }}>{t.name}</td>
                     <td className="px-3 py-1.5 text-blue-700 font-mono font-semibold">{t.duration}일</td>
+                    <td className="px-3 py-1.5 text-xs font-mono text-gray-500">D+{ES[i] ?? 0}</td>
+                    <td className="px-3 py-1.5 text-xs font-mono text-gray-500">D+{EF[i] ?? 0}</td>
                     <td className="px-3 py-1.5 text-gray-500 text-xs">{t.start || '—'}</td>
                     <td className="px-3 py-1.5 text-gray-500 text-xs">{t.finish || '—'}</td>
                     <td className="px-3 py-1.5 text-gray-400 text-xs">{t.predecessors || '—'}</td>
