@@ -14,8 +14,9 @@
   - 완료 조건: 본인이 속하지 않은 프로젝트는 목록·상세에서 비노출
 - [ ] **역할 기반 권한** — 원청 PM은 전체 편집, 협력사는 자기 레인만, 뷰어는 읽기 전용
   - 완료 조건: 다른 협력사 레인 수정 시 403
-- [ ] **자동 저장 + 에러 복구** — 프로세스맵/일보 편집 중 2초 debounce localStorage 초안, 네트워크 실패 시 복구 UI
+- [x] **자동 저장 + 에러 복구** — 프로세스맵/일보 편집 중 2초 debounce localStorage 초안, 네트워크 실패 시 복구 UI
   - 완료 조건: 브라우저 강제 종료 후 재진입 시 미저장 변경 복원 다이얼로그
+  - 구현: `lib/hooks/useAutoSaveDraft.ts` + `DraftRestoreBanner` · ProcessMapBoard/DailyReportForm 적용
 
 ## Tier 1 — 사용성 임팩트 최대
 

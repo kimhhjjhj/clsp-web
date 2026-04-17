@@ -15,6 +15,8 @@ import PullPlanBoard from './PullPlanBoard'
 import { analyzeProcessMap } from '@/lib/process-map/analyzer'
 import { autoLayout } from '@/lib/process-map/auto-layout'
 import { exportToPng } from '@/lib/process-map/export-png'
+import { useAutoSaveDraft } from '@/lib/hooks/useAutoSaveDraft'
+import DraftRestoreBanner from '@/components/common/DraftRestoreBanner'
 import FlowCanvas from './FlowCanvas'
 import { AlertTriangle, Zap } from 'lucide-react'
 
@@ -108,6 +110,9 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [undo, redo])
 
+  // ── 서버 버전 추적 (draft 충돌 감지용) ────────────
+  const [serverVersion, setServerVersion] = useState<string | undefined>(undefined)
+
   // ── 로드 ───────────────────────────────────────────────
   useEffect(() => {
     fetch(`/api/projects/${projectId}/process-map`)
@@ -117,11 +122,23 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
           lanes: data.lanes ?? [],
           cards: data.cards ?? [],
           links: data.links ?? [],
+          groups: data.groups ?? [],
         })
+        setServerVersion(data.updatedAt ?? undefined)
         setLoading(false)
       })
       .catch(() => setLoading(false))
   }, [projectId])
+
+  // ── 자동 저장 (localStorage draft) ─────────────────
+  const draftKey = `pmap-draft:${projectId}`
+  const { hasDraft, draftEnvelope, lastSavedAt, clearDraft, applyDraft } = useAutoSaveDraft<ProcessMap>({
+    key: draftKey,
+    data: map,
+    enabled: !loading && dirty,   // 서버 로드 완료 + 미저장 변경이 있을 때만
+    serverVersion,
+    isMeaningful: (m) => m.lanes.length > 0 || m.cards.length > 0,
+  })
 
   // ── 저장 ───────────────────────────────────────────────
   const save = useCallback(async () => {
@@ -133,14 +150,23 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
         body: JSON.stringify(map),
       })
       if (res.ok) {
+        const data = await res.json()
         setDirty(false)
         setNotice('저장됨')
+        setServerVersion(data.updatedAt ?? new Date().toISOString())
+        clearDraft()
         setTimeout(() => setNotice(null), 1500)
+      } else {
+        setNotice('저장 실패 — 초안은 자동 보관됨')
+        setTimeout(() => setNotice(null), 3000)
       }
+    } catch {
+      setNotice('네트워크 오류 — 초안은 자동 보관됨')
+      setTimeout(() => setNotice(null), 3000)
     } finally {
       setSaving(false)
     }
-  }, [projectId, map])
+  }, [projectId, map, clearDraft])
 
   // ── 베이스라인 import ─────────────────────────────────
   async function importBaseline() {
@@ -327,6 +353,16 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* 복구 배너 (저장되지 않은 초안이 있을 때) */}
+      {hasDraft && draftEnvelope && (
+        <DraftRestoreBanner
+          savedAt={draftEnvelope.savedAt}
+          label="프로세스맵 변경"
+          onRestore={() => applyDraft(d => { setMapRaw(d); setDirty(true); setNotice('초안 복원됨'); setTimeout(() => setNotice(null), 2000) })}
+          onDiscard={() => { clearDraft(); setNotice('초안 폐기됨'); setTimeout(() => setNotice(null), 1500) }}
+        />
+      )}
+
       {/* 뷰 토글 */}
       <div className="flex items-center gap-0.5 bg-gray-100 p-0.5 rounded-lg w-fit">
         <button
@@ -434,7 +470,11 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
             ><Redo2 size={13} /></button>
           </div>
           {notice && <span className="text-xs text-green-700">✓ {notice}</span>}
-          {dirty && <span className="text-xs text-orange-500">● 미저장</span>}
+          {dirty && (
+            <span className="text-xs text-orange-500" title={lastSavedAt ? `자동 초안 ${new Date(lastSavedAt).toLocaleTimeString('ko-KR')}` : '자동 저장 대기중'}>
+              ● 미저장{lastSavedAt ? ' (자동보관됨)' : ''}
+            </span>
+          )}
           <button
             onClick={save}
             disabled={saving || !dirty}

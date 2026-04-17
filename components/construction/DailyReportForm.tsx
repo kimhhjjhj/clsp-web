@@ -8,6 +8,8 @@ import {
   Image as ImageIcon,
 } from 'lucide-react'
 import PhotoUpload, { type Photo } from './PhotoUpload'
+import { useAutoSaveDraft } from '@/lib/hooks/useAutoSaveDraft'
+import DraftRestoreBanner from '@/components/common/DraftRestoreBanner'
 
 export interface DailyReportData {
   id?: string
@@ -94,7 +96,17 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
   const [saving, setSaving] = useState(false)
   const [showZero, setShowZero] = useState(false)
   const [search, setSearch] = useState('')
+  const [dirty, setDirty] = useState(false)
   const isEdit = !!reportId
+
+  // 자동 저장 초안 — 신규: projectId+date, 편집: projectId+reportId
+  const draftKey = isEdit ? `dr-draft:${projectId}:${reportId}` : `dr-draft-new:${projectId}:${data.date}`
+  const { hasDraft, draftEnvelope, lastSavedAt, clearDraft, applyDraft } = useAutoSaveDraft<DailyReportData>({
+    key: draftKey,
+    data,
+    enabled: dirty,
+    isMeaningful: d => d.manpower.length > 0 || (d.workToday.building.length + d.workToday.mep.length) > 0 || !!d.notes,
+  })
 
   const totalToday = data.manpower.reduce((s, c) => s + (c.today || 0), 0)
   const activeCompanies = data.manpower.filter(c => (c.today || 0) > 0).length
@@ -162,13 +174,25 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
       body: JSON.stringify(body),
     })
     setSaving(false)
-    if (!res.ok) return alert('저장 실패')
+    if (!res.ok) {
+      alert('저장 실패 — 초안은 자동 보관되어 있습니다. 네트워크 확인 후 재시도하세요.')
+      return
+    }
+    clearDraft()
+    setDirty(false)
     router.push(`/projects/${projectId}/stage/3`)
   }
 
   function upd<K extends keyof DailyReportData>(key: K, val: DailyReportData[K]) {
     setData(p => ({ ...p, [key]: val }))
   }
+
+  // 데이터 변경 시 dirty 자동 감지 (첫 렌더 제외)
+  const firstRenderRef = React.useRef(true)
+  useEffect(() => {
+    if (firstRenderRef.current) { firstRenderRef.current = false; return }
+    setDirty(true)
+  }, [data])
 
   const visibleManpower = data.manpower.filter(c => {
     if (!showZero && !c.today && c.today !== 0) return false
@@ -253,6 +277,18 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
 
       {/* 본문 */}
       <div className="px-8 py-6 max-w-6xl">
+        {/* 초안 복원 배너 */}
+        {hasDraft && draftEnvelope && (
+          <div className="mb-4">
+            <DraftRestoreBanner
+              savedAt={draftEnvelope.savedAt}
+              label="일보 변경"
+              onRestore={() => applyDraft(d => { setData(d); setDirty(true) })}
+              onDiscard={() => clearDraft()}
+            />
+          </div>
+        )}
+
         {step === 1 && (
           <BasicInfoStep data={data} upd={upd} />
         )}
