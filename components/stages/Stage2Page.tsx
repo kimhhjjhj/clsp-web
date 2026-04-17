@@ -7,6 +7,7 @@ import AccelerationPanel from '@/components/precon/AccelerationPanel'
 import BaselineImportPanel from '@/components/precon/BaselineImportPanel'
 import ScenarioDashboard from '@/components/precon/ScenarioDashboard'
 import BaselineCompare from '@/components/precon/BaselineCompare'
+import ProcessMapBoard from '@/components/precon/ProcessMapBoard'
 import type { CPMSummary } from '@/lib/types'
 
 interface RO {
@@ -262,7 +263,19 @@ export default function Stage2Page({ projectId }: Props) {
           </div>
         )}
 
-        {/* 섹션 4: MSP 베이스라인 임포트 */}
+        {/* 섹션 4: 프로세스맵 (협력사 스윔레인 + 포스트잇 보드) */}
+        <div>
+          <h2 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-orange-500 rounded-full inline-block" />
+            프로세스맵 (협력사 Pull Planning)
+            <span className="text-xs font-normal text-gray-400 ml-2">
+              · 협력사별 레인, 드래그로 순서·기간 조정, 카드 간 선후행 연결
+            </span>
+          </h2>
+          <ProcessMapBoard projectId={projectId} startDate={project?.startDate} />
+        </div>
+
+        {/* 섹션 5: MSP 베이스라인 임포트 */}
         <div>
           <h2 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-purple-600 rounded-full inline-block" />
