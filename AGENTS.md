@@ -57,6 +57,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 사용자에게 선택지만 주고 끝내기 — 판단 가능한 것은 판단하고 진행한다
 - 작동하지 않는 상태로 커밋 — typecheck·smoke 이전에 커밋 금지
 
+## 개선 루프 (자율 반복 작업 모드)
+
+`docs/LOOP_PROMPT.md` + `docs/IMPROVEMENT_BACKLOG.md` 가 자동화 루프의 심장입니다.
+
+- 사용자가 "루프 돌려" / "다음 사이클" / `/loop` 지시 시 루프 프롬프트 본문 실행
+- 한 사이클 = 백로그 1항목 완료 + 커밋·푸시
+- 위의 자율 운영 원칙 6가지가 매 사이클마다 적용됨
+- 블로커 발생 시 즉시 `[?]` 표시 + 보고 후 중단
+
 ## 언제 사용자에게 확인받는가
 
 - **받는 경우**: DB 스키마 변경, 기존 데이터 마이그레이션, 공종/회사 이름의
