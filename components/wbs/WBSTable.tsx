@@ -26,7 +26,7 @@ export interface WBSTableHandle {
   collapseAll: () => void
 }
 
-const DEFAULT_WIDTHS = [260, 80, 64, 130, 64, 78, 64, 140, 48]
+const DEFAULT_WIDTHS = [260, 80, 64, 130, 64, 78, 64, 210, 48]
 
 const HEADERS: { label: string; align: 'left' | 'center' | 'right'; color?: string }[] = [
   { label: '공종명',        align: 'left'   },
@@ -51,7 +51,7 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
     if (s.unit === 'man/day') stdLookup.set(s.trade, s)
   }
 
-  function companyActual(taskName: string): { avg: number; approved: boolean; trades: string[] } | null {
+  function companyActual(taskName: string): { avg: number; approved: boolean; trades: string[]; totalSamples: number } | null {
     const trades = WBS_TRADE_MAP[taskName] ?? []
     if (trades.length === 0) return null
     const found: CompanyStandardSummary[] = []
@@ -60,9 +60,12 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
       if (hit) found.push(hit)
     }
     if (found.length === 0) return null
-    const avg = Math.round((found.reduce((s, x) => s + x.value, 0) / found.length) * 10) / 10
+    // 샘플 수 기반 가중 평균 (sample 많은 trade가 더 신뢰도 높음)
+    const totalW = found.reduce((s, x) => s + (x.sampleCount ?? 1), 0)
+    const weighted = found.reduce((s, x) => s + x.value * (x.sampleCount ?? 1), 0)
+    const avg = Math.round((weighted / totalW) * 10) / 10
     const approved = found.every(x => x.approved)
-    return { avg, approved, trades: found.map(f => f.trade) }
+    return { avg, approved, trades: found.map(f => f.trade), totalSamples: totalW }
   }
 
   useImperativeHandle(ref, () => ({
@@ -237,15 +240,16 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                         {Math.round(task.duration * 7 / 5)}
                       </td>
 
-                      {/* 회사 실적 (평균 투입 인원) */}
+                      {/* 회사 실적 (가중 평균 투입 인원) */}
                       <td style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {(() => {
                           const ca = companyActual(task.name)
                           if (!ca) {
                             return <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>
                           }
+                          const tooltip = `관련 공종 ${ca.trades.length}개: ${ca.trades.join(', ')}\n누적 활동일 ${ca.totalSamples}일 샘플 기반 가중평균`
                           return (
-                            <span title={`관련 공종: ${ca.trades.join(', ')}`}>
+                            <span title={tooltip}>
                               <span style={{
                                 fontFamily: 'monospace',
                                 fontWeight: 600,
@@ -253,7 +257,10 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                               }}>
                                 {ca.avg}
                               </span>
-                              <span style={{ color: '#94a3b8', marginLeft: 4 }}>명/일</span>
+                              <span style={{ color: '#94a3b8', marginLeft: 3, fontSize: 11 }}>명/일</span>
+                              <span style={{ color: '#cbd5e1', marginLeft: 5, fontSize: 10 }}>
+                                ({ca.trades.length}공종·{ca.totalSamples}일)
+                              </span>
                               {!ca.approved && (
                                 <span style={{
                                   fontSize: 9, fontWeight: 600, color: '#d97706',
