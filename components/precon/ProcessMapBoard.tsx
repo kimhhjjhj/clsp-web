@@ -8,7 +8,8 @@ import {
 } from 'lucide-react'
 import {
   type ProcessMap, type ProcessMapLane, type ProcessMapCard, type ProcessMapLink, type CardComment,
-  EMPTY_MAP, DEFAULT_LANES, LECTURE_DEFAULT_LANES, genId,
+  type CardRequest, type CardResources, type CardWorker, type CardMaterial,
+  EMPTY_MAP, DEFAULT_LANES, LECTURE_DEFAULT_LANES, DEFAULT_ZONE_ROWS, DEFAULT_ZONE_COLS, genId,
 } from '@/lib/process-map/types'
 import PullPlanBoard from './PullPlanBoard'
 import { analyzeProcessMap } from '@/lib/process-map/analyzer'
@@ -723,6 +724,32 @@ function CardEditorModal({
   const [newAuthor, setNewAuthor] = useState('')
   const [newText, setNewText] = useState('')
 
+  // 강의자료 양식 필드
+  const [location, setLocation] = useState(card.location ?? '')
+  const [workContent, setWorkContent] = useState(card.workContent ?? '')
+  const [workZones, setWorkZones] = useState<string[]>(card.workZones ?? [])
+  const [workers, setWorkers] = useState<CardWorker[]>(card.resources?.workers ?? [])
+  const [equipment, setEquipment] = useState<string[]>(card.resources?.equipment ?? [])
+  const [materials, setMaterials] = useState<CardMaterial[]>(card.resources?.materials ?? [])
+  const [request, setRequest] = useState<CardRequest>(card.request ?? {})
+  // 섹션 접기
+  const [openSection, setOpenSection] = useState<'basic' | 'work' | 'zone' | 'request' | 'comments'>('basic')
+
+  function toggleZone(zone: string) {
+    setWorkZones(prev => prev.includes(zone) ? prev.filter(z => z !== zone) : [...prev, zone])
+  }
+  function addWorker() { setWorkers(w => [...w, { trade: '', count: 0 }]) }
+  function updateWorker(i: number, patch: Partial<CardWorker>) { setWorkers(w => w.map((x, j) => j === i ? { ...x, ...patch } : x)) }
+  function removeWorker(i: number) { setWorkers(w => w.filter((_, j) => j !== i)) }
+  function addMaterial() { setMaterials(m => [...m, { name: '' }]) }
+  function updateMaterial(i: number, patch: Partial<CardMaterial>) { setMaterials(m => m.map((x, j) => j === i ? { ...x, ...patch } : x)) }
+  function removeMaterial(i: number) { setMaterials(m => m.filter((_, j) => j !== i)) }
+  function addEquipment() { setEquipment(e => [...e, '']) }
+  function updateEquipment(i: number, val: string) { setEquipment(e => e.map((x, j) => j === i ? val : x)) }
+  function removeEquipment(i: number) { setEquipment(e => e.filter((_, j) => j !== i)) }
+
+  const totalWorkers = workers.reduce((s, w) => s + (w.count || 0), 0)
+
   function addComment() {
     const text = newText.trim()
     if (!text) return
@@ -748,11 +775,37 @@ function CardEditorModal({
     } catch { return '' }
   }
 
+  const SectionHeader = ({ id, title, right }: { id: typeof openSection; title: string; right?: React.ReactNode }) => (
+    <button
+      type="button"
+      onClick={() => setOpenSection(id)}
+      className={`w-full flex items-center justify-between px-3 py-2 border-t border-gray-100 text-xs font-semibold ${
+        openSection === id ? 'bg-slate-50 text-slate-900' : 'bg-white text-gray-500 hover:bg-gray-50'
+      }`}
+    >
+      <span className="flex items-center gap-1.5">
+        <span className={`w-1 h-3 rounded-full ${openSection === id ? 'bg-blue-600' : 'bg-gray-300'}`} />
+        {title}
+      </span>
+      {right}
+    </button>
+  )
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl p-5 w-full max-w-lg max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
-        <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Edit3 size={13} /> 카드 편집</h3>
-        <div className="space-y-2.5">
+      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* 헤더 */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-sm font-bold flex items-center gap-2">
+            <Edit3 size={14} /> 카드 편집 · <span className="text-gray-400 font-normal">{title || '(제목 없음)'}</span>
+          </h3>
+          <span className="text-[10px] text-gray-400">{kind === 'ask' ? '요청사항' : kind === 'milestone' ? '마일스톤' : kind === 'decision' ? '결정' : '작업'}</span>
+        </div>
+
+        {/* 섹션: 기본 */}
+        <SectionHeader id="basic" title="1. 기본정보" />
+        {openSection === 'basic' && (
+        <div className="p-4 space-y-2.5 overflow-auto">
           {/* 종류 (task/ask/milestone 등) */}
           <div>
             <label className="text-xs text-gray-500 font-semibold">종류</label>
@@ -841,74 +894,272 @@ function CardEditorModal({
               MSP 베이스라인 연동 카드 · 다음 import 시 기간이 덮어쓰일 수 있음
             </div>
           )}
+        </div>
+        )}
 
-          {/* 코멘트 섹션 */}
-          <div className="pt-3 mt-2 border-t border-gray-100">
-            <label className="text-xs text-gray-500 font-semibold flex items-center gap-1">
-              <MessageSquare size={11} /> 회의 코멘트 · 협력사 발언 ({comments.length})
-            </label>
+        {/* 섹션: 작업 사항 */}
+        <SectionHeader
+          id="work"
+          title="2. 작업 사항"
+          right={<span className="text-[10px] text-gray-400">
+            {totalWorkers > 0 && `인원 ${totalWorkers}명`}
+            {equipment.filter(x=>x.trim()).length > 0 && ` · 장비 ${equipment.filter(x=>x.trim()).length}`}
+            {materials.filter(m=>m.name).length > 0 && ` · 자재 ${materials.filter(m=>m.name).length}`}
+          </span>}
+        />
+        {openSection === 'work' && (
+        <div className="p-4 space-y-2.5 overflow-auto">
+          <div>
+            <label className="text-xs text-gray-500 font-semibold">작업내용</label>
+            <textarea
+              value={workContent}
+              onChange={e => setWorkContent(e.target.value)}
+              rows={2}
+              placeholder="예) B2F 바닥 1구간 철근 배근 및 매립 박스 고정"
+              className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+            />
+          </div>
 
-            {/* 기존 코멘트 */}
-            {comments.length > 0 && (
-              <ul className="mt-2 space-y-1.5 max-h-52 overflow-auto">
-                {comments.map(c => (
-                  <li key={c.id} className="bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 text-xs">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-gray-700">{c.author}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-gray-400">{fmtTime(c.createdAt)}</span>
-                        <button onClick={() => removeComment(c.id)} className="text-gray-300 hover:text-red-600" title="삭제">
-                          <Trash2 size={10} />
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-gray-700 whitespace-pre-wrap leading-snug">{c.text}</p>
+          {/* 투입인원 */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-gray-500 font-semibold">투입인원 {totalWorkers > 0 && <span className="text-blue-600">(총 {totalWorkers}명)</span>}</label>
+              <button type="button" onClick={addWorker} className="text-[11px] text-blue-600 hover:underline">+ 추가</button>
+            </div>
+            {workers.length === 0 ? (
+              <div className="text-[11px] text-gray-400 italic py-1">입력된 인원 없음</div>
+            ) : (
+              <ul className="space-y-1">
+                {workers.map((w, i) => (
+                  <li key={i} className="grid grid-cols-[1fr_1fr_80px_auto] gap-1 items-center">
+                    <input value={w.trade} onChange={e => updateWorker(i, { trade: e.target.value })} placeholder="공종 (예: 철근)" className="border border-gray-200 rounded px-2 py-1 text-xs" />
+                    <input value={w.company ?? ''} onChange={e => updateWorker(i, { company: e.target.value })} placeholder="회사 (예: 새한기업)" className="border border-gray-200 rounded px-2 py-1 text-xs" />
+                    <input type="number" min={0} value={w.count || ''} onChange={e => updateWorker(i, { count: Number(e.target.value) })} placeholder="명" className="border border-gray-200 rounded px-2 py-1 text-xs font-mono" />
+                    <button type="button" onClick={() => removeWorker(i)} className="text-gray-300 hover:text-red-500"><Trash2 size={11} /></button>
                   </li>
                 ))}
               </ul>
             )}
+          </div>
 
-            {/* 신규 코멘트 입력 */}
-            <div className="mt-2 bg-blue-50/40 border border-blue-100 rounded-lg p-2 space-y-1.5">
-              <input
-                value={newAuthor}
-                onChange={e => setNewAuthor(e.target.value)}
-                placeholder="발언자 (예: 박소장/새한기업)"
-                className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs bg-white"
-              />
-              <textarea
-                value={newText}
-                onChange={e => setNewText(e.target.value)}
-                onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') addComment() }}
-                rows={2}
-                placeholder="의견 / 우려 / 조건 입력 (Ctrl+Enter로 추가)"
-                className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs bg-white resize-none"
-              />
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={addComment}
-                  disabled={!newText.trim()}
-                  className="text-[11px] px-2.5 py-1 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700 disabled:opacity-50"
-                >코멘트 추가</button>
-              </div>
+          {/* 투입장비 */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-gray-500 font-semibold">투입장비</label>
+              <button type="button" onClick={addEquipment} className="text-[11px] text-blue-600 hover:underline">+ 추가</button>
+            </div>
+            {equipment.length === 0 ? (
+              <div className="text-[11px] text-gray-400 italic py-1">입력된 장비 없음</div>
+            ) : (
+              <ul className="space-y-1">
+                {equipment.map((e, i) => (
+                  <li key={i} className="flex items-center gap-1">
+                    <input value={e} onChange={ev => updateEquipment(i, ev.target.value)} placeholder="예) 타워크레인 2대, 굴착기 1대" className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs" />
+                    <button type="button" onClick={() => removeEquipment(i)} className="text-gray-300 hover:text-red-500"><Trash2 size={11} /></button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* 투입자재 */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-gray-500 font-semibold">투입자재</label>
+              <button type="button" onClick={addMaterial} className="text-[11px] text-blue-600 hover:underline">+ 추가</button>
+            </div>
+            {materials.length === 0 ? (
+              <div className="text-[11px] text-gray-400 italic py-1">입력된 자재 없음</div>
+            ) : (
+              <ul className="space-y-1">
+                {materials.map((m, i) => (
+                  <li key={i} className="grid grid-cols-[1fr_80px_70px_auto] gap-1 items-center">
+                    <input value={m.name} onChange={e => updateMaterial(i, { name: e.target.value })} placeholder="자재명 (예: 레미콘 25-21-150)" className="border border-gray-200 rounded px-2 py-1 text-xs" />
+                    <input type="number" value={m.qty ?? ''} onChange={e => updateMaterial(i, { qty: e.target.value ? Number(e.target.value) : undefined })} placeholder="수량" className="border border-gray-200 rounded px-2 py-1 text-xs font-mono" />
+                    <input value={m.unit ?? ''} onChange={e => updateMaterial(i, { unit: e.target.value })} placeholder="단위" className="border border-gray-200 rounded px-2 py-1 text-xs" />
+                    <button type="button" onClick={() => removeMaterial(i)} className="text-gray-300 hover:text-red-500"><Trash2 size={11} /></button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+        )}
+
+        {/* 섹션: 작업 구간 (구역 그리드) */}
+        <SectionHeader
+          id="zone"
+          title="3. 작업 구간"
+          right={workZones.length > 0 ? <span className="text-[10px] text-blue-600 font-semibold">{workZones.join(', ')}</span> : undefined}
+        />
+        {openSection === 'zone' && (
+        <div className="p-4 space-y-2.5 overflow-auto">
+          <div>
+            <label className="text-xs text-gray-500 font-semibold">위치 (자유 입력)</label>
+            <input value={location} onChange={e => setLocation(e.target.value)} placeholder="예) B2F 바닥 1구간, 101동 3F" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-semibold mb-1 block">그리드 구역 선택 (A~D × 1~6)</label>
+            <div className="inline-block border border-gray-200 rounded-lg overflow-hidden">
+              <table className="border-collapse">
+                <thead>
+                  <tr>
+                    <th className="w-8 h-7 bg-gray-50 border-b border-r border-gray-200 text-[10px] text-gray-400"></th>
+                    {DEFAULT_ZONE_COLS.map(col => (
+                      <th key={col} className="w-8 h-7 bg-gray-50 border-b border-r border-gray-200 text-[10px] font-semibold text-gray-600">{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {DEFAULT_ZONE_ROWS.map(row => (
+                    <tr key={row}>
+                      <td className="w-8 h-8 bg-gray-50 border-b border-r border-gray-200 text-[10px] font-semibold text-center text-gray-600">{row}</td>
+                      {DEFAULT_ZONE_COLS.map(col => {
+                        const zoneId = `${row}-${col}`
+                        const selected = workZones.includes(zoneId)
+                        return (
+                          <td
+                            key={zoneId}
+                            onClick={() => toggleZone(zoneId)}
+                            className={`w-8 h-8 border-b border-r border-gray-200 cursor-pointer transition-colors text-[9px] text-center font-mono ${
+                              selected ? 'bg-blue-600 text-white font-bold' : 'hover:bg-blue-50 text-gray-300'
+                            }`}
+                          >{selected ? '●' : zoneId}</td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2">칸 클릭으로 선택/해제 · 선택: <span className="font-mono">{workZones.join(', ') || '없음'}</span></p>
+          </div>
+        </div>
+        )}
+
+        {/* 섹션: 타 공종 요청사항 */}
+        <SectionHeader
+          id="request"
+          title="4. 타 공종 요청사항"
+          right={(request.targetTrade || request.task) ? <span className="text-[10px] text-amber-700 font-semibold">{request.targetTrade || '미지정'}: {request.task || ''}</span> : undefined}
+        />
+        {openSection === 'request' && (
+        <div className="p-4 space-y-2.5 overflow-auto">
+          <p className="text-[11px] text-gray-500 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
+            다른 공종에게 "이걸 해줘야 내 작업이 들어갈 수 있다"고 요청하는 사항. 강의자료 양식 상단 영역.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">해당 공종</label>
+              <input value={request.targetTrade ?? ''} onChange={e => setRequest(r => ({ ...r, targetTrade: e.target.value }))} placeholder="예) 형틀, 전기" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">위치</label>
+              <input value={request.location ?? ''} onChange={e => setRequest(r => ({ ...r, location: e.target.value }))} placeholder="예) B2F 코어 벽체" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-semibold">요청작업</label>
+            <input value={request.task ?? ''} onChange={e => setRequest(r => ({ ...r, task: e.target.value }))} placeholder="예) 슬리브 매립 완료 + 배근 검측 요청" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">요청 구간</label>
+              <input value={request.zone ?? ''} onChange={e => setRequest(r => ({ ...r, zone: e.target.value }))} placeholder="예) A-1, A-2, B-1" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">요청 일정</label>
+              <input value={request.date ?? ''} onChange={e => setRequest(r => ({ ...r, date: e.target.value }))} placeholder="예) 2026-05-12 까지" className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </div>
           </div>
         </div>
+        )}
 
-        <div className="flex justify-between mt-4 pt-3 border-t border-gray-100">
+        {/* 섹션: 회의 코멘트 */}
+        <SectionHeader
+          id="comments"
+          title="5. 회의 코멘트"
+          right={<span className="text-[10px] text-gray-400">{comments.length}건</span>}
+        />
+        {openSection === 'comments' && (
+        <div className="p-4 space-y-2.5 overflow-auto">
+          {/* 기존 코멘트 */}
+          {comments.length > 0 && (
+            <ul className="space-y-1.5 max-h-52 overflow-auto">
+              {comments.map(c => (
+                <li key={c.id} className="bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 text-xs">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="font-semibold text-gray-700">{c.author}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-gray-400">{fmtTime(c.createdAt)}</span>
+                      <button onClick={() => removeComment(c.id)} className="text-gray-300 hover:text-red-600" title="삭제">
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-gray-700 whitespace-pre-wrap leading-snug">{c.text}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* 신규 코멘트 입력 */}
+          <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-2 space-y-1.5">
+            <input
+              value={newAuthor}
+              onChange={e => setNewAuthor(e.target.value)}
+              placeholder="발언자 (예: 박소장/새한기업)"
+              className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs bg-white"
+            />
+            <textarea
+              value={newText}
+              onChange={e => setNewText(e.target.value)}
+              onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') addComment() }}
+              rows={2}
+              placeholder="의견 / 우려 / 조건 입력 (Ctrl+Enter로 추가)"
+              className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs bg-white resize-none"
+            />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={addComment}
+                disabled={!newText.trim()}
+                className="text-[11px] px-2.5 py-1 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700 disabled:opacity-50"
+              >코멘트 추가</button>
+            </div>
+          </div>
+        </div>
+        )}
+
+        <div className="flex justify-between p-3 border-t border-gray-200 bg-gray-50">
           <button onClick={onDelete} className="text-xs text-red-600 flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded"><Trash2 size={11} /> 삭제</button>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">취소</button>
             <button
-              onClick={() => onSave({
-                title, laneId, startDay, duration, note, status,
-                assignee: assignee || undefined,
-                comments,
-                kind,
-                askType: kind === 'ask' ? askType : undefined,
-                requestTo: kind === 'ask' ? (requestTo || undefined) : undefined,
-              })}
+              onClick={() => {
+                const hasReq = request.targetTrade || request.task || request.location || request.zone || request.date
+                const cleanEquip = equipment.filter(x => x.trim())
+                const cleanMat = materials.filter(m => m.name.trim())
+                const cleanWork = workers.filter(w => w.trade.trim() || w.count > 0)
+                const res: CardResources | undefined = (cleanWork.length || cleanEquip.length || cleanMat.length) ? {
+                  workers: cleanWork.length ? cleanWork : undefined,
+                  equipment: cleanEquip.length ? cleanEquip : undefined,
+                  materials: cleanMat.length ? cleanMat : undefined,
+                } : undefined
+                onSave({
+                  title, laneId, startDay, duration, note, status,
+                  assignee: assignee || undefined,
+                  comments,
+                  kind,
+                  askType: kind === 'ask' ? askType : undefined,
+                  requestTo: kind === 'ask' ? (requestTo || undefined) : undefined,
+                  location: location || undefined,
+                  workContent: workContent || undefined,
+                  workZones: workZones.length ? workZones : undefined,
+                  resources: res,
+                  request: hasReq ? request : undefined,
+                })
+              }}
               className="px-3 py-1.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >저장</button>
           </div>

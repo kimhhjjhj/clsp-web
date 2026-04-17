@@ -52,6 +52,38 @@ export interface CardComment {
   createdAt: string    // ISO
 }
 
+// ── 카드 상세 양식 (강의자료 노트 작성법 준수) ──────────
+
+// 투입 인원 (공종별 인원수)
+export interface CardWorker {
+  trade: string      // 예: "철근"
+  company?: string   // 예: "새한기업"
+  count: number      // 인원수
+}
+
+// 투입 자재
+export interface CardMaterial {
+  name: string       // 예: "레미콘 25-21-150"
+  qty?: number
+  unit?: string      // m3, ton, 장 등
+}
+
+// 카드 단위 자원 계획
+export interface CardResources {
+  workers?: CardWorker[]      // 투입 인원
+  equipment?: string[]        // 투입 장비 (문자열 배열, 예: ["굴착기 2대", "타워크레인"])
+  materials?: CardMaterial[]  // 투입 자재
+}
+
+// 타 공종 요청사항 (강의자료 양식 상단)
+export interface CardRequest {
+  targetTrade?: string    // 해당 공종 (요청 대상 공종)
+  location?: string       // 위치 (예: "B2F 코어")
+  task?: string           // 요청작업
+  zone?: string           // 요청 구간 (예: "A-1, A-2")
+  date?: string           // 요청일정 (ISO 또는 자유)
+}
+
 export interface ProcessMapCard {
   id: string
   laneId: string
@@ -79,6 +111,18 @@ export interface ProcessMapCard {
   status?: 'planned' | 'in_progress' | 'done' | 'blocked'
   note?: string
   comments?: CardComment[]
+
+  // ── 강의자료 노트 양식 ────────────────────────
+  // 타 공종 요청사항 (카드 한 장에 붙이는 요청 섹션)
+  request?: CardRequest
+
+  // 작업 구간 (도면 그리드 영역 선택)
+  workZones?: string[]       // 예: ["A-1","A-2","B-1"]
+  location?: string          // 자유 텍스트 위치 (예: "B2F 바닥 1구간")
+
+  // 작업사항 본문
+  workContent?: string       // 작업내용 (상세)
+  resources?: CardResources  // 투입 인원/장비/자재
 
   // 플로우 뷰 전용
   x?: number
@@ -171,6 +215,10 @@ export const DEFAULT_LANES = LECTURE_DEFAULT_LANES
 export function genId(prefix = 'id'): string {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }
+
+// ── 구역 그리드 기본 (강의자료: A-D × 1-6) ─────────────
+export const DEFAULT_ZONE_ROWS = ['A', 'B', 'C', 'D']
+export const DEFAULT_ZONE_COLS = ['1', '2', '3', '4', '5', '6']
 
 // ── 주 단위 헬퍼 ─────────────────────────────────────────
 export interface WeekInfo {

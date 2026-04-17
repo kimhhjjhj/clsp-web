@@ -486,13 +486,21 @@ function Sticker({
           {card.requestTo && kind === 'ask' && (
             <div className="text-[9px] opacity-80 truncate">→ {card.requestTo}</div>
           )}
-          {card.duration >= 1 && (
-            <div className="text-[9px] opacity-70 mt-0.5">
-              {card.duration}일
-              {card.comments && card.comments.length > 0 && ` · 💬${card.comments.length}`}
-            </div>
-          )}
+          {(() => {
+            const totalWorkers = card.resources?.workers?.reduce((s, w) => s + (w.count || 0), 0) ?? 0
+            const zones = card.workZones?.length ? card.workZones.slice(0, 3).join(',') + (card.workZones.length > 3 ? `+${card.workZones.length - 3}` : '') : null
+            const parts: string[] = []
+            if (card.duration >= 1) parts.push(`${card.duration}일`)
+            if (totalWorkers > 0) parts.push(`👷${totalWorkers}`)
+            if (zones) parts.push(`📍${zones}`)
+            if (card.comments?.length) parts.push(`💬${card.comments.length}`)
+            if (parts.length === 0) return null
+            return <div className="text-[9px] opacity-70 mt-0.5 truncate">{parts.join(' · ')}</div>
+          })()}
         </div>
+        {card.request && (card.request.targetTrade || card.request.task) && (
+          <span className="text-[8px] bg-amber-400/80 text-amber-900 px-1 rounded flex-shrink-0" title={`요청: ${card.request.targetTrade || '?'} - ${card.request.task || ''}`}>📌</span>
+        )}
         {card.baselineTaskId && (
           <span className="text-[8px] bg-black/20 px-1 rounded flex-shrink-0">MSP</span>
         )}
