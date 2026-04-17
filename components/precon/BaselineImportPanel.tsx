@@ -9,9 +9,9 @@ interface BTask {
   predecessors: string | null; level: number
 }
 
-interface Props { projectId: string }
+interface Props { projectId: string; onUpdate?: () => void }
 
-export default function BaselineImportPanel({ projectId }: Props) {
+export default function BaselineImportPanel({ projectId, onUpdate }: Props) {
   const [tasks, setTasks] = useState<BTask[]>([])
   const [preview, setPreview] = useState<Omit<BTask, 'id'>[]>([])
   const [saved, setSaved] = useState(false)
@@ -127,13 +127,13 @@ export default function BaselineImportPanel({ projectId }: Props) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tasks: preview }),
     })
-    if (res.ok) { const d = await res.json(); setTasks(d); setPreview([]); setSaved(true) }
+    if (res.ok) { const d = await res.json(); setTasks(d); setPreview([]); setSaved(true); onUpdate?.() }
   }
 
   async function clearBaseline() {
     if (!confirm('베이스라인을 삭제하시겠습니까?')) return
     await fetch(`/api/projects/${projectId}/baseline`, { method: 'DELETE' })
-    setTasks([]); setSaved(false)
+    setTasks([]); setSaved(false); onUpdate?.()
   }
 
   const displayTasks = preview.length > 0 ? preview : tasks
