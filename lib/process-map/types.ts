@@ -10,15 +10,23 @@ export interface ProcessMapLane {
   order: number
 }
 
+export type CardShape = 'task' | 'decision' | 'milestone' | 'start' | 'end' | 'note'
+
 export interface ProcessMapCard {
   id: string
   laneId: string
   title: string           // 작업명 (예: "1F 철근 배근")
-  startDay: number        // 프로젝트 시작일로부터 N일 (0-based)
-  duration: number        // 일수 (>=1)
+  startDay: number        // 프로젝트 시작일로부터 N일 (0-based, 타임라인용)
+  duration: number        // 일수 (>=1, 타임라인용)
   baselineTaskId?: string // BaselineTask.id (연동 시)
   note?: string
   status?: 'planned' | 'in_progress' | 'done' | 'blocked'
+  // 플로우 뷰 전용 (자유 캔버스)
+  x?: number              // 캔버스 x좌표 (px)
+  y?: number              // 캔버스 y좌표 (px)
+  shape?: CardShape       // 기본 'task'
+  w?: number              // 폭 (기본 160)
+  h?: number              // 높이 (기본 56)
 }
 
 export interface ProcessMapLink {

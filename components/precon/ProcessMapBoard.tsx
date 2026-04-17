@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, Save, Download, Upload, ZoomIn, ZoomOut, Loader2,
-  Link2, Unlink, Edit3, ChevronRight, Palette,
+  Link2, Unlink, Edit3, ChevronRight, Palette, GanttChartSquare, Workflow,
 } from 'lucide-react'
 import {
   type ProcessMap, type ProcessMapLane, type ProcessMapCard, type ProcessMapLink,
   EMPTY_MAP, DEFAULT_LANES, genId,
 } from '@/lib/process-map/types'
+import FlowCanvas from './FlowCanvas'
 
 const LANE_H = 60
 const HEADER_H = 40
@@ -39,6 +40,7 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
   const [linkingFrom, setLinkingFrom] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'timeline' | 'flow'>('timeline')
   const boardRef = useRef<HTMLDivElement>(null)
 
   // ── 로드 ───────────────────────────────────────────────
@@ -256,6 +258,22 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* 뷰 토글 */}
+      <div className="flex items-center gap-0.5 bg-gray-100 p-0.5 rounded-lg w-fit">
+        <button
+          onClick={() => setViewMode('timeline')}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+            viewMode === 'timeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+          }`}
+        ><GanttChartSquare size={13} /> 타임라인 (스윔레인)</button>
+        <button
+          onClick={() => setViewMode('flow')}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+            viewMode === 'flow' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+          }`}
+        ><Workflow size={13} /> 플로우 (자유 캔버스)</button>
+      </div>
+
       {/* 툴바 */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
@@ -273,11 +291,13 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
             {importing ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
             베이스라인에서 가져오기
           </button>
-          <div className="inline-flex items-center gap-1 text-xs text-gray-500">
-            <button onClick={() => setDayWidth(w => Math.max(MIN_DAY_W, w - 2))} className="p-1 hover:bg-gray-100 rounded"><ZoomOut size={12} /></button>
-            <span className="font-mono">{dayWidth}px/일</span>
-            <button onClick={() => setDayWidth(w => Math.min(MAX_DAY_W, w + 2))} className="p-1 hover:bg-gray-100 rounded"><ZoomIn size={12} /></button>
-          </div>
+          {viewMode === 'timeline' && (
+            <div className="inline-flex items-center gap-1 text-xs text-gray-500">
+              <button onClick={() => setDayWidth(w => Math.max(MIN_DAY_W, w - 2))} className="p-1 hover:bg-gray-100 rounded"><ZoomOut size={12} /></button>
+              <span className="font-mono">{dayWidth}px/일</span>
+              <button onClick={() => setDayWidth(w => Math.min(MAX_DAY_W, w + 2))} className="p-1 hover:bg-gray-100 rounded"><ZoomIn size={12} /></button>
+            </div>
+          )}
           {linkingFrom && (
             <span className="text-xs text-blue-700 bg-blue-100 border border-blue-200 px-2 py-1 rounded-lg flex items-center gap-1">
               <Link2 size={11} /> 연결할 후행 카드를 클릭하세요
@@ -299,7 +319,8 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
         </div>
       </div>
 
-      {/* 보드 */}
+      {/* 보드 (타임라인) */}
+      {viewMode === 'timeline' && (
       <div
         className="bg-white border border-gray-200 rounded-xl overflow-auto"
         ref={boardRef}
@@ -445,6 +466,18 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
           </div>
         )}
       </div>
+
+      )}
+
+      {/* 플로우 뷰 */}
+      {viewMode === 'flow' && (
+        <FlowCanvas
+          map={map}
+          setMap={setMap}
+          onEditCard={setEditingCard}
+          markDirty={markDirty}
+        />
+      )}
 
       {/* 카드 편집 모달 */}
       {editingCard && (
