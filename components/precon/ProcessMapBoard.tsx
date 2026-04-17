@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, Save, Download, Upload, ZoomIn, ZoomOut, Loader2,
   Link2, Unlink, Edit3, ChevronRight, Palette, GanttChartSquare, Workflow,
+  Undo2, Redo2,
 } from 'lucide-react'
 import {
   type ProcessMap, type ProcessMapLane, type ProcessMapCard, type ProcessMapLink,
@@ -31,7 +32,7 @@ interface Props {
 }
 
 export default function ProcessMapBoard({ projectId, startDate }: Props) {
-  const [map, setMap] = useState<ProcessMap>(EMPTY_MAP)
+  const [map, setMapRaw] = useState<ProcessMap>(EMPTY_MAP)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -42,6 +43,64 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
   const [notice, setNotice] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'timeline' | 'flow'>('timeline')
   const boardRef = useRef<HTMLDivElement>(null)
+
+  // ── Undo/Redo 히스토리 (throttle 방식) ──────────────────
+  const history = useRef<ProcessMap[]>([])
+  const future = useRef<ProcessMap[]>([])
+  const lastPushRef = useRef(0)
+  const MAX_HISTORY = 50
+  const HISTORY_THROTTLE = 400  // 400ms 내 연속 변경은 1 히스토리로
+
+  // setMap 래퍼 — 자동으로 history push + dirty
+  const setMap: React.Dispatch<React.SetStateAction<ProcessMap>> = useCallback((updater) => {
+    setMapRaw(prev => {
+      const now = Date.now()
+      if (now - lastPushRef.current > HISTORY_THROTTLE) {
+        history.current.push(JSON.parse(JSON.stringify(prev)))
+        if (history.current.length > MAX_HISTORY) history.current.shift()
+        future.current = []
+        lastPushRef.current = now
+        setDirty(true)
+      }
+      return typeof updater === 'function' ? (updater as (p: ProcessMap) => ProcessMap)(prev) : updater
+    })
+  }, [])
+
+  const undo = useCallback(() => {
+    if (history.current.length === 0) return
+    setMapRaw(current => {
+      const prev = history.current.pop()!
+      future.current.push(JSON.parse(JSON.stringify(current)))
+      setDirty(true)
+      return prev
+    })
+  }, [])
+
+  const redo = useCallback(() => {
+    if (future.current.length === 0) return
+    setMapRaw(current => {
+      const next = future.current.pop()!
+      history.current.push(JSON.parse(JSON.stringify(current)))
+      setDirty(true)
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const isEditable = (e.target as HTMLElement)?.tagName === 'INPUT'
+        || (e.target as HTMLElement)?.tagName === 'TEXTAREA'
+      if (isEditable) return
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault(); undo()
+      } else if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y')
+        || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+        e.preventDefault(); redo()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [undo, redo])
 
   // ── 로드 ───────────────────────────────────────────────
   useEffect(() => {
@@ -97,6 +156,7 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
     }
   }
 
+  // 기존 markDirty 호출 코드 호환용 (setMap 래퍼에 이미 dirty/history 처리됨)
   function markDirty() { setDirty(true) }
 
   // ── 레인 CRUD ───────────────────────────────────────
@@ -306,6 +366,20 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <div className="inline-flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg">
+            <button
+              onClick={undo}
+              disabled={history.current.length === 0}
+              className="p-1.5 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-l-lg"
+              title="실행 취소 (Ctrl+Z)"
+            ><Undo2 size={13} /></button>
+            <button
+              onClick={redo}
+              disabled={future.current.length === 0}
+              className="p-1.5 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-r-lg"
+              title="다시 실행 (Ctrl+Y)"
+            ><Redo2 size={13} /></button>
+          </div>
           {notice && <span className="text-xs text-green-700">✓ {notice}</span>}
           {dirty && <span className="text-xs text-orange-500">● 미저장</span>}
           <button
