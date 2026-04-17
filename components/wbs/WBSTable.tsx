@@ -2,13 +2,23 @@
 
 import { useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { getWorkRate } from '@/lib/engine/wbs'
+import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
 import type { CPMResult } from '@/lib/types'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+
+export interface CompanyStandardSummary {
+  trade: string
+  unit: string
+  value: number
+  approved: boolean
+  sampleCount?: number
+}
 
 interface Props {
   byCategory: Record<string, CPMResult[]>
   fmtProductivity: (task: CPMResult) => string
   categoryColors: Record<string, string>
+  standards?: CompanyStandardSummary[]
 }
 
 export interface WBSTableHandle {
@@ -16,7 +26,7 @@ export interface WBSTableHandle {
   collapseAll: () => void
 }
 
-const DEFAULT_WIDTHS = [260, 80, 64, 150, 64, 88, 64, 48]
+const DEFAULT_WIDTHS = [260, 80, 64, 130, 64, 78, 64, 140, 48]
 
 const HEADERS: { label: string; align: 'left' | 'center' | 'right'; color?: string }[] = [
   { label: '공종명',        align: 'left'   },
@@ -24,15 +34,36 @@ const HEADERS: { label: string; align: 'left' | 'center' | 'right'; color?: stri
   { label: '단위',          align: 'center' },
   { label: '생산성',        align: 'left'   },
   { label: 'W.D',           align: 'right',  color: '#2563eb' },
-  { label: '공종별 가동률', align: 'center' },
+  { label: '가동률',        align: 'center' },
   { label: 'C.D',           align: 'right'  },
+  { label: '회사 실적',     align: 'left',   color: '#7c3aed' },
   { label: 'CP',            align: 'center' },
 ]
 
-const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategory, fmtProductivity, categoryColors }, ref) {
+const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategory, fmtProductivity, categoryColors, standards }, ref) {
   const [colWidths, setColWidths] = useState(DEFAULT_WIDTHS)
   const [expanded, setExpanded] = useState<Set<string>>(new Set(Object.keys(byCategory)))
   const resizing = useRef<{ col: number; startX: number; startW: number } | null>(null)
+
+  // trade → { value, approved, sampleCount } lookup (man/day만)
+  const stdLookup = new Map<string, CompanyStandardSummary>()
+  for (const s of standards ?? []) {
+    if (s.unit === 'man/day') stdLookup.set(s.trade, s)
+  }
+
+  function companyActual(taskName: string): { avg: number; approved: boolean; trades: string[] } | null {
+    const trades = WBS_TRADE_MAP[taskName] ?? []
+    if (trades.length === 0) return null
+    const found: CompanyStandardSummary[] = []
+    for (const tr of trades) {
+      const hit = stdLookup.get(tr)
+      if (hit) found.push(hit)
+    }
+    if (found.length === 0) return null
+    const avg = Math.round((found.reduce((s, x) => s + x.value, 0) / found.length) * 10) / 10
+    const approved = found.every(x => x.approved)
+    return { avg, approved, trades: found.map(f => f.trade) }
+  }
 
   useImperativeHandle(ref, () => ({
     expandAll:   () => setExpanded(new Set(Object.keys(byCategory))),
@@ -133,7 +164,7 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                   onMouseEnter={e => (e.currentTarget.style.background = '#e8edf5')}
                   onMouseLeave={e => (e.currentTarget.style.background = '#f1f5f9')}
                 >
-                  <td colSpan={8} style={{ padding: '7px 10px' }}>
+                  <td colSpan={9} style={{ padding: '7px 10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {isExp
                         ? <ChevronUp size={13} style={{ color: '#64748b', flexShrink: 0 }} />
@@ -204,6 +235,34 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                       {/* C.D */}
                       <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: 'monospace', fontSize: 13, color: '#475569' }}>
                         {Math.round(task.duration * 7 / 5)}
+                      </td>
+
+                      {/* 회사 실적 (평균 투입 인원) */}
+                      <td style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {(() => {
+                          const ca = companyActual(task.name)
+                          if (!ca) {
+                            return <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>
+                          }
+                          return (
+                            <span title={`관련 공종: ${ca.trades.join(', ')}`}>
+                              <span style={{
+                                fontFamily: 'monospace',
+                                fontWeight: 600,
+                                color: ca.approved ? '#059669' : '#d97706',
+                              }}>
+                                {ca.avg}
+                              </span>
+                              <span style={{ color: '#94a3b8', marginLeft: 4 }}>명/일</span>
+                              {!ca.approved && (
+                                <span style={{
+                                  fontSize: 9, fontWeight: 600, color: '#d97706',
+                                  background: '#fef3c7', borderRadius: 3, padding: '0 3px', marginLeft: 4,
+                                }}>대기</span>
+                              )}
+                            </span>
+                          )
+                        })()}
                       </td>
 
                       {/* CP */}

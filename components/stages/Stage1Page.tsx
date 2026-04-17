@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Play, FileDown, ChevronDown, ChevronUp, BarChart3, AlertTriangle, ChevronRight } from 'lucide-react'
 import type { CPMSummary, CPMResult } from '@/lib/types'
 import { generateReport } from '@/lib/engine/report-pdf'
-import WBSTable, { type WBSTableHandle } from '@/components/wbs/WBSTable'
+import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/components/wbs/WBSTable'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import MonteCarloPanel from '@/components/analysis/MonteCarloPanel'
 import ProductivityPanel from '@/components/analysis/ProductivityPanel'
@@ -64,7 +64,27 @@ export default function Stage1Page({ projectId, project }: Props) {
   } | null>(null)
   const [showMcPanel, setShowMcPanel] = useState(false)
   const [showProdPanel, setShowProdPanel] = useState(false)
+  const [standards, setStandards] = useState<CompanyStandardSummary[]>([])
   const wbsTableRef = useRef<WBSTableHandle>(null)
+
+  // 회사 실적 표준 로드 (WBS 컬럼에 평균 투입 인원 표시용)
+  useEffect(() => {
+    fetch('/api/company-standards?includeProposals=1')
+      .then(r => r.json())
+      .then(data => {
+        const summaries: CompanyStandardSummary[] = []
+        for (const s of data.standards ?? []) {
+          summaries.push({ trade: s.trade, unit: s.unit, value: s.value, approved: true, sampleCount: s.sampleCount })
+        }
+        for (const c of data.candidates ?? []) {
+          // 승인된 게 없는 것만 후보로 추가
+          if (summaries.some(x => x.trade === c.trade && x.unit === c.unit)) continue
+          summaries.push({ trade: c.trade, unit: c.unit, value: c.avgValue, approved: false, sampleCount: c.totalSamples })
+        }
+        setStandards(summaries)
+      })
+      .catch(() => {})
+  }, [])
 
   async function calculate() {
     setCalculating(true)
@@ -321,6 +341,7 @@ export default function Stage1Page({ projectId, project }: Props) {
                         categoryColors={Object.fromEntries(
                           Object.keys(byCategory).map(cat => [cat, CATEGORY_COLORS_HEX[cat] ?? '#94a3b8'])
                         )}
+                        standards={standards}
                       />
                     </CardContent>
                   </Card>
