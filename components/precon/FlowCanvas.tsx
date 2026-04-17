@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, Link2, Edit3, Diamond, Circle, Square, StickyNote,
-  MousePointer2, Hand, Maximize2, Map as MapIcon,
+  MousePointer2, Hand, Maximize2, Map as MapIcon, Group,
 } from 'lucide-react'
-import type { ProcessMap, ProcessMapCard, ProcessMapLane, ProcessMapLink, CardShape } from '@/lib/process-map/types'
-import { genId } from '@/lib/process-map/types'
+import type { ProcessMap, ProcessMapCard, ProcessMapLane, ProcessMapLink, ProcessMapGroup, CardShape } from '@/lib/process-map/types'
+import { genId, LINK_TYPE_LABEL } from '@/lib/process-map/types'
 import type { MapAnalysis } from '@/lib/process-map/analyzer'
 import { AlertTriangle } from 'lucide-react'
 
@@ -43,6 +43,15 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty, analysi
   const [lasso, setLasso] = useState<LassoState | null>(null)
   const [showMinimap, setShowMinimap] = useState(true)
   const [snapGuides, setSnapGuides] = useState<{ x?: number; y?: number }>({})
+  const [editingLink, setEditingLink] = useState<ProcessMapLink | null>(null)
+  const [groupDrag, setGroupDrag] = useState<{
+    groupId: string
+    startX: number; startY: number
+    origGroup: { x: number; y: number }
+    origCards: Record<string, { x: number; y: number }>
+    mode: 'move' | 'resize'
+    handle?: 'nw' | 'ne' | 'sw' | 'se'
+  } | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
 
   // ── 초기 좌표 자동 배치 ──────────────
@@ -348,6 +357,100 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty, analysi
     markDirty()
   }
 
+  // ── 그룹 추가 ──────────────
+  function addGroup() {
+    const vp = canvasRef.current
+    const cx = vp ? (vp.clientWidth / 2 - pan.x) / zoom : 200
+    const cy = vp ? (vp.clientHeight / 2 - pan.y) / zoom : 200
+    const group: ProcessMapGroup = {
+      id: genId('group'),
+      label: `Phase ${(map.groups?.length ?? 0) + 1}`,
+      color: '#64748b',
+      x: Math.round(cx - 200),
+      y: Math.round(cy - 120),
+      w: 400,
+      h: 240,
+    }
+    setMap(m => ({ ...m, groups: [...(m.groups ?? []), group] }))
+    markDirty()
+  }
+
+  // ── 그룹 드래그 (이동/리사이즈) ──────────────
+  const onGroupMouseDown = useCallback((e: React.MouseEvent, group: ProcessMapGroup, mode: 'move' | 'resize', handle?: 'nw' | 'ne' | 'sw' | 'se') => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (tool === 'pan') return
+    // 그룹 내 카드 좌표 기록 (이동 시 함께 움직임)
+    const origCards: Record<string, { x: number; y: number }> = {}
+    if (mode === 'move') {
+      for (const c of map.cards) {
+        if (c.x == null || c.y == null) continue
+        const cw = c.w ?? DEFAULT_W, ch = c.h ?? DEFAULT_H
+        const cx = c.x + cw / 2, cy = c.y + ch / 2
+        if (cx >= group.x && cx <= group.x + group.w && cy >= group.y && cy <= group.y + group.h) {
+          origCards[c.id] = { x: c.x, y: c.y }
+        }
+      }
+    }
+    setGroupDrag({
+      groupId: group.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      origGroup: { x: group.x, y: group.y },
+      origCards,
+      mode,
+      handle,
+    })
+  }, [tool, map.cards])
+
+  useEffect(() => {
+    if (!groupDrag) return
+    function onMove(ev: MouseEvent) {
+      if (!groupDrag) return
+      const dx = (ev.clientX - groupDrag.startX) / zoom
+      const dy = (ev.clientY - groupDrag.startY) / zoom
+      setMap(m => ({
+        ...m,
+        groups: (m.groups ?? []).map(g => {
+          if (g.id !== groupDrag.groupId) return g
+          if (groupDrag.mode === 'move') {
+            return { ...g, x: Math.round(groupDrag.origGroup.x + dx), y: Math.round(groupDrag.origGroup.y + dy) }
+          }
+          // resize by handle
+          const orig = groupDrag.origGroup
+          let newX = g.x, newY = g.y, newW = g.w, newH = g.h
+          if (groupDrag.handle === 'se') { newW = Math.max(80, g.w + dx); newH = Math.max(60, g.h + dy) }
+          if (groupDrag.handle === 'ne') { newY = orig.y + dy; newH = Math.max(60, g.h - dy); newW = Math.max(80, g.w + dx) }
+          if (groupDrag.handle === 'sw') { newX = orig.x + dx; newW = Math.max(80, g.w - dx); newH = Math.max(60, g.h + dy) }
+          if (groupDrag.handle === 'nw') { newX = orig.x + dx; newY = orig.y + dy; newW = Math.max(80, g.w - dx); newH = Math.max(60, g.h - dy) }
+          return { ...g, x: Math.round(newX), y: Math.round(newY), w: Math.round(newW), h: Math.round(newH) }
+        }),
+        cards: m.cards.map(c => {
+          if (groupDrag.mode !== 'move') return c
+          const orig = groupDrag.origCards[c.id]
+          if (!orig) return c
+          return { ...c, x: Math.round(orig.x + dx), y: Math.round(orig.y + dy) }
+        }),
+      }))
+    }
+    function onUp() { setGroupDrag(null); markDirty() }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [groupDrag, zoom, setMap, markDirty])
+
+  function updateGroup(id: string, patch: Partial<ProcessMapGroup>) {
+    setMap(m => ({ ...m, groups: (m.groups ?? []).map(g => g.id === id ? { ...g, ...patch } : g) }))
+    markDirty()
+  }
+  function removeGroup(id: string) {
+    setMap(m => ({ ...m, groups: (m.groups ?? []).filter(g => g.id !== id) }))
+    markDirty()
+  }
+
   // ── 선택 카드 삭제 ──────────────
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -445,6 +548,7 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty, analysi
         <ToolBtn onClick={() => addShape('start')} icon={<span className="text-[10px] font-bold">S</span>} title="시작" />
         <ToolBtn onClick={() => addShape('end')} icon={<span className="text-[10px] font-bold">E</span>} title="종료" />
         <ToolBtn onClick={() => addShape('note')} icon={<StickyNote size={13} />} title="메모" />
+        <ToolBtn onClick={addGroup} icon={<Group size={13} />} title="그룹/Phase 박스" />
         <div className="w-px h-5 bg-gray-200 mx-1" />
         <ToolBtn onClick={zoomToFit} icon={<Maximize2 size={13} />} title="전체 맞춤" />
         <ToolBtn active={showMinimap} onClick={() => setShowMinimap(v => !v)} icon={<MapIcon size={13} />} title="미니맵" />
@@ -476,6 +580,18 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty, analysi
       >
         {/* 변환 컨테이너 */}
         <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: 0, height: 0 }}>
+          {/* 그룹 박스 (최하층) */}
+          {(map.groups ?? []).map(group => (
+            <GroupBox
+              key={group.id}
+              group={group}
+              onMouseDown={(e, mode, handle) => onGroupMouseDown(e, group, mode, handle)}
+              onLabelChange={label => updateGroup(group.id, { label })}
+              onColorChange={color => updateGroup(group.id, { color })}
+              onRemove={() => { if (confirm('그룹 박스만 삭제합니다 (내부 카드는 남음).')) removeGroup(group.id) }}
+            />
+          ))}
+
           {/* 링크 SVG */}
           <svg style={{ position: 'absolute', left: -5000, top: -5000, width: 10000, height: 10000, pointerEvents: 'none', overflow: 'visible' }}>
             <defs>
@@ -504,23 +620,28 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty, analysi
                 const p = getLinkPath(from, to)
                 if (!p) return null
                 const isCp = analysis?.criticalPath.has(link.fromCardId) && analysis?.criticalPath.has(link.toCardId)
+                const labelText = link.type === 'FS' && !link.lag ? null : `${link.type}${link.lag ? (link.lag > 0 ? '+' : '') + link.lag : ''}`
                 return (
                   <g key={link.id} style={{ pointerEvents: 'auto' }}>
+                    {/* 클릭 히트박스 넓게 */}
+                    <path d={p.path} stroke="transparent" strokeWidth="10" fill="none"
+                      style={{ cursor: 'pointer' }}
+                      onClick={e => { e.stopPropagation(); setEditingLink(link) }}
+                    />
                     <path
                       d={p.path}
                       stroke={isCp ? '#ea580c' : '#64748b'}
                       strokeWidth={isCp ? 2.5 : 1.5}
                       fill="none"
                       markerEnd={isCp ? 'url(#fc-arrow-cp)' : 'url(#fc-arrow)'}
-                      style={{ cursor: 'pointer' }}
-                      onClick={e => {
-                        e.stopPropagation()
-                        if (confirm('이 연결을 삭제할까요?')) {
-                          setMap(m => ({ ...m, links: m.links.filter(l => l.id !== link.id) }))
-                          markDirty()
-                        }
-                      }}
+                      style={{ pointerEvents: 'none' }}
                     />
+                    {labelText && (
+                      <g transform={`translate(${p.midX}, ${p.midY})`} style={{ pointerEvents: 'none' }}>
+                        <rect x={-18} y={-8} width={36} height={16} fill="#fff" stroke={isCp ? '#ea580c' : '#94a3b8'} strokeWidth={0.5} rx={3} />
+                        <text textAnchor="middle" y={4} fontSize={9} fill={isCp ? '#ea580c' : '#475569'} fontWeight={600}>{labelText}</text>
+                      </g>
+                    )}
                   </g>
                 )
               })}
@@ -651,6 +772,166 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty, analysi
           {selectedIds.size}개 선택됨 · 드래그로 함께 이동, Delete로 일괄 삭제
         </div>
       )}
+
+      {/* Link 타입 편집 모달 */}
+      {editingLink && (
+        <LinkEditorModal
+          link={editingLink}
+          fromTitle={map.cards.find(c => c.id === editingLink.fromCardId)?.title ?? ''}
+          toTitle={map.cards.find(c => c.id === editingLink.toCardId)?.title ?? ''}
+          onClose={() => setEditingLink(null)}
+          onSave={(patch) => {
+            setMap(m => ({ ...m, links: m.links.map(l => l.id === editingLink.id ? { ...l, ...patch } : l) }))
+            markDirty()
+            setEditingLink(null)
+          }}
+          onDelete={() => {
+            setMap(m => ({ ...m, links: m.links.filter(l => l.id !== editingLink.id) }))
+            markDirty()
+            setEditingLink(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── 그룹 박스 ──────────────────────────────────────
+function GroupBox({
+  group, onMouseDown, onLabelChange, onColorChange, onRemove,
+}: {
+  group: ProcessMapGroup
+  onMouseDown: (e: React.MouseEvent, mode: 'move' | 'resize', handle?: 'nw' | 'ne' | 'sw' | 'se') => void
+  onLabelChange: (label: string) => void
+  onColorChange: (color: string) => void
+  onRemove: () => void
+}) {
+  return (
+    <div
+      className="absolute group"
+      style={{
+        left: group.x, top: group.y, width: group.w, height: group.h,
+        background: group.color + '1a',
+        border: `2px dashed ${group.color}`,
+        borderRadius: 8,
+        pointerEvents: 'none',
+      }}
+    >
+      {/* 헤더바 (이동 핸들) */}
+      <div
+        className="absolute -top-7 left-0 flex items-center gap-1 bg-white/90 border border-gray-200 rounded px-1.5 py-0.5 text-xs cursor-move"
+        style={{ pointerEvents: 'auto' }}
+        onMouseDown={e => onMouseDown(e, 'move')}
+      >
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: group.color }} />
+        <input
+          value={group.label}
+          onChange={e => onLabelChange(e.target.value)}
+          onMouseDown={e => e.stopPropagation()}
+          className="font-semibold text-gray-800 bg-transparent outline-none w-[120px]"
+        />
+        <input
+          type="color"
+          value={group.color}
+          onChange={e => onColorChange(e.target.value)}
+          onMouseDown={e => e.stopPropagation()}
+          className="w-4 h-4 rounded cursor-pointer opacity-0 group-hover:opacity-100"
+        />
+        <button
+          onClick={onRemove}
+          onMouseDown={e => e.stopPropagation()}
+          className="text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100"
+        ><Trash2 size={11} /></button>
+      </div>
+
+      {/* 4 모서리 리사이즈 핸들 */}
+      {(['nw', 'ne', 'sw', 'se'] as const).map(h => {
+        const pos = {
+          nw: { left: -5, top: -5, cursor: 'nwse-resize' },
+          ne: { right: -5, top: -5, cursor: 'nesw-resize' },
+          sw: { left: -5, bottom: -5, cursor: 'nesw-resize' },
+          se: { right: -5, bottom: -5, cursor: 'nwse-resize' },
+        }[h]
+        return (
+          <div
+            key={h}
+            className="absolute w-3 h-3 bg-white border border-gray-400 rounded-sm opacity-0 group-hover:opacity-100"
+            style={{ ...pos, pointerEvents: 'auto' }}
+            onMouseDown={e => onMouseDown(e, 'resize', h)}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Link 편집 모달 ──────────────────────────────────────
+function LinkEditorModal({
+  link, fromTitle, toTitle, onClose, onSave, onDelete,
+}: {
+  link: ProcessMapLink
+  fromTitle: string
+  toTitle: string
+  onClose: () => void
+  onSave: (patch: Partial<ProcessMapLink>) => void
+  onDelete: () => void
+}) {
+  const [type, setType] = useState(link.type)
+  const [lag, setLag] = useState(link.lag ?? 0)
+
+  const descriptions: Record<ProcessMapLink['type'], string> = {
+    FS: '선행이 끝나야 후행 시작 (가장 일반적)',
+    SS: '선행이 시작하면 후행도 시작',
+    FF: '선행 종료 = 후행 종료',
+    SF: '선행이 시작해야 후행 종료 (드묾)',
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl p-5 w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <h3 className="text-sm font-bold mb-1 flex items-center gap-2"><Link2 size={13} /> 선후행 관계 편집</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          <span className="font-semibold">{fromTitle}</span> → <span className="font-semibold">{toTitle}</span>
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-gray-500 font-semibold">관계 유형</label>
+            <div className="mt-1 grid grid-cols-4 gap-1">
+              {(['FS', 'SS', 'FF', 'SF'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setType(t)}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    type === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >{t}</button>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-500 mt-1.5">{LINK_TYPE_LABEL[type]} — {descriptions[type]}</p>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-semibold">지연(Lag, 일)</label>
+            <input
+              type="number"
+              value={lag}
+              onChange={e => setLag(Number(e.target.value))}
+              className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              placeholder="예: 2 (선행 끝나고 2일 후), -3 (3일 겹침)"
+            />
+            <p className="text-[10px] text-gray-400 mt-0.5">양수: 지연 / 음수: 선행 종료 전 후행 시작</p>
+          </div>
+        </div>
+        <div className="flex justify-between mt-4">
+          <button onClick={onDelete} className="text-xs text-red-600 flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded"><Trash2 size={11} /> 연결 삭제</button>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">취소</button>
+            <button
+              onClick={() => onSave({ type, lag: lag || undefined })}
+              className="px-3 py-1.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >저장</button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -37,10 +37,22 @@ export interface ProcessMapLink {
   lag?: number                      // 지연일
 }
 
+// 플로우 뷰 전용 - 여러 카드를 묶는 시각적 박스 (Phase/Zone 등)
+export interface ProcessMapGroup {
+  id: string
+  label: string        // "1단계", "B구역" 등
+  color: string        // hex (반투명 배경으로 사용)
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 export interface ProcessMap {
   lanes: ProcessMapLane[]
   cards: ProcessMapCard[]
   links: ProcessMapLink[]
+  groups?: ProcessMapGroup[]
   updatedAt?: string
 }
 
@@ -48,6 +60,14 @@ export const EMPTY_MAP: ProcessMap = {
   lanes: [],
   cards: [],
   links: [],
+  groups: [],
+}
+
+export const LINK_TYPE_LABEL: Record<ProcessMapLink['type'], string> = {
+  FS: '종료-시작',
+  SS: '시작-시작',
+  FF: '종료-종료',
+  SF: '시작-종료',
 }
 
 // ── 기본 레인 프리셋 (새 보드 생성 시) ─────────────────────
