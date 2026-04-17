@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import DxfUpload from '@/components/precon/DxfUpload'
 
 interface FormData {
   name: string
@@ -229,7 +230,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           <CardHeader>
             <CardTitle className="text-sm font-semibold">면적 정보</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="siteArea">대지면적 (m²)</Label>
@@ -247,6 +248,18 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 <Label htmlFor="bldgPerim">건물 둘레 (m)</Label>
                 <Input id="bldgPerim" type="number" min={0} value={form.bldgPerim} onChange={e => set('bldgPerim', e.target.value)} />
               </div>
+            </div>
+            <Separator />
+            <div>
+              <Label className="mb-2 block">DXF 도면으로 면적·둘레 자동 갱신</Label>
+              <DxfUpload
+                onApply={v => {
+                  set('siteArea', String(v.siteArea))
+                  set('bldgArea', String(v.bldgArea))
+                  set('sitePerim', String(v.sitePerim))
+                  set('bldgPerim', String(v.bldgPerim))
+                }}
+              />
             </div>
           </CardContent>
         </Card>
