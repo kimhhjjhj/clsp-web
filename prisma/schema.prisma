@@ -35,6 +35,7 @@ model Project {
   baselineTasks          BaselineTask[]
   weeklyProgress         WeeklyProgress[]
   dailyReports           DailyReport[]
+  productivityProposals  ProductivityProposal[]
 }
 
 model Task {
@@ -120,17 +121,58 @@ model WeeklyProgress {
 }
 
 model DailyReport {
-  id          String   @id @default(cuid())
-  projectId   String
-  date        String
-  weather     String?
-  temperature Float?
-  workers     Json?
-  equipment   String?
-  content     String?
-  notes       String?
-  photos      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  projectId     String
+  date          String
+  weather       String?
+  temperature   Float?
+  tempMin       Float?
+  tempMax       Float?
+  workers       Json?
+  manpower      Json?
+  equipment     String?
+  equipmentList Json?
+  materialList  Json?
+  workToday     Json?
+  workTomorrow  Json?
+  signers       Json?
+  content       String?
+  notes         String?
+  photos        Json?    // [{ url, caption?, trade?, uploadedAt }]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+// ── 생산성 실적 DB (관리자 승인 플로우) ──────────────────────────
+
+model ProductivityProposal {
+  id            String    @id @default(cuid())
+  projectId     String?
+  trade         String
+  value         Float
+  unit          String    // man/day, mandays/ton, mandays/m3 등
+  sampleSize    Int       // 계산에 사용된 활동일 or 항목 수
+  source        Json      // 계산 근거 {totalManDays, activeDays, dateRange, ...}
+  status        String    @default("pending") // pending | approved | rejected
+  reviewerNote  String?
+  approvedBy    String?
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([trade])
+}
+
+model CompanyStandardProductivity {
+  id                String   @id @default(cuid())
+  trade             String
+  unit              String
+  value             Float
+  sampleCount       Int      @default(1)
+  sourceProposalIds Json     // 제안 ID 배열
+  lastUpdated       DateTime @default(now())
+
+  @@unique([trade, unit])
 }

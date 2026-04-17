@@ -43,3 +43,9 @@ next-env.d.ts
 /lib/generated/prisma
 public/data/layers.csv
 *.csv
+
+# 회사 일보 샘플 (실제 데이터 유출 방지)
+/samples/
+
+# 일보 첨부 사진 (유출 방지 + 용량)
+/public/uploads/
