@@ -10,7 +10,9 @@ import {
   type ProcessMap, type ProcessMapLane, type ProcessMapCard, type ProcessMapLink,
   EMPTY_MAP, DEFAULT_LANES, genId,
 } from '@/lib/process-map/types'
+import { analyzeProcessMap } from '@/lib/process-map/analyzer'
 import FlowCanvas from './FlowCanvas'
+import { AlertTriangle, Zap } from 'lucide-react'
 
 const LANE_H = 60
 const HEADER_H = 40
@@ -235,6 +237,9 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
     return Math.max(30, max + 10)  // 최소 30일 표시
   }, [map.cards])
 
+  // ── 분석 (CP + 충돌) ─────────────────────────────
+  const analysis = useMemo(() => analyzeProcessMap(map), [map])
+
   // ── 드래그 상태 ──────────────────────────────────────
   const [drag, setDrag] = useState<{
     type: 'move' | 'resize'
@@ -393,6 +398,39 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
         </div>
       </div>
 
+      {/* 분석 배너 */}
+      {(analysis.criticalPath.size > 0 || analysis.conflicts.length > 0) && (
+        <div className="flex flex-wrap gap-2 items-center text-xs">
+          {analysis.criticalPath.size > 0 && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-100 text-orange-800 rounded-lg font-semibold">
+              <Zap size={11} /> Critical Path {analysis.criticalPath.size}개 · 총공기 {analysis.projectDuration}일
+            </span>
+          )}
+          {analysis.conflicts.length > 0 && (
+            <details className="inline-block">
+              <summary className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-800 rounded-lg font-semibold cursor-pointer hover:bg-red-200">
+                <AlertTriangle size={11} /> 경고 {analysis.conflicts.length}건
+              </summary>
+              <div className="absolute z-20 mt-1 bg-white border border-red-200 rounded-lg shadow-lg p-2 max-w-lg max-h-60 overflow-auto">
+                <ul className="text-[11px] text-red-900 space-y-0.5">
+                  {analysis.conflicts.slice(0, 20).map((c, i) => (
+                    <li key={i} className="flex items-start gap-1.5">
+                      <span className="text-red-400">
+                        {c.kind === 'cycle' ? '↻' : c.kind === 'lane_overlap' ? '⇄' : '⏰'}
+                      </span>
+                      <span>{c.message}</span>
+                    </li>
+                  ))}
+                  {analysis.conflicts.length > 20 && (
+                    <li className="text-red-400 pt-1">+ {analysis.conflicts.length - 20}건 더</li>
+                  )}
+                </ul>
+              </div>
+            </details>
+          )}
+        </div>
+      )}
+
       {/* 보드 (타임라인) */}
       {viewMode === 'timeline' && (
       <div
@@ -471,12 +509,19 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
                     const left = LANE_LABEL_W + card.startDay * dayWidth
                     const width = Math.max(dayWidth * 1, card.duration * dayWidth)
                     const isLinkingThis = linkingFrom === card.id
+                    const isCritical = analysis.criticalPath.has(card.id)
+                    const hasConflict = analysis.conflicts.some(c => c.cardIds.includes(card.id))
+                    const borderCls = isLinkingThis
+                      ? 'border-blue-600'
+                      : hasConflict
+                      ? 'border-red-500 ring-2 ring-red-200'
+                      : isCritical
+                      ? 'border-orange-500'
+                      : 'border-transparent hover:border-white'
                     return (
                       <div
                         key={card.id}
-                        className={`absolute rounded-md shadow-sm cursor-move select-none text-xs text-white flex items-center px-1.5 overflow-hidden border-2 ${
-                          isLinkingThis ? 'border-blue-600' : 'border-transparent hover:border-white'
-                        }`}
+                        className={`absolute rounded-md shadow-sm cursor-move select-none text-xs text-white flex items-center px-1.5 overflow-hidden border-2 ${borderCls}`}
                         style={{
                           top: (LANE_H - CARD_H) / 2,
                           left,
@@ -494,9 +539,15 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
                           }
                         }}
                         onDoubleClick={e => { e.stopPropagation(); setEditingCard(card) }}
-                        title={`${card.title} (${card.duration}일${card.baselineTaskId ? ' · 베이스라인 연동' : ''})`}
+                        title={`${card.title} (${card.duration}일${card.baselineTaskId ? ' · MSP' : ''})${isCritical ? ' · Critical Path' : ''}${hasConflict ? ' · ⚠ 충돌' : ''}`}
                       >
+                        {isCritical && (
+                          <span className="mr-1 text-[9px] bg-orange-500 text-white px-1 rounded flex-shrink-0">CP</span>
+                        )}
                         <span className="truncate flex-1">{card.title}</span>
+                        {hasConflict && (
+                          <AlertTriangle size={10} className="ml-1 text-red-200 flex-shrink-0" />
+                        )}
                         {card.baselineTaskId && (
                           <span className="ml-1 text-[9px] bg-black/30 px-1 rounded flex-shrink-0">MSP</span>
                         )}
@@ -550,6 +601,7 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
           setMap={setMap}
           onEditCard={setEditingCard}
           markDirty={markDirty}
+          analysis={analysis}
         />
       )}
 

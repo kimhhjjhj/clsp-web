@@ -7,6 +7,8 @@ import {
 } from 'lucide-react'
 import type { ProcessMap, ProcessMapCard, ProcessMapLane, ProcessMapLink, CardShape } from '@/lib/process-map/types'
 import { genId } from '@/lib/process-map/types'
+import type { MapAnalysis } from '@/lib/process-map/analyzer'
+import { AlertTriangle } from 'lucide-react'
 
 const DEFAULT_W = 160
 const DEFAULT_H = 56
@@ -18,6 +20,7 @@ interface Props {
   setMap: React.Dispatch<React.SetStateAction<ProcessMap>>
   onEditCard: (c: ProcessMapCard) => void
   markDirty: () => void
+  analysis?: MapAnalysis
 }
 
 type ConnectingState = {
@@ -31,7 +34,7 @@ type LassoState = {
   curX: number; curY: number
 }
 
-export default function FlowCanvas({ map, setMap, onEditCard, markDirty }: Props) {
+export default function FlowCanvas({ map, setMap, onEditCard, markDirty, analysis }: Props) {
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [tool, setTool] = useState<'select' | 'pan'>('select')
@@ -482,6 +485,9 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty }: Props
               <marker id="fc-arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb" />
               </marker>
+              <marker id="fc-arrow-cp" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#ea580c" />
+              </marker>
             </defs>
             <g transform="translate(5000, 5000)">
               {/* 스냅 가이드 */}
@@ -497,11 +503,15 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty }: Props
                 if (!from || !to) return null
                 const p = getLinkPath(from, to)
                 if (!p) return null
+                const isCp = analysis?.criticalPath.has(link.fromCardId) && analysis?.criticalPath.has(link.toCardId)
                 return (
                   <g key={link.id} style={{ pointerEvents: 'auto' }}>
                     <path
                       d={p.path}
-                      stroke="#64748b" strokeWidth="1.5" fill="none" markerEnd="url(#fc-arrow)"
+                      stroke={isCp ? '#ea580c' : '#64748b'}
+                      strokeWidth={isCp ? 2.5 : 1.5}
+                      fill="none"
+                      markerEnd={isCp ? 'url(#fc-arrow-cp)' : 'url(#fc-arrow)'}
                       style={{ cursor: 'pointer' }}
                       onClick={e => {
                         e.stopPropagation()
@@ -555,6 +565,8 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty }: Props
             const shape = card.shape ?? 'task'
             const selected = selectedIds.has(card.id)
             const isConnecting = connecting?.fromId === card.id
+            const isCritical = analysis?.criticalPath.has(card.id) ?? false
+            const hasConflict = analysis?.conflicts.some(c => c.cardIds.includes(card.id)) ?? false
 
             return (
               <div
@@ -579,6 +591,8 @@ export default function FlowCanvas({ map, setMap, onEditCard, markDirty }: Props
                   selected={selected || isConnecting}
                   hasBaseline={!!card.baselineTaskId}
                   status={card.status}
+                  isCritical={isCritical}
+                  hasConflict={hasConflict}
                 />
                 {/* 연결 핸들 4방향 (선택 시만 표시) */}
                 {(selected || isConnecting) && (
@@ -740,7 +754,7 @@ function Minimap({
 
 // ── 도형 렌더러 ──────────────────────────────────
 function ShapeRenderer({
-  shape, title, color, width, height, selected, hasBaseline, status,
+  shape, title, color, width, height, selected, hasBaseline, status, isCritical, hasConflict,
 }: {
   shape: CardShape
   title: string
@@ -750,9 +764,11 @@ function ShapeRenderer({
   selected: boolean
   hasBaseline: boolean
   status?: string
+  isCritical?: boolean
+  hasConflict?: boolean
 }) {
-  const borderColor = selected ? '#2563eb' : 'transparent'
-  const borderWidth = selected ? 2 : 0
+  const borderColor = hasConflict ? '#dc2626' : selected ? '#2563eb' : isCritical ? '#ea580c' : 'transparent'
+  const borderWidth = (selected || hasConflict) ? 2 : isCritical ? 2 : 0
 
   const statusBg: Record<string, string> = {
     planned: color,
@@ -834,6 +850,12 @@ function ShapeRenderer({
       <span className="text-[11px] font-semibold text-center px-2 line-clamp-2" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
         {title}
       </span>
+      {isCritical && (
+        <span className="absolute top-1 left-1 bg-orange-500 text-white text-[8px] font-bold px-1 rounded">CP</span>
+      )}
+      {hasConflict && (
+        <AlertTriangle size={12} className="absolute -top-1.5 -right-1.5 text-red-600 fill-white" />
+      )}
       {hasBaseline && (
         <span className="absolute top-1 right-1 bg-black/40 text-[8px] px-1 rounded">MSP</span>
       )}
