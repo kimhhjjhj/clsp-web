@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { normalizeTrade } from '@/lib/normalizers/aliases'
 
 export async function GET(req: NextRequest) {
   const includeProposals = req.nextUrl.searchParams.get('includeProposals') === '1'
@@ -30,14 +31,17 @@ export async function GET(req: NextRequest) {
   })
 
   // trade+unit 별로 aggregate — 표준이 없으면 제안들의 평균을 후보로 제시
+  // 정규화 적용 (별칭 통일)
   const candidateMap = new Map<
     string,
     { trade: string; unit: string; values: number[]; samples: number; projects: Set<string> }
   >()
   for (const p of proposals) {
-    const key = `${p.trade}|${p.unit}`
+    const tradeKey = normalizeTrade(p.trade)
+    if (!tradeKey) continue
+    const key = `${tradeKey}|${p.unit}`
     const cur = candidateMap.get(key) ?? {
-      trade: p.trade,
+      trade: tradeKey,
       unit: p.unit,
       values: [],
       samples: 0,
