@@ -8,12 +8,15 @@
 
 ## Tier 0 — 실운영 선결 조건 (없으면 배포 불가)
 
-- [ ] **인증·사용자 모델** — Supabase Auth 도입. `User` 모델, 로그인/로그아웃, 이메일·비밀번호 + 추후 SSO 확장 여지
+- [?] **인증·사용자 모델** — Supabase Auth 도입. `User` 모델, 로그인/로그아웃, 이메일·비밀번호 + 추후 SSO 확장 여지
   - 완료 조건: 비로그인 상태에선 `/login` 제외 모든 페이지가 리다이렉트
-- [ ] **프로젝트 멤버십** — `ProjectMember { projectId, userId, role }` 스키마. role: owner/pm/sub/viewer
+  - **블로커**: Supabase URL·ANON_KEY 환경변수 필요, 회원가입 정책 결정 필요
+- [?] **프로젝트 멤버십** — `ProjectMember { projectId, userId, role }` 스키마. role: owner/pm/sub/viewer
   - 완료 조건: 본인이 속하지 않은 프로젝트는 목록·상세에서 비노출
-- [ ] **역할 기반 권한** — 원청 PM은 전체 편집, 협력사는 자기 레인만, 뷰어는 읽기 전용
+  - **블로커**: 인증 선결, 기존 4개 프로젝트 소유자 지정 필요
+- [?] **역할 기반 권한** — 원청 PM은 전체 편집, 협력사는 자기 레인만, 뷰어는 읽기 전용
   - 완료 조건: 다른 협력사 레인 수정 시 403
+  - **블로커**: 인증·멤버십 선결
 - [x] **자동 저장 + 에러 복구** — 프로세스맵/일보 편집 중 2초 debounce localStorage 초안, 네트워크 실패 시 복구 UI
   - 완료 조건: 브라우저 강제 종료 후 재진입 시 미저장 변경 복원 다이얼로그
   - 구현: `lib/hooks/useAutoSaveDraft.ts` + `DraftRestoreBanner` · ProcessMapBoard/DailyReportForm 적용
