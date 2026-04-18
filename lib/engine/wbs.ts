@@ -90,6 +90,7 @@ export interface DurationExplanation {
     category: string
   }
   result: number            // 최종 기간(일)
+  source?: string           // 생산성 출처 (회사 승인 / 제안 / 시스템 기본값)
 }
 
 export interface DurationLike {
@@ -99,11 +100,23 @@ export interface DurationLike {
   stdDays?: number | null
 }
 
+// 생산성 값의 출처 — WBSTable에서 회사 표준 lookup 후 전달
+export interface ProductivitySource {
+  type: 'approved' | 'proposal' | 'default'
+  sampleCount?: number
+  mappedTrades?: string[]  // WBS 공종명 → 일보 trade 매핑된 것들
+}
+
 /**
  * 공종의 기간이 어떻게 계산됐는지 설명.
  * WBSTask / DBRow 둘 다 받을 수 있게 DurationLike로 추상화.
+ * source는 선택 — 전달 시 출처 라벨 포함.
  */
-export function explainDuration(row: DurationLike, qty: number): DurationExplanation {
+export function explainDuration(
+  row: DurationLike,
+  qty: number,
+  source?: ProductivitySource,
+): DurationExplanation {
   const rate = getWorkRate(row.category)
   const prod = row.prod ?? null
   const stdDays = row.stdDays ?? null
@@ -155,12 +168,28 @@ export function explainDuration(row: DurationLike, qty: number): DurationExplana
     ? `${basis} ÷ 작업률 ${rate} = ${rounded}일`
     : `${basis} = ${rounded}일`
 
+  // 4) 출처 라벨 (선택)
+  let sourceLabel: string | undefined
+  if (source) {
+    const tradesNote = source.mappedTrades && source.mappedTrades.length > 0
+      ? ` (매칭: ${source.mappedTrades.join('·')})`
+      : ''
+    if (source.type === 'approved') {
+      sourceLabel = `출처: 회사 승인 표준 · 샘플 ${source.sampleCount ?? 0}건${tradesNote}`
+    } else if (source.type === 'proposal') {
+      sourceLabel = `출처: 회사 실적 제안 · 샘플 ${source.sampleCount ?? 0}건 (미승인)${tradesNote}`
+    } else {
+      sourceLabel = `출처: 시스템 기본값 (QuickPlan CP_DB)`
+    }
+  }
+
   return {
     formula,
     steps,
     assumptions,
     inputs: { qty, unit, prod, stdDays, workRate: rate, category: row.category },
     result: rounded,
+    source: sourceLabel,
   }
 }
 

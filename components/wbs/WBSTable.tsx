@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react'
-import { getWorkRate, explainDuration } from '@/lib/engine/wbs'
+import { getWorkRate, explainDuration, type ProductivitySource } from '@/lib/engine/wbs'
 import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
 import type { CPMResult } from '@/lib/types'
 import { ChevronDown, ChevronUp, Info } from 'lucide-react'
@@ -66,6 +66,20 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
     const avg = Math.round((weighted / totalW) * 10) / 10
     const approved = found.every(x => x.approved)
     return { avg, approved, trades: found.map(f => f.trade), totalSamples: totalW }
+  }
+
+  // 공종의 생산성 출처 결정 (explainDuration의 source 인자용)
+  // - 회사 표준 매칭되고 전부 approved → 'approved'
+  // - 매칭은 되는데 일부 또는 전부 미승인 → 'proposal'
+  // - 매칭 안 됨 → 'default' (CP_DB 기본값)
+  function productivitySource(taskName: string): ProductivitySource {
+    const ca = companyActual(taskName)
+    if (!ca) return { type: 'default' }
+    return {
+      type: ca.approved ? 'approved' : 'proposal',
+      sampleCount: ca.totalSamples,
+      mappedTrades: ca.trades,
+    }
   }
 
   useImperativeHandle(ref, () => ({
@@ -237,10 +251,18 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                                   stdDays: task.stdDays ? Number(task.stdDays) : null,
                                 },
                                 task.quantity,
+                                productivitySource(task.name),
                               )
                             : null
                           const tooltip = exp
-                            ? `${exp.formula}\n\n── 계산 단계 ──\n${exp.steps.join('\n')}${exp.assumptions.length ? `\n\n── 가정 ──\n${exp.assumptions.join('\n')}` : ''}`
+                            ? [
+                                exp.formula,
+                                '',
+                                '── 계산 단계 ──',
+                                ...exp.steps,
+                                ...(exp.assumptions.length ? ['', '── 가정 ──', ...exp.assumptions] : []),
+                                ...(exp.source ? ['', exp.source] : []),
+                              ].join('\n')
                             : '물량 정보 없음'
                           return (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
