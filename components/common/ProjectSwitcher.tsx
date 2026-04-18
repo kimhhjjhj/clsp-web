@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { FolderKanban, ChevronDown, Search, Plus, X, Building2, ClipboardCheck, Eye, Check } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
 import { getProjectStatus, STATUS_META } from '@/lib/project-status'
+import StatusBadge from './StatusBadge'
 
 export default function ProjectSwitcher() {
   const router = useRouter()
@@ -232,10 +233,7 @@ function ProjectRow({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1 py-0 rounded ${info.bg} ${info.text}`}>
-            <span className={`w-1 h-1 rounded-full ${info.dot}`} />
-            {info.label}
-          </span>
+          <StatusBadge project={p} size="xs" />
           <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{p.name}</p>
         </div>
         <p className="text-[10px] text-gray-500 truncate mt-0.5">

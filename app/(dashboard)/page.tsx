@@ -11,6 +11,7 @@ import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import { Skeleton, SkeletonList } from '@/components/common/Skeleton'
 import { getProjectStatus, STATUS_META, formatRelative, type ProjectStatus } from '@/lib/project-status'
+import StatusBadge from '@/components/common/StatusBadge'
 
 interface Project {
   id: string
@@ -208,10 +209,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded ${info.bg} ${info.text}`}>
-                              <span className={`w-1 h-1 rounded-full ${info.dot}`} />
-                              {info.label}
-                            </span>
+                            <StatusBadge project={p} size="xs" />
                             <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-700">{p.name}</p>
                           </div>
                           <p className="text-[11px] text-gray-500 truncate mt-0.5">
