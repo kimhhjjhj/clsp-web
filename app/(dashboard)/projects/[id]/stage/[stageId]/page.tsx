@@ -3,10 +3,10 @@
 import React, { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Layers } from 'lucide-react'
-import Stage1Page from '@/components/stages/Stage1Page'
 import Stage2Page from '@/components/stages/Stage2Page'
 import Stage3Page from '@/components/stages/Stage3Page'
 import Stage4Page from '@/components/stages/Stage4Page'
+import Stage1Redirect from '@/components/stages/Stage1Redirect'
 import PageHeader from '@/components/common/PageHeader'
 import { Skeleton } from '@/components/common/Skeleton'
 import MobileNotice from '@/components/common/MobileNotice'
@@ -23,10 +23,10 @@ interface Project {
 }
 
 const STAGE_LABELS: Record<string, { label: string; desc: string; color: string }> = {
-  '1': { label: '1단계 · 개략공기', desc: 'WBS · CPM · 자원계획', color: '#2563eb' },
-  '2': { label: '2단계 · 프리콘',   desc: '시나리오 · 프로세스맵', color: '#16a34a' },
-  '3': { label: '3단계 · 시공관리', desc: '일보 · 엑셀 임포트 · 사진', color: '#ea580c' },
-  '4': { label: '4단계 · 분석',     desc: '공종·위치·생산성 분석', color: '#7c3aed' },
+  '1': { label: '개략공기 (이전 링크)', desc: '사업 초기 검토로 이전됨', color: '#2563eb' },
+  '2': { label: '2단계 · 프리콘',       desc: '시나리오 · 프로세스맵', color: '#16a34a' },
+  '3': { label: '3단계 · 시공관리',     desc: '일보 · 엑셀 임포트 · 사진', color: '#ea580c' },
+  '4': { label: '4단계 · 분석',         desc: '공종·위치·생산성 분석', color: '#7c3aed' },
 }
 
 export default function StagePage({
@@ -129,14 +129,7 @@ export default function StagePage({
         tabs={stageNav}
       />
 
-      {/* 모바일 안내 — Stage1(CPM)·Stage2(프로세스맵)는 좌우 분할 뷰라 데스크톱 권장 */}
-      {stageId === '1' && (
-        <MobileNotice
-          feature="1단계는 WBS 테이블·간트·몬테카를로 등 좌우 분할 뷰가 많아 데스크톱 권장합니다."
-          hint="모바일에선 3·4단계(일보·분석) 위주로 사용하세요."
-          dismissKey="stage1"
-        />
-      )}
+      {/* 모바일 안내 — Stage2(프로세스맵)는 좌우 분할 보드라 데스크톱 권장 */}
       {stageId === '2' && (
         <MobileNotice
           feature="2단계 프로세스맵은 드래그·스윔레인 보드라 데스크톱 권장합니다."
@@ -156,7 +149,7 @@ export default function StagePage({
           </div>
         ) : (
           <>
-            {stageId === '1' && <Stage1Page projectId={id} project={project} />}
+            {stageId === '1' && <Stage1Redirect projectId={id} />}
             {stageId === '2' && <Stage2Page projectId={id} />}
             {stageId === '3' && <Stage3Page projectId={id} />}
             {stageId === '4' && <Stage4Page projectId={id} projectName={project?.name} />}

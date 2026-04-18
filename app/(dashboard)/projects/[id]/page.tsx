@@ -4,8 +4,8 @@ import React, { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  BarChart3, ShieldCheck, TrendingUp, Pencil, CheckCircle2, ArrowRight, HardHat,
-  MapPin, Layers, Ruler, Calendar, AlertTriangle, Activity, Building2,
+  ShieldCheck, TrendingUp, Pencil, CheckCircle2, ArrowRight, HardHat,
+  Calendar, AlertTriangle, Activity, Building2,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { Skeleton } from '@/components/common/Skeleton'
@@ -97,7 +97,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
     </div>
   )
 
-  const stage1Done = status?.stage1.hasCpm ?? false
+  // 1단계(개략공기)는 사업 초기 검토(/bid)로 이전 — 프로젝트 진입 시점엔 이미 완료된 것으로 간주
   const stage2Done = (status?.stage2.riskCount ?? 0) > 0 || (status?.stage2.hasBaseline ?? false)
   const stage3Done = status?.stage3.latestRate !== null && status?.stage3.latestRate !== undefined
   const stage4Done = (status?.stage4.weeklyReportCount ?? 0) > 0
@@ -122,21 +122,6 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
     progress: number
     done: boolean
   }[] = [
-    {
-      stageId: 1,
-      phaseLabel: 'PHASE 01',
-      color: '#2563eb',
-      bg: '#eff6ff',
-      icon: <BarChart3 size={22} color={stage1Done ? '#2563eb' : '#94a3b8'} />,
-      title: '1단계 · 개략공기',
-      subtitle: 'WBS · CPM · 자원 계획',
-      rows: [
-        { label: '진행 상태', value: stage1Done ? 'CPM 완료' : '미시작', highlight: stage1Done },
-        { label: '총공기', value: totalDuration > 0 ? `${Math.round(totalDuration)}일` : '—' },
-      ],
-      progress: stage1Done ? 100 : 0,
-      done: stage1Done,
-    },
     {
       stageId: 2,
       phaseLabel: 'PHASE 02',
@@ -201,8 +186,8 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
     project.bldgArea ? `연면적 ${project.bldgArea.toLocaleString()}㎡` : null,
   ].filter(Boolean).join(' · ')
 
-  const currentPhase = stage3Done ? '시공 진행 중' : stage2Done ? '프리콘 단계' : stage1Done ? '계획 수립' : '준비 중'
-  const phaseColor = stage3Done ? '#16a34a' : stage2Done ? '#ea580c' : stage1Done ? '#2563eb' : '#94a3b8'
+  const currentPhase = stage3Done ? '시공 진행 중' : stage2Done ? '프리콘 단계' : '초기 검토 완료'
+  const phaseColor = stage3Done ? '#16a34a' : stage2Done ? '#ea580c' : '#2563eb'
 
   return (
     <div className="flex flex-col h-full">

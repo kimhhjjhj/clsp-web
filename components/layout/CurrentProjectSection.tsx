@@ -35,7 +35,7 @@ const STAGES: {
   color: string
   bg: string
 }[] = [
-  { n: 1, label: '개략공기',   icon: BarChart3,  color: '#2563eb', bg: 'bg-blue-500' },
+  // 1단계(개략공기)는 '사업 초기 검토'(/bid)로 이전됨. 프로젝트 저장 후에는 2·3·4단계만 운영.
   { n: 2, label: '프리콘',     icon: ShieldCheck, color: '#16a34a', bg: 'bg-emerald-500' },
   { n: 3, label: '시공 관리',  icon: HardHat,    color: '#ea580c', bg: 'bg-orange-500' },
   { n: 4, label: '분석·준공',  icon: TrendingUp, color: '#7c3aed', bg: 'bg-purple-500' },
@@ -43,7 +43,6 @@ const STAGES: {
 
 function computeState(status: StageStatus | null, n: number): State {
   if (!status) return 'pending'
-  if (n === 1) return status.stage1.hasCpm ? 'done' : 'pending'
   if (n === 2) {
     const hasRisk = status.stage2.riskCount > 0 || status.stage2.opportunityCount > 0
     const hasBaseline = status.stage2.hasBaseline

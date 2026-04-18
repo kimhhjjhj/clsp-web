@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { FolderKanban, ChevronDown, Search, Plus, X, Building2, Calculator, Eye, Check } from 'lucide-react'
+import { FolderKanban, ChevronDown, Search, Plus, X, Building2, ClipboardCheck, Eye, Check } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
 
 export default function ProjectSwitcher() {
@@ -19,7 +19,7 @@ export default function ProjectSwitcher() {
   const ref = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // 입찰·견적 모드 감지
+  // 사업 초기 검토 모드 감지 (舊 입찰·견적)
   const isBidMode = pathname.startsWith('/bid')
 
   // 바깥 클릭 닫기
@@ -78,9 +78,9 @@ export default function ProjectSwitcher() {
     }
   }
 
-  // 입찰·견적 모드 버튼: 클릭해도 드롭다운 열림 (다른 프로젝트 전환 가능하게)
+  // 사업 초기 검토 모드 버튼: 클릭해도 드롭다운 열림 (다른 프로젝트 전환 가능하게)
   const triggerLabel = isBidMode
-    ? { icon: <Calculator size={13} className="text-amber-500" />, text: '새 견적 시뮬', sub: '프로젝트 없이 시뮬 중', color: 'text-amber-700 bg-amber-50 border-amber-200' }
+    ? { icon: <ClipboardCheck size={13} className="text-amber-500" />, text: '사업 초기 검토', sub: '저장 전 시뮬 중', color: 'text-amber-700 bg-amber-50 border-amber-200' }
     : currentProject
     ? {
         icon: <FolderKanban size={13} style={{ color: currentStage ? stageInfo[currentStage]?.color : '#2563eb' }} />,

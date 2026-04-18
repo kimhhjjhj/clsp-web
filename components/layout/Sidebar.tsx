@@ -11,7 +11,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, FolderKanban, Calculator, BarChart3, Database, ShieldAlert, Users2,
+  LayoutDashboard, FolderKanban, ClipboardCheck, BarChart3, Database, ShieldAlert, Users2,
   Upload, ShieldCheck, Settings, X,
 } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
@@ -20,9 +20,9 @@ import CurrentProjectSection from './CurrentProjectSection'
 interface NavItem { href: string; label: string; icon: typeof LayoutDashboard }
 
 const GLOBAL_ITEMS: NavItem[] = [
-  { href: '/',         label: '대시보드',   icon: LayoutDashboard },
-  { href: '/projects', label: '프로젝트',   icon: FolderKanban },
-  { href: '/bid',      label: '입찰·견적',  icon: Calculator },
+  { href: '/',         label: '대시보드',        icon: LayoutDashboard },
+  { href: '/projects', label: '프로젝트',        icon: FolderKanban },
+  { href: '/bid',      label: '사업 초기 검토',  icon: ClipboardCheck },
 ]
 
 const ASSET_ITEMS: NavItem[] = [

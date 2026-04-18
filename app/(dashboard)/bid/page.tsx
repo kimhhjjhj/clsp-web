@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Calculator, Building2, Ruler, Layers, Play, Save, TrendingUp,
+  ClipboardCheck, Building2, Ruler, Layers, Play, Save, TrendingUp,
   Calendar, Users, DollarSign, AlertTriangle, Loader2, ArrowRight,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
@@ -135,9 +135,9 @@ export default function BidPage() {
   return (
     <div className="flex flex-col h-full">
       <PageHeader
-        icon={Calculator}
-        title="입찰·견적 모드"
-        subtitle="기본 정보만으로 개략공기·인력·원가 즉시 산출 · 저장 없이 반복 시뮬 가능"
+        icon={ClipboardCheck}
+        title="사업 초기 검토"
+        subtitle="기본 정보만으로 개략공기·인력·공사비 산정 · 저장 없이 반복 시뮬 → 확정 시 프로젝트 생성"
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
@@ -256,7 +256,7 @@ export default function BidPage() {
           <div className="lg:col-span-2 space-y-5">
             {!result ? (
               <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
-                <Calculator size={32} className="mx-auto mb-3 text-gray-300" />
+                <ClipboardCheck size={32} className="mx-auto mb-3 text-gray-300" />
                 <p className="text-sm text-gray-500">좌측 정보 입력 후 <strong>개략 견적 산출</strong>을 누르세요</p>
                 <p className="text-[11px] text-gray-400 mt-1">데이터는 저장되지 않고, 저장 버튼을 누를 때만 프로젝트가 생성됩니다</p>
               </div>
