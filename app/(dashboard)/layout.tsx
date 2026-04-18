@@ -19,11 +19,6 @@ const NAV_ITEMS = [
   { href: '#',         label: '분석',         icon: BarChart3,       desc: '데이터 환류', disabled: true },
 ]
 
-const TOP_TABS = [
-  { href: '/',         label: '대시보드', icon: LayoutDashboard },
-  { href: '/projects', label: '프로젝트', icon: FolderKanban },
-]
-
 function TopBarSearch() {
   const palette = useCommandPalette()
   return (
@@ -135,27 +130,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
 
           <Image src="/tongyang-logo.png" alt="TONGYANG" height={28} width={140} className="object-contain h-6 sm:h-7 w-auto" />
-
-          <div className="hidden sm:block w-px h-6 bg-gray-200 mx-1" />
-
-          <nav className="hidden sm:flex items-center h-full gap-0.5 ml-1">
-            {TOP_TABS.map(({ href, label, icon: Icon }) => {
-              const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
-              return (
-                <Link key={href} href={href}
-                  className={`relative px-4 h-full flex items-center gap-2 text-[13px] font-medium transition-colors no-underline ${
-                    active ? 'text-[#1e293b]' : 'text-gray-400 hover:text-gray-700'
-                  }`}
-                >
-                  <Icon size={14} className={active ? 'text-[#2563eb]' : ''} />
-                  {label}
-                  {active && (
-                    <span className="absolute bottom-0 left-3 right-3 h-[2.5px] rounded-full bg-gradient-to-r from-[#2563eb] to-[#3b82f6]" />
-                  )}
-                </Link>
-              )
-            })}
-          </nav>
 
           <div className="ml-auto flex items-center gap-2">
             <TopBarSearch />
