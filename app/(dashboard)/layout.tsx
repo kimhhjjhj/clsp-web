@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { ToastProvider } from '@/components/common/Toast'
 import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
+import Breadcrumb from '@/components/common/Breadcrumb'
 
 const NAV_ITEMS = [
   { href: '/',         label: '대시보드',     icon: LayoutDashboard, desc: '전체 현황' },
@@ -137,6 +138,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
           </div>
         </header>
+
+        {/* 브레드크럼 */}
+        <Breadcrumb />
 
         {/* 메인 콘텐츠 */}
         <main className="flex-1 overflow-auto" style={{ background: '#fafafa' }}>

@@ -27,7 +27,9 @@
   - 완료 조건: Cmd+K 누르면 검색창, 상위 10개 결과 클릭 시 이동
   - 구현: `components/common/CommandPalette.tsx` + `/api/search` (프로젝트/일보/태스크/제안 4종)
   - Provider 대시보드 레이아웃에 주입, 상단바 Search 버튼 연결, 단축키 ⌘K/Ctrl+K/`/`
-- [ ] **글로벌 네비게이션 · 브레드크럼** — 프로젝트 선택 후 드릴다운 경로가 항상 보이게
+- [x] **글로벌 네비게이션 · 브레드크럼** — 프로젝트 선택 후 드릴다운 경로가 항상 보이게
+  - 구현: `components/common/Breadcrumb.tsx` — URL 기반 자동 생성, 프로젝트/일보 ID는 이름 fetch + 메모 캐싱
+  - 대시보드 레이아웃 header 하단에 고정 표시
   - 완료 조건: 모든 stage·sub 페이지 상단에 `프로젝트 > 단계 > 탭` 표시
 - [ ] **모바일 반응형 (일보)** — 3단계 `DailyReportForm`과 목록을 폰에서 입력·조회 가능
   - 완료 조건: iPhone Safari에서 일보 신규 저장·사진 업로드·조회 전 흐름 성공
