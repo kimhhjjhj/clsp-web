@@ -17,7 +17,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, BarChart3, Database, ShieldAlert, Users2,
-  Upload, ShieldCheck, Settings, X, DollarSign, ChevronRight, Layers,
+  Upload, ShieldCheck, Settings, X, DollarSign, ChevronRight, Layers, Plus,
 } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
 import CurrentProjectSection from './CurrentProjectSection'
@@ -94,7 +94,7 @@ export default function Sidebar({ onClose }: Props) {
   useEffect(() => { if (isAdminArea && !adminOpen) setAdminOpen(true) }, [isAdminArea]) // eslint-disable-line
 
   return (
-    <>
+    <div className="flex flex-col h-full">
       {/* 로고 — CLSP 브랜드 */}
       <div className="flex items-start justify-between px-5 py-5 border-b border-white/10 flex-shrink-0">
         <Link href="/" onClick={onClose} className="flex items-center gap-3 no-underline group">
@@ -203,20 +203,33 @@ export default function Sidebar({ onClose }: Props) {
             ))}
             <button
               type="button"
-              className="w-full flex items-center gap-2.5 px-2.5 h-8 rounded-md text-[13px] font-medium text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-[13px] font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
             >
-              <Settings size={15} strokeWidth={1.75} className="flex-shrink-0" />
+              <Settings size={16} strokeWidth={1.85} className="flex-shrink-0" />
               <span className="flex-1 text-left">설정</span>
             </button>
           </NavGroup>
         </Section>
       </nav>
-    </>
+
+      {/* 하단 CTA — 새 프로젝트 */}
+      <div className="flex-shrink-0 px-3 py-3 border-t border-white/[0.06]">
+        <Link
+          href="/projects/new"
+          onClick={onClose}
+          className="group flex items-center justify-center gap-2 w-full h-10 rounded-lg text-white text-[13px] font-semibold shadow-lg shadow-orange-900/30 hover:shadow-orange-900/50 transition-all no-underline"
+          style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
+        >
+          <Plus size={15} strokeWidth={2.5} />
+          새 프로젝트
+        </Link>
+      </div>
+    </div>
   )
 }
 
 function NavGroup({ children }: { children: React.ReactNode }) {
-  return <div className="space-y-px">{children}</div>
+  return <div className="space-y-0.5">{children}</div>
 }
 
 function SidebarLink({
@@ -231,16 +244,13 @@ function SidebarLink({
     <Link
       href={item.href}
       onClick={onNavigate}
-      className={`group relative flex items-center gap-2.5 px-2.5 h-8 rounded-md transition-colors no-underline ${
+      className={`group flex items-center gap-2.5 px-3 h-9 rounded-lg transition-all no-underline ${
         active
-          ? 'bg-white/[0.08] text-white'
-          : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
+          ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
+          : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
       }`}
     >
-      {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r-full" />
-      )}
-      <Icon size={15} strokeWidth={active ? 2.25 : 1.75} className="flex-shrink-0" />
+      <Icon size={16} strokeWidth={active ? 2.25 : 1.85} className="flex-shrink-0" />
       <span className={`flex-1 text-[13px] leading-none truncate ${active ? 'font-semibold' : 'font-medium'}`}>
         {item.label}
       </span>
@@ -261,21 +271,18 @@ function CollapsibleItem({
   const Icon = item.icon
   return (
     <div
-      className={`relative flex items-center gap-1 h-8 rounded-md transition-colors overflow-hidden ${
+      className={`flex items-center gap-0.5 h-9 rounded-lg transition-all overflow-hidden ${
         active
-          ? 'bg-white/[0.08] text-white'
-          : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
+          ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
+          : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
       }`}
     >
-      {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r-full" />
-      )}
       <Link
         href={item.href}
         onClick={onNavigate}
-        className="flex items-center gap-2.5 pl-2.5 pr-1 h-full flex-1 min-w-0 no-underline"
+        className="flex items-center gap-2.5 pl-3 pr-1 h-full flex-1 min-w-0 no-underline"
       >
-        <Icon size={15} strokeWidth={active ? 2.25 : 1.75} className="flex-shrink-0" />
+        <Icon size={16} strokeWidth={active ? 2.25 : 1.85} className="flex-shrink-0" />
         <span className={`flex-1 text-[13px] leading-none truncate ${active ? 'font-semibold' : 'font-medium'}`}>
           {item.label}
         </span>
@@ -290,7 +297,7 @@ function CollapsibleItem({
       >
         <ChevronRight
           size={13}
-          className={`transition-transform ${open ? 'rotate-90' : ''} ${active ? 'text-white/70' : 'text-slate-500'}`}
+          className={`transition-transform ${open ? 'rotate-90' : ''} ${active ? 'text-white/80' : 'text-slate-500'}`}
         />
       </button>
     </div>
