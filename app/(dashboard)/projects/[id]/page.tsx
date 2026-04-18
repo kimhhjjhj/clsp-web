@@ -14,6 +14,17 @@ import { IndustrySpecificSummary, type IndustrySpecific } from '@/components/com
 import CpAlertBanner from '@/components/common/CpAlertBanner'
 import { getProjectStatus, STATUS_META, formatRelative } from '@/lib/project-status'
 
+interface AiCostEstimate {
+  summary?: {
+    grandTotalKRW: number
+    directCostKRW: number
+    pricePerSqmKRW: number
+    pricePerPyongKRW: number
+  }
+  estimatedAt?: string
+  model?: string
+}
+
 interface Project {
   id: string
   name: string
@@ -27,6 +38,7 @@ interface Project {
   siteArea?: number
   startDate?: string
   industrySpecific?: IndustrySpecific | null
+  aiCostEstimate?: AiCostEstimate | null
 }
 
 interface StageStatus {
@@ -42,6 +54,13 @@ interface StageCardRow {
   highlight?: boolean
   danger?: boolean
   muted?: boolean
+}
+
+function fmtKRWBillion(n: number): string {
+  if (n >= 1_000_000_000_000) return `${(n / 1_000_000_000_000).toFixed(1)}조`
+  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`
+  if (n >= 10_000) return `${Math.round(n / 10_000).toLocaleString()}만`
+  return n.toLocaleString()
 }
 
 function addDays(iso: string | undefined, days: number | null | undefined): string | null {
@@ -360,6 +379,30 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                 accent="#16a34a"
               />
             </div>
+
+            {/* AI 공사비 추정 — 초기 검토 시 저장된 경우 */}
+            {project.aiCostEstimate?.summary && (
+              <div className="card-elevated p-4 bg-gradient-to-br from-violet-50/60 to-blue-50/40">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-[10px] font-bold text-violet-700 uppercase tracking-wider">
+                    🤖 사업 초기 검토 · AI 추정 공사비
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-violet-900 font-mono tracking-tight leading-none">
+                  {fmtKRWBillion(project.aiCostEstimate.summary.grandTotalKRW)}
+                </p>
+                <p className="text-[11px] text-violet-700 mt-1.5">
+                  평당 {Math.round((project.aiCostEstimate.summary.pricePerPyongKRW ?? 0) / 10000).toLocaleString()}만원
+                  {' · '}
+                  ㎡당 {Math.round((project.aiCostEstimate.summary.pricePerSqmKRW ?? 0) / 1000)}천원
+                </p>
+                {project.aiCostEstimate.estimatedAt && (
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    {new Date(project.aiCostEstimate.estimatedAt).toLocaleDateString('ko-KR')} 추정
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* 상세 정보 */}
             <div className="card-elevated overflow-hidden">

@@ -112,6 +112,9 @@ export default function BidPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  // AI 공사비 추정 결과 (저장 시 함께 전송)
+  const [aiEstimate, setAiEstimate] = useState<unknown | null>(null)
+
   // 결과 뷰 탭
   const [topTab, setTopTab] = useState<TopTab>(initialTab)
 
@@ -249,6 +252,9 @@ export default function BidPage() {
           wtBottom: Number(input.wtBottom) || null,
           waBottom: Number(input.waBottom) || null,
           startDate: input.startDate || null,
+          aiCostEstimate: aiEstimate
+            ? { ...aiEstimate, estimatedAt: new Date().toISOString() }
+            : null,
         }),
       })
       const data = await res.json()
@@ -566,6 +572,7 @@ export default function BidPage() {
                         siteArea={Number(input.siteArea) || undefined}
                         totalDuration={result.cpm.totalDuration}
                         tasks={result.cpm.tasks}
+                        onResult={setAiEstimate}
                       />
 
                       {/* 월별 필요 인력 */}

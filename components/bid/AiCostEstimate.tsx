@@ -52,6 +52,8 @@ interface Props {
   siteArea?: number
   totalDuration: number
   tasks: CPMResult[]
+  /** 추정 완료 시 부모에 결과 전달 (프로젝트 저장에 포함) */
+  onResult?: (result: AiResult | null) => void
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -104,10 +106,11 @@ export default function AiCostEstimate(props: Props) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI 호출 실패')
       setResult(data)
-      // 기본으로 모든 카테고리 펼침
       setExpandedCat(new Set((data.trades as Trade[]).map(t => t.category)))
+      props.onResult?.(data)
     } catch (e: any) {
       setError(e.message)
+      props.onResult?.(null)
     } finally {
       setLoading(false)
     }

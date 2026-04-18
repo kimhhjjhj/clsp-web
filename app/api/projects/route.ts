@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
         buildingArea: body.buildingArea,
         wtBottom: body.wtBottom,
         waBottom: body.waBottom,
+        aiCostEstimate: body.aiCostEstimate ?? undefined,
       },
     })
     return NextResponse.json(project, { status: 201 })
