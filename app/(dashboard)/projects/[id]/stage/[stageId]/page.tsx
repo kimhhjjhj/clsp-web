@@ -22,11 +22,12 @@ interface Project {
   startDate?: string
 }
 
-const STAGE_LABELS: Record<string, { label: string; desc: string; color: string }> = {
-  '1': { label: '개략공기 (이전 링크)', desc: '사업 초기 검토로 이전됨', color: '#2563eb' },
-  '2': { label: '2단계 · 프리콘',       desc: '시나리오 · 프로세스맵', color: '#16a34a' },
-  '3': { label: '3단계 · 시공관리',     desc: '일보 · 엑셀 임포트 · 사진', color: '#ea580c' },
-  '4': { label: '4단계 · 분석',         desc: '공종·위치·생산성 분석', color: '#7c3aed' },
+// 표시용 단계 번호 (URL 2/3/4 → 사용자 1/2/3)
+const STAGE_LABELS: Record<string, { label: string; desc: string; color: string; displayN: string }> = {
+  '1': { label: '개략공기 (이전 링크)', desc: '사업 초기 검토로 이전됨',       color: '#2563eb', displayN: '·' },
+  '2': { label: '1단계 · 프리콘',       desc: '시나리오 · 프로세스맵',         color: '#16a34a', displayN: '1' },
+  '3': { label: '2단계 · 시공관리',     desc: '일보 · 엑셀 임포트 · 사진',    color: '#ea580c', displayN: '2' },
+  '4': { label: '3단계 · 분석·준공',    desc: '공종·위치·생산성 분석',        color: '#7c3aed', displayN: '3' },
 }
 
 export default function StagePage({
@@ -45,15 +46,17 @@ export default function StagePage({
       .catch(() => setLoading(false))
   }, [id])
 
+  // URL 2/3/4 구간 내에서만 이전/다음 이동 (1은 사업 초기 검토로 이전됨)
   const prevStage = String(Number(stageId) - 1)
   const nextStage = String(Number(stageId) + 1)
-  const hasPrev = Number(stageId) > 1
+  const hasPrev = Number(stageId) > 2
   const hasNext = Number(stageId) < 4
   const stageInfo = STAGE_LABELS[stageId]
 
   const stageNav = (
     <div className="flex items-center gap-1 py-2 overflow-x-auto">
-      {['1', '2', '3', '4'].map(s => {
+      {/* URL stage 2/3/4만 노출 (1은 사업 초기 검토로 이전됨) */}
+      {['2', '3', '4'].map(s => {
         const info = STAGE_LABELS[s]
         const active = s === stageId
         return (
@@ -91,7 +94,7 @@ export default function StagePage({
             className="flex items-center justify-center w-9 h-9 rounded-lg text-white font-bold"
             style={{ background: stageInfo?.color ?? '#64748b' }}
           >
-            {stageId}
+            {stageInfo?.displayN ?? stageId}
           </div>
         }
         title={project ? project.name : '프로젝트…'}
