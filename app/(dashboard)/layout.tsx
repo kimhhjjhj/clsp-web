@@ -34,7 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ProjectProvider>
         <CommandPaletteProvider>
           <GlobalShortcuts />
-          <div className="flex h-full relative" style={{ background: '#e8ecf1' }}>
+          <div className="flex h-full relative" style={{ background: '#d9dfe8' }}>
             {/* 모바일 사이드바 오버레이 */}
             {mobileSidebarOpen && (
               <div
@@ -85,7 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Breadcrumb />
 
               {/* 메인 콘텐츠 */}
-              <main className="flex-1 overflow-auto" style={{ background: '#e8ecf1' }}>
+              <main className="flex-1 overflow-auto" style={{ background: '#d9dfe8' }}>
                 {children}
               </main>
             </div>

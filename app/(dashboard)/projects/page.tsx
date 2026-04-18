@@ -265,10 +265,8 @@ function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id
 
   return (
     <div
-      className={`group relative bg-white rounded-xl border transition-all overflow-hidden flex flex-col ${
-        isCompleted
-          ? 'border-gray-200 hover:border-slate-300 hover:shadow-md opacity-90 hover:opacity-100'
-          : 'border-gray-200 hover:shadow-lg hover:-translate-y-0.5'
+      className={`group card-elevated relative overflow-hidden flex flex-col ${
+        isCompleted ? 'opacity-90 hover:opacity-100' : 'hover:-translate-y-0.5'
       }`}
     >
       {/* 상단 컬러 띠 — 상태 시각화 */}

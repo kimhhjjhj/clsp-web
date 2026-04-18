@@ -226,7 +226,7 @@ export default function DashboardPage() {
 
         {/* 활발한 현장 + 바로가기 */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="lg:col-span-2 card-elevated overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-gray-900">활발한 현장</h3>
@@ -293,7 +293,7 @@ export default function DashboardPage() {
           </div>
 
           {/* 바로가기 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="card-elevated p-5">
             <h3 className="text-sm font-bold text-gray-900 mb-3">바로가기</h3>
             <div className="space-y-1.5">
               <QuickLink href="/projects/new" icon={<Plus size={14} />} label="새 프로젝트 만들기" color="blue" />
@@ -329,7 +329,7 @@ function KpiCard({
   accent?: string   // hex color — 좌측 상단 컬러 띠 (상태 강조용)
 }) {
   const inner = (
-    <div className={`relative bg-white rounded-xl border border-gray-200 p-4 transition-all overflow-hidden ${href ? 'hover:border-blue-300 hover:shadow-md cursor-pointer hover:-translate-y-0.5' : ''}`}>
+    <div className={`card-elevated relative p-4 overflow-hidden ${href ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}>
       {accent && <div className="absolute top-0 left-0 right-0 h-1" style={{ background: accent }} />}
       <div className="flex items-center justify-between mb-2">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
