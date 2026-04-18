@@ -1,9 +1,8 @@
 'use client'
 
 // ═══════════════════════════════════════════════════════════
-// 사이드바 '진행 단계' 섹션 — 미니멀 타임라인
-// - 단계별 색 사용 안 함 (알록달록 X)
-// - 상태(done/active/pending)만 단일 톤으로 구분
+// 사이드바 '진행 단계' 섹션 — Linear 스타일 플랫 리스트
+// 타임라인 dot·체크 제거. 들여쓰기 + 좌측 indent line.
 // ═══════════════════════════════════════════════════════════
 
 import { useEffect, useState } from 'react'
@@ -73,6 +72,7 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
   const activeStageMatch = pathname.match(/\/projects\/[^/]+\/stage\/(\d)/)
   const activeStage = activeStageMatch ? Number(activeStageMatch[1]) : null
   const onOverview = pathname === `/projects/${project.id}`
+  const onEdit = pathname === `/projects/${project.id}/edit`
 
   const lifecycle = getProjectStatus({
     latestReportDate: status?.stage3.lastReportDate ?? null,
@@ -81,32 +81,30 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
   const info = STATUS_META[lifecycle]
 
   return (
-    <div className="mx-2">
-      {/* 프로젝트 요약 — 이름 + 상태 텍스트만 */}
+    <div>
+      {/* 프로젝트 이름 — 섹션 리더 */}
       <Link
         href={`/projects/${project.id}`}
         onClick={onNavigate}
-        className={`block rounded-lg px-3 py-2 mb-1.5 no-underline transition-colors ${
+        className={`relative flex items-center gap-2 mx-2 px-2.5 h-8 rounded-md no-underline transition-colors ${
           onOverview
-            ? 'bg-white/10'
-            : 'hover:bg-white/[0.05]'
+            ? 'bg-white/[0.08] text-white'
+            : 'text-slate-200 hover:bg-white/[0.04]'
         }`}
       >
-        <p className="text-[13px] font-semibold truncate text-white leading-tight">
+        {onOverview && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r-full" />
+        )}
+        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${info.dot}`} />
+        <span className={`flex-1 truncate text-[13px] ${onOverview ? 'font-semibold' : 'font-medium'}`}>
           {project.name}
-        </p>
-        <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5">
-          <span className={`w-1 h-1 rounded-full ${info.dot}`} />
-          {info.label}
-        </p>
+        </span>
       </Link>
 
-      {/* 타임라인 — 단색 dot */}
-      <div className="relative py-0.5">
-        {/* 연결선 */}
-        <div className="absolute left-[15px] top-5 bottom-5 w-px bg-white/[0.08]" aria-hidden />
-
-        <div className="space-y-0">
+      {/* 단계 리스트 — 좌측 indent line */}
+      <div className="relative mx-2 mt-0.5 pl-[18px]">
+        <div className="absolute left-[10px] top-1 bottom-1 w-px bg-white/[0.08]" aria-hidden />
+        <div className="space-y-px">
           {STAGES.map(st => {
             const s = computeState(status, st.urlN)
             const isActive = activeStage === st.urlN
@@ -115,14 +113,16 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
                 key={st.urlN}
                 href={`/projects/${project.id}/stage/${st.urlN}`}
                 onClick={onNavigate}
-                className={`relative flex items-center gap-3 pl-1 pr-2 h-9 rounded-md text-[13px] no-underline transition-colors ${
+                className={`relative flex items-center gap-2 px-2 h-7 rounded-md text-[12px] no-underline transition-colors ${
                   isActive
                     ? 'bg-white/[0.08] text-white font-medium'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
                 }`}
               >
-                <TimelineDot state={s} active={isActive} />
                 <span className="flex-1 truncate">{st.label}</span>
+                {s === 'done' && (
+                  <Check size={11} strokeWidth={2.5} className="text-slate-300 flex-shrink-0" />
+                )}
               </Link>
             )
           })}
@@ -133,36 +133,18 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
       <Link
         href={`/projects/${project.id}/edit`}
         onClick={onNavigate}
-        className="mt-1 flex items-center gap-2 px-3 h-7 rounded-md text-[11px] text-slate-500 hover:text-slate-200 hover:bg-white/[0.04] transition-colors no-underline"
+        className={`relative flex items-center gap-2 mx-2 mt-0.5 px-2.5 h-7 rounded-md text-[12px] no-underline transition-colors ${
+          onEdit
+            ? 'bg-white/[0.08] text-white font-medium'
+            : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]'
+        }`}
       >
-        <Settings size={11} />
-        설정
+        {onEdit && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r-full" />
+        )}
+        <Settings size={11} strokeWidth={1.75} className="flex-shrink-0" />
+        <span className="flex-1 truncate">프로젝트 설정</span>
       </Link>
     </div>
-  )
-}
-
-// ──────────────────────────────────────────────────
-// Dot — 단일 톤, 상태만 구분
-//  done    — 채움 + 체크
-//  active  — 채움 (현재 보고 있는 단계)
-//  pending — 빈 원
-// ──────────────────────────────────────────────────
-function TimelineDot({ state, active }: { state: State; active: boolean }) {
-  const baseRing = 'ring-[3px] ring-slate-900'
-  if (state === 'done') {
-    return (
-      <span className={`relative flex items-center justify-center w-[14px] h-[14px] rounded-full flex-shrink-0 bg-white/70 ${baseRing}`}>
-        <Check size={8} className="text-slate-900" strokeWidth={3.5} />
-      </span>
-    )
-  }
-  if (state === 'active') {
-    return (
-      <span className={`w-[14px] h-[14px] rounded-full flex-shrink-0 ${baseRing} bg-white`} />
-    )
-  }
-  return (
-    <span className={`w-[14px] h-[14px] rounded-full flex-shrink-0 border border-slate-600 ${baseRing} ${active ? 'bg-slate-600' : 'bg-transparent'}`} />
   )
 }

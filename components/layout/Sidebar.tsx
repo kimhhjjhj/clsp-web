@@ -140,7 +140,7 @@ export default function Sidebar({ onClose }: Props) {
             onNavigate={onClose}
           />
           {bidOpen && (
-            <div className="ml-3 pl-3 border-l border-white/[0.08] space-y-0.5 mt-0.5 mb-1">
+            <div className="ml-[18px] pl-3 border-l border-white/[0.06] space-y-px mt-0.5 mb-1">
               {BID_SUB.map(sub => {
                 const subActive = isBid && activeBidTab === sub.tab
                 const Icon = sub.icon
@@ -149,15 +149,14 @@ export default function Sidebar({ onClose }: Props) {
                     key={sub.tab}
                     href={`/bid?tab=${sub.tab}`}
                     onClick={onClose}
-                    className={`flex items-center gap-2 px-2 h-8 rounded-md text-xs transition-colors no-underline ${
+                    className={`flex items-center gap-2 px-2 h-7 rounded-md text-[12px] transition-colors no-underline ${
                       subActive
-                        ? 'bg-white/[0.08] text-white font-semibold'
-                        : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                        ? 'text-white font-medium'
+                        : 'text-slate-500 hover:text-slate-200'
                     }`}
                   >
-                    <Icon size={12} className="flex-shrink-0" />
+                    <Icon size={11} strokeWidth={1.75} className="flex-shrink-0" />
                     <span className="flex-1 truncate">{sub.label}</span>
-                    {subActive && <span className="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0" />}
                   </Link>
                 )
               })}
@@ -204,9 +203,9 @@ export default function Sidebar({ onClose }: Props) {
             ))}
             <button
               type="button"
-              className="w-full flex items-center gap-2.5 px-2 h-9 rounded-lg text-[13px] text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] transition-colors"
+              className="w-full flex items-center gap-2.5 px-2.5 h-8 rounded-md text-[13px] font-medium text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] transition-colors"
             >
-              <Settings size={15} className="flex-shrink-0" />
+              <Settings size={15} strokeWidth={1.75} className="flex-shrink-0" />
               <span className="flex-1 text-left">설정</span>
             </button>
           </NavGroup>
@@ -217,7 +216,7 @@ export default function Sidebar({ onClose }: Props) {
 }
 
 function NavGroup({ children }: { children: React.ReactNode }) {
-  return <div className="space-y-0.5">{children}</div>
+  return <div className="space-y-px">{children}</div>
 }
 
 function SidebarLink({
@@ -232,15 +231,19 @@ function SidebarLink({
     <Link
       href={item.href}
       onClick={onNavigate}
-      className={`flex items-center gap-2.5 px-2 h-9 rounded-lg transition-colors no-underline ${
+      className={`group relative flex items-center gap-2.5 px-2.5 h-8 rounded-md transition-colors no-underline ${
         active
-          ? 'bg-blue-600 text-white font-semibold shadow-sm'
-          : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+          ? 'bg-white/[0.08] text-white'
+          : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
       }`}
     >
-      <Icon size={15} className="flex-shrink-0" />
-      <span className="flex-1 text-[13px] leading-none truncate">{item.label}</span>
-      {active && <span className="w-1 h-4 bg-white/60 rounded-full flex-shrink-0" />}
+      {active && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r-full" />
+      )}
+      <Icon size={15} strokeWidth={active ? 2.25 : 1.75} className="flex-shrink-0" />
+      <span className={`flex-1 text-[13px] leading-none truncate ${active ? 'font-semibold' : 'font-medium'}`}>
+        {item.label}
+      </span>
     </Link>
   )
 }
@@ -258,19 +261,24 @@ function CollapsibleItem({
   const Icon = item.icon
   return (
     <div
-      className={`flex items-center gap-1 h-9 rounded-lg transition-colors overflow-hidden ${
+      className={`relative flex items-center gap-1 h-8 rounded-md transition-colors overflow-hidden ${
         active
-          ? 'bg-blue-600 text-white font-semibold shadow-sm'
-          : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+          ? 'bg-white/[0.08] text-white'
+          : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
       }`}
     >
+      {active && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r-full" />
+      )}
       <Link
         href={item.href}
         onClick={onNavigate}
-        className="flex items-center gap-2.5 pl-2 pr-1 h-full flex-1 min-w-0 no-underline"
+        className="flex items-center gap-2.5 pl-2.5 pr-1 h-full flex-1 min-w-0 no-underline"
       >
-        <Icon size={15} className="flex-shrink-0" />
-        <span className="flex-1 text-[13px] leading-none truncate">{item.label}</span>
+        <Icon size={15} strokeWidth={active ? 2.25 : 1.75} className="flex-shrink-0" />
+        <span className={`flex-1 text-[13px] leading-none truncate ${active ? 'font-semibold' : 'font-medium'}`}>
+          {item.label}
+        </span>
       </Link>
       <button
         type="button"
@@ -282,7 +290,7 @@ function CollapsibleItem({
       >
         <ChevronRight
           size={13}
-          className={`transition-transform ${open ? 'rotate-90' : ''} ${active ? 'text-white/80' : 'text-slate-500'}`}
+          className={`transition-transform ${open ? 'rotate-90' : ''} ${active ? 'text-white/70' : 'text-slate-500'}`}
         />
       </button>
     </div>
@@ -300,14 +308,14 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="mt-4 pt-3 border-t border-white/[0.06]">
+    <div className="mt-5 pt-2 border-t border-white/[0.05]">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center gap-1.5 px-2 pb-1 group"
+        className="w-full flex items-center gap-1.5 px-2.5 py-1 mb-0.5 group"
       >
         {accent && <span className="w-1 h-3 rounded-full flex-shrink-0" style={{ background: accent }} />}
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em] group-hover:text-slate-400 transition-colors">
+        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.12em] group-hover:text-slate-300 transition-colors">
           {label}
         </span>
         <ChevronRight
@@ -315,7 +323,7 @@ function Section({
           className={`ml-auto text-slate-600 group-hover:text-slate-400 transition-all ${open ? 'rotate-90' : ''}`}
         />
       </button>
-      {open && <div className="mt-0.5">{children}</div>}
+      {open && <div>{children}</div>}
     </div>
   )
 }
