@@ -44,15 +44,22 @@ function renderIcon(icon: Props['icon']): React.ReactNode {
 export default function PageHeader({ icon, title, subtitle, actions, tabs, stickyTop = true, accent = 'blue' }: Props) {
   const iconNode = renderIcon(icon)
   const a = ACCENT[accent]
+  // JSX로 직접 넘긴 아이콘(예: stage 페이지의 solid 숫자 배지)은
+  // accent 래퍼로 이중 감싸지 않고 그대로 렌더
+  const isCustomNode = isValidElement(icon)
 
   return (
     <div className={`bg-white/95 backdrop-blur-sm border-b border-gray-200 ${stickyTop ? 'sticky top-0 z-20' : ''}`}>
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {iconNode && (
-            <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${a.bg} ${a.text} flex-shrink-0 ring-1 ${a.ring} shadow-sm`}>
-              {iconNode}
-            </div>
+            isCustomNode ? (
+              <div className="flex-shrink-0">{iconNode}</div>
+            ) : (
+              <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${a.bg} ${a.text} flex-shrink-0 ring-1 ${a.ring} shadow-sm`}>
+                {iconNode}
+              </div>
+            )
           )}
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate tracking-tight">{title}</h1>
