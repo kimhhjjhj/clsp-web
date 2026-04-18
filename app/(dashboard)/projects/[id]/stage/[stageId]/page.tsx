@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState, use } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Layers } from 'lucide-react'
 import Stage1Page from '@/components/stages/Stage1Page'
 import Stage2Page from '@/components/stages/Stage2Page'
 import Stage3Page from '@/components/stages/Stage3Page'
 import Stage4Page from '@/components/stages/Stage4Page'
+import PageHeader from '@/components/common/PageHeader'
+import { Skeleton } from '@/components/common/Skeleton'
 
 interface Project {
   id: string
@@ -19,18 +21,11 @@ interface Project {
   startDate?: string
 }
 
-const STAGE_LABELS: Record<string, string> = {
-  '1': '1단계 · 개략공기 검토',
-  '2': '2단계 · 프리콘',
-  '3': '3단계 · 시공 관리',
-  '4': '4단계 · 분석 & 준공',
-}
-
-const STAGE_COLORS: Record<string, string> = {
-  '1': '#2563eb',
-  '2': '#16a34a',
-  '3': '#ea580c',
-  '4': '#7c3aed',
+const STAGE_LABELS: Record<string, { label: string; desc: string; color: string }> = {
+  '1': { label: '1단계 · 개략공기', desc: 'WBS · CPM · 자원계획', color: '#2563eb' },
+  '2': { label: '2단계 · 프리콘',   desc: '시나리오 · 프로세스맵', color: '#16a34a' },
+  '3': { label: '3단계 · 시공관리', desc: '일보 · 엑셀 임포트 · 사진', color: '#ea580c' },
+  '4': { label: '4단계 · 분석',     desc: '공종·위치·생산성 분석', color: '#7c3aed' },
 }
 
 export default function StagePage({
@@ -53,73 +48,108 @@ export default function StagePage({
   const nextStage = String(Number(stageId) + 1)
   const hasPrev = Number(stageId) > 1
   const hasNext = Number(stageId) < 4
-  const color = STAGE_COLORS[stageId] ?? '#64748b'
+  const stageInfo = STAGE_LABELS[stageId]
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-full">
-      <div
-        className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-        style={{ borderColor: `${color} transparent transparent transparent` }}
-      />
+  const stageNav = (
+    <div className="flex items-center gap-1 py-2 overflow-x-auto">
+      {['1', '2', '3', '4'].map(s => {
+        const info = STAGE_LABELS[s]
+        const active = s === stageId
+        return (
+          <Link
+            key={s}
+            href={`/projects/${id}/stage/${s}`}
+            className={`relative flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold no-underline transition-colors ${
+              active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ background: active ? info.color : '#d1d5db' }}
+              />
+              {info.label}
+            </span>
+            {active && (
+              <span
+                className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
+                style={{ background: info.color }}
+              />
+            )}
+          </Link>
+        )
+      })}
     </div>
   )
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* 상단 네비게이션 바 */}
-      <div
-        className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-white"
-      >
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/projects/${id}`}
-            className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+      <PageHeader
+        icon={
+          <div
+            className="flex items-center justify-center w-9 h-9 rounded-lg text-white font-bold"
+            style={{ background: stageInfo?.color ?? '#64748b' }}
           >
-            <ChevronLeft size={15} />
-            {project?.name ?? '프로젝트'}
-          </Link>
-          <span className="text-gray-300">|</span>
-          <span
-            className="text-sm font-semibold"
-            style={{ color }}
-          >
-            {STAGE_LABELS[stageId] ?? `${stageId}단계`}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {hasPrev && (
-            <Link
-              href={`/projects/${id}/stage/${prevStage}`}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg hover:border-gray-400 transition-colors"
-            >
-              <ChevronLeft size={12} />
-              이전 단계
-            </Link>
-          )}
-          {hasNext && (
-            <Link
-              href={`/projects/${id}/stage/${nextStage}`}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-opacity hover:opacity-80"
-              style={{ background: color }}
-            >
-              다음 단계
-              <ChevronRight size={12} />
-            </Link>
-          )}
-        </div>
-      </div>
+            {stageId}
+          </div>
+        }
+        title={project ? project.name : '프로젝트…'}
+        subtitle={stageInfo?.desc ?? '공정 단계'}
+        actions={
+          <>
+            {hasPrev && (
+              <Link
+                href={`/projects/${id}/stage/${prevStage}`}
+                className="hidden sm:inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                <ChevronLeft size={12} /> 이전
+              </Link>
+            )}
+            {hasNext ? (
+              <Link
+                href={`/projects/${id}/stage/${nextStage}`}
+                className="inline-flex items-center gap-1 h-9 px-3 sm:px-4 rounded-lg text-white text-xs font-semibold transition-opacity hover:opacity-90"
+                style={{ background: stageInfo?.color ?? '#64748b' }}
+              >
+                <span className="hidden sm:inline">다음 단계</span>
+                <span className="sm:hidden">다음</span>
+                <ChevronRight size={12} />
+              </Link>
+            ) : (
+              <Link
+                href={`/projects/${id}`}
+                className="inline-flex items-center gap-1 h-9 px-3 sm:px-4 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800"
+              >
+                프로젝트로
+              </Link>
+            )}
+          </>
+        }
+        tabs={stageNav}
+      />
 
       {/* 단계별 콘텐츠 */}
       <div className="flex-1 overflow-hidden">
-        {stageId === '1' && <Stage1Page projectId={id} project={project} />}
-        {stageId === '2' && <Stage2Page projectId={id} />}
-        {stageId === '3' && <Stage3Page projectId={id} />}
-        {stageId === '4' && <Stage4Page projectId={id} projectName={project?.name} />}
-        {!['1','2','3','4'].includes(stageId) && (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            존재하지 않는 단계입니다.
+        {loading ? (
+          <div className="p-6 space-y-3">
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+              {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-20" />)}
+            </div>
           </div>
+        ) : (
+          <>
+            {stageId === '1' && <Stage1Page projectId={id} project={project} />}
+            {stageId === '2' && <Stage2Page projectId={id} />}
+            {stageId === '3' && <Stage3Page projectId={id} />}
+            {stageId === '4' && <Stage4Page projectId={id} projectName={project?.name} />}
+            {!['1', '2', '3', '4'].includes(stageId) && (
+              <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                존재하지 않는 단계입니다.
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
