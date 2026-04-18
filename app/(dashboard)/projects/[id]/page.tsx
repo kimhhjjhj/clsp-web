@@ -98,10 +98,17 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
     </div>
   )
 
+  // 라이프사이클 상태 — 준공이면 모든 단계 완료로 간주
+  const lifecycle = getProjectStatus({
+    latestReportDate: status?.stage3.lastReportDate ?? null,
+    _count: { dailyReports: status?.stage3.dailyReportCount ?? 0 },
+  })
+  const isCompleted = lifecycle === 'completed'
+
   // 1단계(개략공기)는 사업 초기 검토(/bid)로 이전 — 프로젝트 진입 시점엔 이미 완료된 것으로 간주
-  const stage2Done = (status?.stage2.riskCount ?? 0) > 0 || (status?.stage2.hasBaseline ?? false)
-  const stage3Done = status?.stage3.latestRate !== null && status?.stage3.latestRate !== undefined
-  const stage4Done = (status?.stage4.weeklyReportCount ?? 0) > 0
+  const stage2Done = isCompleted || (status?.stage2.riskCount ?? 0) > 0 || (status?.stage2.hasBaseline ?? false)
+  const stage3Done = isCompleted || (status?.stage3.latestRate !== null && status?.stage3.latestRate !== undefined)
+  const stage4Done = isCompleted || (status?.stage4.weeklyReportCount ?? 0) > 0
 
   const latestRate = status?.stage3.latestRate ?? 0
   const plannedRate = status?.stage3.plannedRate ?? 0
@@ -125,11 +132,11 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
   }[] = [
     {
       stageId: 2,
-      phaseLabel: 'PHASE 02',
+      phaseLabel: 'STAGE 01',
       color: '#16a34a',
       bg: '#f0fdf4',
       icon: <ShieldCheck size={22} color={stage2Done ? '#16a34a' : '#94a3b8'} />,
-      title: '2단계 · 프리콘',
+      title: '1단계 · 프리콘',
       subtitle: '리스크 · 시나리오 · 프로세스맵',
       rows: [
         { label: '리스크 / 기회', value: `R&O ${riskCount}건`, highlight: riskCount > 0 },
@@ -145,11 +152,11 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
     },
     {
       stageId: 3,
-      phaseLabel: 'PHASE 03',
+      phaseLabel: 'STAGE 02',
       color: '#ea580c',
       bg: '#fff7ed',
       icon: <HardHat size={22} color={stage3Done ? '#ea580c' : '#94a3b8'} />,
-      title: '3단계 · 시공 관리',
+      title: '2단계 · 시공 관리',
       subtitle: '일보 · 엑셀 임포트 · 사진',
       rows: [
         {
@@ -165,11 +172,11 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
     },
     {
       stageId: 4,
-      phaseLabel: 'PHASE 04',
+      phaseLabel: 'STAGE 03',
       color: '#7c3aed',
       bg: '#faf5ff',
       icon: <TrendingUp size={22} color={stage4Done ? '#7c3aed' : '#94a3b8'} />,
-      title: '4단계 · 분석 & 준공',
+      title: '3단계 · 분석 & 준공',
       subtitle: '공종·위치 분석 · Lessons Learned',
       rows: [
         { label: '주간 보고서', value: `${status?.stage4.weeklyReportCount ?? 0}주차` },
@@ -212,10 +219,6 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
 
         {/* 상태 배너 — 라이프사이클 상태 + 현재 진행 단계 통합 */}
         {(() => {
-          const lifecycle = getProjectStatus({
-            latestReportDate: status?.stage3.lastReportDate ?? null,
-            _count: { dailyReports: status?.stage3.dailyReportCount ?? 0 },
-          })
           const lcInfo = STATUS_META[lifecycle]
           return (
             <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl overflow-hidden">
