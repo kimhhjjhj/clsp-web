@@ -73,6 +73,110 @@ export function calcDuration(row: DBRow, qty: number): number {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 기간 산정 근거 설명 (Add-on, 순수 함수)
+// - 기존 calcDuration 로직을 건드리지 않고 step-by-step 풀어씀
+// - UI에 툴팁·상세 패널로 표시하기 위한 데이터
+// ═══════════════════════════════════════════════════════════
+export interface DurationExplanation {
+  formula: string           // 한 줄 요약 ("물량 100 ÷ 생산성 50 ÷ 작업률 0.666 = 기간 3일")
+  steps: string[]           // 단계별 계산 과정
+  assumptions: string[]     // 주의·가정 (예: 작업률의 의미)
+  inputs: {                 // 원본 입력값 (UI 테이블용)
+    qty: number
+    unit?: string
+    prod: number | null
+    stdDays: number | null
+    workRate: number | null
+    category: string
+  }
+  result: number            // 최종 기간(일)
+}
+
+export interface DurationLike {
+  category: string
+  unit?: string | null
+  prod?: number | null
+  stdDays?: number | null
+}
+
+/**
+ * 공종의 기간이 어떻게 계산됐는지 설명.
+ * WBSTask / DBRow 둘 다 받을 수 있게 DurationLike로 추상화.
+ */
+export function explainDuration(row: DurationLike, qty: number): DurationExplanation {
+  const rate = getWorkRate(row.category)
+  const prod = row.prod ?? null
+  const stdDays = row.stdDays ?? null
+  const unit = row.unit ?? undefined
+  const steps: string[] = []
+  const assumptions: string[] = []
+  let durRaw = 0
+  let basis = ''
+
+  // 1) 원시 기간 (작업률 적용 전)
+  if (prod !== null && prod > 0) {
+    durRaw = qty / prod
+    steps.push(`① 원시 기간 = 물량 ${fmt(qty)} ${unit ?? ''} ÷ 생산성 ${prod} ${unit ?? ''}/일 = ${fmt(durRaw)}일`)
+    basis = `물량 ${fmt(qty)} ÷ 생산성 ${prod}`
+  } else if (stdDays !== null && stdDays > 0) {
+    durRaw = qty * stdDays
+    steps.push(`① 원시 기간 = 물량 ${fmt(qty)} ${unit ?? ''} × 표준일수 ${stdDays}일 = ${fmt(durRaw)}일`)
+    basis = `물량 ${fmt(qty)} × 표준일수 ${stdDays}`
+  } else {
+    return {
+      formula: '산정 불가 (생산성·표준일수 모두 없음)',
+      steps: ['생산성(prod) 또는 표준일수(stdDays) 중 하나는 있어야 합니다.'],
+      assumptions: [],
+      inputs: { qty, unit, prod, stdDays, workRate: rate, category: row.category },
+      result: 0,
+    }
+  }
+
+  // 2) 작업률 적용
+  let final = durRaw
+  if (rate !== null && rate > 0) {
+    final = durRaw / rate
+    steps.push(`② 작업률 보정 = ${fmt(durRaw)}일 ÷ ${rate} (${categoryLabel(row.category)} 작업률) = ${fmt(final)}일`)
+    assumptions.push(
+      `작업률 ${rate}은 하루 중 실제 작업시간 비율. ${categoryLabel(row.category)} 기준 업계 평균치.`
+    )
+  } else {
+    steps.push(`② 작업률 미적용 (${categoryLabel(row.category)}은 원시 기간 그대로)`)
+    assumptions.push(`마감공사 등 일부는 작업률 보정 없이 표준일수 그대로 사용.`)
+  }
+
+  // 3) 반올림
+  const rounded = Math.round(final * 10) / 10
+  if (rounded !== final) {
+    steps.push(`③ 소수점 1자리 반올림 → ${rounded}일`)
+  }
+
+  const formula = rate !== null && rate > 0
+    ? `${basis} ÷ 작업률 ${rate} = ${rounded}일`
+    : `${basis} = ${rounded}일`
+
+  return {
+    formula,
+    steps,
+    assumptions,
+    inputs: { qty, unit, prod, stdDays, workRate: rate, category: row.category },
+    result: rounded,
+  }
+}
+
+function fmt(n: number): string {
+  if (n >= 1000) return n.toLocaleString()
+  return (Math.round(n * 100) / 100).toString()
+}
+
+function categoryLabel(cat: string): string {
+  if (cat.startsWith('공사준비') || cat.startsWith('토목공사')) return '공사준비·토목'
+  if (cat.startsWith('골조공사')) return '골조'
+  if (cat.startsWith('마감공사')) return '마감'
+  return cat
+}
+
+// ═══════════════════════════════════════════════════════════
 // 물량 자동 산정 (파이썬 compute_quantities()와 동일)
 // ═══════════════════════════════════════════════════════════
 export function computeQuantities(p: ProjectInput): Record<string, number> {

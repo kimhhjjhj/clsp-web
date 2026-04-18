@@ -1,10 +1,10 @@
 'use client'
 
 import { useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react'
-import { getWorkRate } from '@/lib/engine/wbs'
+import { getWorkRate, explainDuration } from '@/lib/engine/wbs'
 import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
 import type { CPMResult } from '@/lib/types'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Info } from 'lucide-react'
 
 export interface CompanyStandardSummary {
   trade: string
@@ -225,9 +225,36 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                         {fmtProductivity(task)}
                       </td>
 
-                      {/* W.D */}
+                      {/* W.D — Add-on: ⓘ 아이콘 호버 시 기간 산정 근거 툴팁 */}
                       <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, fontSize: 14, color: '#2563eb' }}>
-                        {Math.round(task.duration)}
+                        {(() => {
+                          const exp = task.quantity != null
+                            ? explainDuration(
+                                {
+                                  category: task.category,
+                                  unit: task.unit ?? undefined,
+                                  prod: task.productivity ? Number(task.productivity) : null,
+                                  stdDays: task.stdDays ? Number(task.stdDays) : null,
+                                },
+                                task.quantity,
+                              )
+                            : null
+                          const tooltip = exp
+                            ? `${exp.formula}\n\n── 계산 단계 ──\n${exp.steps.join('\n')}${exp.assumptions.length ? `\n\n── 가정 ──\n${exp.assumptions.join('\n')}` : ''}`
+                            : '물량 정보 없음'
+                          return (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <span>{Math.round(task.duration)}</span>
+                              <span
+                                title={tooltip}
+                                aria-label="기간 산정 근거"
+                                style={{ display: 'inline-flex', cursor: 'help', color: '#94a3b8', opacity: 0.7 }}
+                              >
+                                <Info size={11} />
+                              </span>
+                            </span>
+                          )
+                        })()}
                       </td>
 
                       {/* 공종별 가동률 */}
