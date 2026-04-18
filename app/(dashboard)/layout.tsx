@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Search, Menu } from 'lucide-react'
 import { ToastProvider } from '@/components/common/Toast'
 import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
+import GlobalShortcuts from '@/components/common/GlobalShortcuts'
 import Breadcrumb from '@/components/common/Breadcrumb'
 import { ProjectProvider } from '@/lib/project-context/ProjectContext'
 import ProjectSwitcher from '@/components/common/ProjectSwitcher'
@@ -16,6 +17,7 @@ function TopBarSearch() {
     <button
       onClick={() => palette.open()}
       className="hidden lg:flex items-center gap-2 h-8 px-3 rounded-full bg-gray-50 border border-gray-200/80 w-56 hover:border-gray-300 transition-colors cursor-pointer text-left"
+      title="⌘K · /  검색  ·  ?  단축키 도움말"
     >
       <Search size={13} className="text-gray-400" />
       <span className="text-xs text-gray-400 flex-1 truncate">검색 · 프로젝트 / 일보 / 공종...</span>
@@ -31,6 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <ToastProvider>
       <ProjectProvider>
         <CommandPaletteProvider>
+          <GlobalShortcuts />
           <div className="flex h-full relative" style={{ background: '#fafafa' }}>
             {/* 모바일 사이드바 오버레이 */}
             {mobileSidebarOpen && (
