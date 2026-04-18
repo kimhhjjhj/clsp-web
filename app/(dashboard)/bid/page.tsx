@@ -305,6 +305,7 @@ export default function BidPage() {
         icon={ClipboardCheck}
         title="사업 초기 검토"
         subtitle="기본 정보만으로 개략 공기·공사비 산정 · 저장 없이 반복 시뮬 → 확정 시 프로젝트 생성"
+        accent="violet"
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">

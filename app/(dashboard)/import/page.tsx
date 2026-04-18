@@ -158,6 +158,7 @@ export default function ImportPage() {
         icon={Upload}
         title="엑셀 일보 임포트"
         subtitle="파주/상봉 포맷을 자동 파싱 → DailyReport 대량 생성"
+        accent="pink"
       />
 
       <MobileNotice

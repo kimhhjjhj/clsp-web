@@ -56,7 +56,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="flex flex-col h-full">
-        <PageHeader icon={BarChart3} title="전사 분석" subtitle="모든 프로젝트 합산 현황" />
+        <PageHeader icon={BarChart3} title="전사 분석" subtitle="모든 프로젝트 합산 현황" accent="violet" />
         <div className="p-4 sm:p-6 space-y-5">
           <SkeletonKpiGrid count={4} />
           <Skeleton className="h-5 w-1/4" />
@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
   if (!data || data.overall.totalReports === 0) {
     return (
       <div className="flex flex-col h-full">
-        <PageHeader icon={BarChart3} title="전사 분석" subtitle="모든 프로젝트 합산 현황" />
+        <PageHeader icon={BarChart3} title="전사 분석" subtitle="모든 프로젝트 합산 현황" accent="violet" />
         <div className="p-6">
           <div className="bg-white rounded-xl border border-gray-200">
             <EmptyState
@@ -95,6 +95,7 @@ export default function AnalyticsPage() {
         icon={BarChart3}
         title="전사 분석"
         subtitle={`${overall.projectCount}개 프로젝트 · ${overall.totalReports.toLocaleString()}건 일보 · ${overall.totalManDays.toLocaleString()} 인일`}
+        accent="violet"
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-5">

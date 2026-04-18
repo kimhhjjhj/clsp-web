@@ -134,6 +134,7 @@ export default function StandardsPage() {
         icon={Database}
         title="생산성 DB"
         subtitle="과거 프로젝트 실적에서 축적된 공종별 평균 투입·생산성 표준"
+        accent="blue"
         actions={
           <>
             <button

@@ -87,6 +87,7 @@ export default function AdminProductivityPage() {
         icon={ShieldCheck}
         title="실적 지표 · 관리자 승인"
         subtitle="프로젝트 실적에서 추출된 자원계획(일평균 투입)과 생산성(인일/물량)을 검토 → 회사 표준 DB에 반영"
+        accent="amber"
       />
 
       <MobileNotice

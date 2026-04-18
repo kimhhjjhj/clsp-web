@@ -100,6 +100,7 @@ export default function DashboardPage() {
         icon={LayoutGrid}
         title="대시보드"
         subtitle="동양건설산업 · 통합 공정관리 플랫폼"
+        accent="blue"
         actions={
           <>
             <Link

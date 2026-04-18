@@ -80,6 +80,7 @@ export default function CompaniesPage() {
         icon={Users2}
         title="협력사"
         subtitle="일보 데이터에서 자동 추출된 거래 이력 · 투입 공종 · 참여 프로젝트"
+        accent="slate"
         actions={
           <button
             onClick={downloadCsv}

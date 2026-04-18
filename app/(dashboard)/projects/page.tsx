@@ -123,6 +123,7 @@ export default function ProjectsPage() {
         icon={FolderKanban}
         title="프로젝트"
         subtitle={`${projects.length}개 프로젝트 · 진행 ${statusCounts.active} · 준공 ${statusCounts.completed}`}
+        accent="emerald"
         actions={
           <>
             <Link

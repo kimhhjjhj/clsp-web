@@ -119,6 +119,7 @@ export default function RisksLibraryPage() {
         icon={ShieldAlert}
         title="R&O 라이브러리"
         subtitle="모든 프로젝트에서 축적된 리스크·기회 카드 · 신규 프로젝트 착수 시 참고"
+        accent="amber"
         actions={
           <button
             onClick={downloadCsv}
