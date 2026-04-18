@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   Plus, Building2, LayoutGrid, TrendingUp, Upload,
   FolderKanban, FileText, Clock, ChevronRight, Activity, Users,
+  Calculator, BarChart3, ArrowRight,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
@@ -97,6 +98,14 @@ export default function DashboardPage() {
               label="평균 연면적" value={kpi.avgArea || '—'} unit={kpi.avgArea ? 'm²' : ''}
               sub="프로젝트 규모" />
           </div>
+        </section>
+
+        {/* 4단계 라이프사이클 스테퍼 */}
+        <section>
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+            건설 프로젝트 라이프사이클
+          </h2>
+          <LifecycleStepper kpi={kpi} loading={loading} />
         </section>
 
         {/* 최근 프로젝트 + 바로가기 */}
@@ -207,6 +216,97 @@ function KpiCard({
     </div>
   )
   return href ? <Link href={href} className="no-underline">{inner}</Link> : inner
+}
+
+interface KpiData {
+  projectCount: number
+  totalReports: number
+  totalTasks: number
+  avgArea: number
+}
+
+function LifecycleStepper({ kpi, loading }: { kpi: KpiData; loading: boolean }) {
+  const stages = [
+    {
+      n: 1, label: '사업 검토', color: '#2563eb', bg: 'bg-blue-50', hoverBg: 'hover:bg-blue-100',
+      icon: <Calculator size={14} className="text-blue-600" />,
+      href: '/bid',
+      kpi: { label: '개략 견적 도구', value: '시뮬', sub: '개요만으로 공기·원가 산출' },
+      cta: '견적 열기',
+    },
+    {
+      n: 2, label: '프리콘', color: '#16a34a', bg: 'bg-emerald-50', hoverBg: 'hover:bg-emerald-100',
+      icon: <FolderKanban size={14} className="text-emerald-600" />,
+      href: '/projects',
+      kpi: { label: '프로젝트', value: kpi.projectCount, sub: `${kpi.totalTasks}개 공종 계획`, unit: '개' },
+      cta: kpi.projectCount === 0 ? '첫 프로젝트 생성' : '프로젝트 목록',
+    },
+    {
+      n: 3, label: '시공 관리', color: '#ea580c', bg: 'bg-orange-50', hoverBg: 'hover:bg-orange-100',
+      icon: <FileText size={14} className="text-orange-600" />,
+      href: '/import',
+      kpi: { label: '누적 일보', value: kpi.totalReports.toLocaleString(), sub: '현장 실적 기록', unit: '건' },
+      cta: kpi.totalReports === 0 ? '엑셀로 임포트' : '엑셀 임포트',
+    },
+    {
+      n: 4, label: '준공·데이터', color: '#7c3aed', bg: 'bg-purple-50', hoverBg: 'hover:bg-purple-100',
+      icon: <BarChart3 size={14} className="text-purple-600" />,
+      href: '/analytics',
+      kpi: { label: '데이터 자산', value: '분석', sub: '생산성 DB · R&O · 협력사' },
+      cta: '전사 분석 보기',
+    },
+  ]
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 relative">
+      {stages.map((s, i) => (
+        <div key={s.n} className="relative">
+          <Link
+            href={s.href}
+            className={`block bg-white border border-gray-200 rounded-xl p-4 no-underline hover:shadow-md hover:-translate-y-0.5 transition-all group h-full`}
+            style={{ borderLeft: `4px solid ${s.color}` }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`flex items-center justify-center w-7 h-7 rounded-md ${s.bg} text-[11px] font-bold`}
+                style={{ color: s.color }}>
+                {s.n}
+              </span>
+              <span className="text-xs font-bold text-gray-700">{s.label}</span>
+              <ArrowRight size={12} className="ml-auto text-gray-300 group-hover:text-gray-900 group-hover:translate-x-0.5 transition-all" />
+            </div>
+
+            <div className="flex items-start gap-2 mb-1">
+              <div className={`w-6 h-6 rounded-md ${s.bg} flex items-center justify-center flex-shrink-0`}>{s.icon}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{s.kpi.label}</p>
+                {loading ? (
+                  <Skeleton className="h-5 w-16 mt-0.5" />
+                ) : (
+                  <p className="text-lg font-bold text-gray-900 leading-none mt-0.5">
+                    {s.kpi.value}
+                    {s.kpi.unit && <span className="text-xs font-normal text-gray-400 ml-1">{s.kpi.unit}</span>}
+                  </p>
+                )}
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-2 line-clamp-1">{s.kpi.sub}</p>
+
+            <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center gap-1 text-[11px] font-semibold" style={{ color: s.color }}>
+              <span>{s.cta}</span>
+              <ChevronRight size={11} />
+            </div>
+          </Link>
+
+          {/* 단계 간 화살표 connector (lg 이상) */}
+          {i < stages.length - 1 && (
+            <div className="hidden lg:flex absolute top-1/2 -right-2 z-10 w-4 h-4 -translate-y-1/2 items-center justify-center">
+              <ChevronRight size={14} className="text-gray-300" strokeWidth={2.5} />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function QuickLink({ href, icon, label, color }: { href: string; icon: React.ReactNode; label: string; color?: 'blue' }) {

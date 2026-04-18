@@ -13,33 +13,67 @@ import { ToastProvider } from '@/components/common/Toast'
 import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
 import Breadcrumb from '@/components/common/Breadcrumb'
 
-// 3개 그룹으로 정리
-const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
+// 업무 라이프사이클 4단계 기반 네비게이션
+interface NavItem { href: string; label: string; icon: typeof LayoutDashboard; desc?: string }
+interface NavStage { stage?: number; label: string; color: string; items: NavItem[]; cta?: NavItem }
+
+const NAV_STAGES: NavStage[] = [
   {
-    label: '운영',
+    stage: 1,
+    label: '사업 검토',
+    color: '#2563eb',      // blue
     items: [
-      { href: '/',          label: '대시보드',  icon: LayoutDashboard },
-      { href: '/projects',  label: '프로젝트',  icon: FolderKanban },
-      { href: '/bid',       label: '입찰·견적', icon: Calculator },
+      { href: '/bid', label: '입찰·견적', icon: Calculator, desc: '개략공기·원가 시뮬' },
     ],
   },
   {
-    label: '데이터',
+    stage: 2,
+    label: '프리콘',
+    color: '#16a34a',      // green
     items: [
-      { href: '/analytics', label: '전사 분석',  icon: BarChart3 },
-      { href: '/standards', label: '생산성 DB', icon: Database },
-      { href: '/risks',     label: 'R&O',      icon: ShieldAlert },
-      { href: '/companies', label: '협력사',    icon: Users2 },
+      { href: '/projects', label: '프로젝트', icon: FolderKanban, desc: '공정 계획·프로세스맵' },
+    ],
+    cta: { href: '/projects/new', label: '새 프로젝트', icon: Plus },
+  },
+  {
+    stage: 3,
+    label: '시공 관리',
+    color: '#ea580c',      // orange
+    items: [
+      { href: '/import', label: '엑셀 임포트', icon: Upload, desc: '과거 일보 일괄 등록' },
     ],
   },
   {
-    label: '도구',
+    stage: 4,
+    label: '준공·데이터 자산',
+    color: '#7c3aed',      // purple
     items: [
-      { href: '/import',             label: '엑셀 임포트', icon: Upload },
-      { href: '/admin/productivity', label: '관리자',     icon: ShieldCheck },
+      { href: '/analytics', label: '전사 분석',  icon: BarChart3,   desc: '누적 인사이트' },
+      { href: '/standards', label: '생산성 DB', icon: Database,    desc: '공종별 표준' },
+      { href: '/risks',     label: 'R&O',      icon: ShieldAlert, desc: '리스크 라이브러리' },
+      { href: '/companies', label: '협력사',    icon: Users2,      desc: '거래 이력' },
     ],
   },
 ]
+
+// 최상단 대시보드 (단계 소속 안 함)
+const DASHBOARD_ITEM: NavItem = { href: '/', label: '대시보드', icon: LayoutDashboard }
+// 하단 관리 영역 (단계 소속 안 함)
+const ADMIN_ITEMS: NavItem[] = [
+  { href: '/admin/productivity', label: '관리자', icon: ShieldCheck, desc: '생산성 승인' },
+]
+
+// 현재 pathname에 해당하는 단계 번호 찾기
+function getActiveStage(pathname: string): number | null {
+  for (const stage of NAV_STAGES) {
+    for (const item of stage.items) {
+      if (item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)) return stage.stage ?? null
+    }
+  }
+  // 프로젝트 상세 페이지 → /projects/[id]는 '프리콘(2)'으로 간주
+  if (pathname.startsWith('/projects/')) return 2
+  return null
+}
 
 function TopBarSearch() {
   const palette = useCommandPalette()
@@ -55,9 +89,37 @@ function TopBarSearch() {
   )
 }
 
+function SidebarLink({
+  item, active, activeColor, onNavigate,
+}: {
+  item: NavItem
+  active: boolean
+  activeColor: string
+  onNavigate: () => void
+}) {
+  const Icon = item.icon
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className={`group flex items-center gap-2.5 px-2 h-9 rounded-lg transition-all no-underline ${
+        active
+          ? 'text-white font-semibold shadow-sm'
+          : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+      }`}
+      style={active ? { background: activeColor } : undefined}
+    >
+      <Icon size={15} className="flex-shrink-0" />
+      <span className="flex-1 text-[13px] leading-none truncate">{item.label}</span>
+      {active && <span className="w-1 h-4 bg-white/60 rounded-full flex-shrink-0" />}
+    </Link>
+  )
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const activeStage = getActiveStage(pathname)
 
   return (
     <ToastProvider>
@@ -94,55 +156,90 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ><X size={16} /></button>
         </div>
 
-        {/* 신규 프로젝트 CTA — 상단 배치 */}
-        <div className="px-3 pt-3 flex-shrink-0">
-          <Link href="/projects/new"
-            onClick={() => setMobileSidebarOpen(false)}
-            className="flex items-center justify-center gap-1.5 w-full h-9 rounded-lg text-white text-xs font-semibold transition-all no-underline bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:shadow-md hover:shadow-blue-500/25 active:scale-[0.98]"
-          >
-            <Plus size={13} />새 프로젝트
-          </Link>
-        </div>
+        {/* 네비 — 4단계 구조 */}
+        <nav className="sidebar-scroll flex-1 px-2 py-2 overflow-y-auto">
+          {/* 대시보드 (최상단, 단계 무소속) */}
+          <SidebarLink
+            item={DASHBOARD_ITEM}
+            active={pathname === '/'}
+            activeColor="#3b82f6"
+            onNavigate={() => setMobileSidebarOpen(false)}
+          />
 
-        {/* 네비 — 그룹 구분, 컴팩트 */}
-        <nav className="sidebar-scroll flex-1 px-2 py-3 overflow-y-auto">
-          {NAV_GROUPS.map((group, gi) => (
-            <div key={group.label} className={gi > 0 ? 'mt-3 pt-3 border-t border-white/[0.06]' : ''}>
-              <p className="px-2 pb-1 text-[9px] font-bold text-slate-500 uppercase tracking-[0.12em]">
-                {group.label}
-              </p>
-              <div className="space-y-0.5">
-                {group.items.map(({ href, label, icon: Icon }) => {
-                  const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
-                  return (
+          {/* 4단계 그룹 */}
+          {NAV_STAGES.map(stage => {
+            const stageActive = activeStage === stage.stage
+            return (
+              <div key={stage.label} className="mt-3">
+                {/* 그룹 헤더 */}
+                <div className="flex items-center gap-2 px-2 pb-1">
+                  <span
+                    className="w-4 h-4 rounded-md flex items-center justify-center text-[9px] font-bold flex-shrink-0"
+                    style={{
+                      background: stageActive ? stage.color : 'rgba(255,255,255,0.08)',
+                      color: stageActive ? '#fff' : stage.color,
+                    }}
+                  >{stage.stage}</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-[0.1em] transition-colors ${
+                    stageActive ? 'text-white' : 'text-slate-500'
+                  }`}>
+                    {stage.label}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  {stage.items.map(item => {
+                    const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+                    return (
+                      <SidebarLink
+                        key={item.href}
+                        item={item}
+                        active={active}
+                        activeColor={stage.color}
+                        onNavigate={() => setMobileSidebarOpen(false)}
+                      />
+                    )
+                  })}
+                  {stage.cta && (
                     <Link
-                      key={href}
-                      href={href}
+                      href={stage.cta.href}
                       onClick={() => setMobileSidebarOpen(false)}
-                      className={`group flex items-center gap-2.5 px-2 h-9 rounded-lg text-sm transition-all no-underline ${
-                        active
-                          ? 'bg-blue-600/90 text-white font-semibold shadow-sm'
-                          : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                      }`}
+                      className="flex items-center gap-2 mx-2 mt-1 h-8 px-2 rounded-md text-[11px] font-semibold text-slate-300 border border-dashed border-white/15 hover:border-white/40 hover:bg-white/[0.04] hover:text-white transition-colors no-underline"
                     >
-                      <Icon size={15} className="flex-shrink-0" />
-                      <span className="flex-1 text-[13px] leading-none">{label}</span>
-                      {active && <span className="w-1 h-4 bg-white/60 rounded-full flex-shrink-0" />}
+                      <Plus size={12} className="flex-shrink-0" />
+                      {stage.cta.label}
                     </Link>
-                  )
-                })}
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </nav>
+            )
+          })}
 
-        {/* 하단 설정 */}
-        <div className="px-2 py-3 border-t border-white/[0.06] flex-shrink-0">
-          <button className="w-full flex items-center gap-2.5 px-2 h-8 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-colors">
-            <Settings size={13} />
-            <span className="flex-1 text-left">설정</span>
-          </button>
-        </div>
+          {/* 관리 영역 */}
+          <div className="mt-4 pt-3 border-t border-white/[0.06]">
+            <p className="px-2 pb-1 text-[9px] font-bold text-slate-500 uppercase tracking-[0.12em]">관리</p>
+            <div className="space-y-0.5">
+              {ADMIN_ITEMS.map(item => {
+                const active = pathname.startsWith(item.href)
+                return (
+                  <SidebarLink
+                    key={item.href}
+                    item={item}
+                    active={active}
+                    activeColor="#64748b"
+                    onNavigate={() => setMobileSidebarOpen(false)}
+                  />
+                )
+              })}
+              <button
+                type="button"
+                className="w-full flex items-center gap-2.5 px-2 h-9 rounded-lg text-sm text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] transition-colors"
+              >
+                <Settings size={15} className="flex-shrink-0" />
+                <span className="flex-1 text-left text-[13px]">설정</span>
+              </button>
+            </div>
+          </div>
+        </nav>
       </aside>
 
       {/* 본문 */}
