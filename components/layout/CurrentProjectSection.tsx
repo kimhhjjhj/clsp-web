@@ -8,17 +8,13 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Settings, Check, ShieldCheck, HardHat, BarChart3 } from 'lucide-react'
+import { Settings, ShieldCheck, HardHat, BarChart3 } from 'lucide-react'
 import { getProjectStatus, STATUS_META } from '@/lib/project-status'
 
 interface StageStatus {
-  stage1: { hasCpm: boolean; totalDuration: number | null; taskCount: number }
-  stage2: { riskCount: number; opportunityCount: number; hasBaseline: boolean; baselineTaskCount: number }
+  // 상단 프로젝트 요약에서 라이프사이클 상태 계산에 사용
   stage3: { latestRate: number | null; dailyReportCount: number; lastReportDate?: string | null }
-  stage4: { weeklyReportCount: number }
 }
-
-type State = 'done' | 'active' | 'pending'
 
 interface ProjectLite {
   id: string
@@ -36,27 +32,6 @@ const STAGES: {
   { urlN: 3, label: '시공 관리', icon: HardHat,     accent: '#f97316' }, // orange
   { urlN: 4, label: '분석·준공', icon: BarChart3,   accent: '#a855f7' }, // purple
 ]
-
-function computeState(status: StageStatus | null, n: number): State {
-  if (!status) return 'pending'
-  if (n === 2) {
-    const hasRisk = status.stage2.riskCount > 0 || status.stage2.opportunityCount > 0
-    const hasBaseline = status.stage2.hasBaseline
-    if (hasRisk && hasBaseline) return 'done'
-    if (hasRisk || hasBaseline) return 'active'
-    return 'pending'
-  }
-  if (n === 3) {
-    const cnt = status.stage3.dailyReportCount
-    if (cnt > 50) return 'done'
-    if (cnt > 0) return 'active'
-    return 'pending'
-  }
-  if (n === 4) {
-    return status.stage4.weeklyReportCount > 0 ? 'done' : 'pending'
-  }
-  return 'pending'
-}
 
 interface Props {
   project: ProjectLite
@@ -111,7 +86,6 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
         <div className="absolute left-[10px] top-1 bottom-1 w-px bg-white/[0.08]" aria-hidden />
         <div className="space-y-px">
           {STAGES.map(st => {
-            const s = computeState(status, st.urlN)
             const isActive = activeStage === st.urlN
             const Icon = st.icon
             return (
@@ -140,8 +114,6 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
                   style={{ color: isActive ? st.accent : undefined }}
                 />
                 <span className="flex-1 truncate">{st.label}</span>
-                {/* 상태 인디케이터 — 텍스트 or 아이콘 */}
-                <StageState state={s} accent={st.accent} />
               </Link>
             )
           })}
@@ -168,35 +140,3 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
   )
 }
 
-// ──────────────────────────────────────────────────
-// 단계 상태 인디케이터 — 텍스트로 명확히 전달
-// done    → '완료' (체크 + 녹색 작은 뱃지)
-// active  → pulse dot (진행중)
-// pending → 빈 원 (대기)
-// ──────────────────────────────────────────────────
-function StageState({ state, accent }: { state: State; accent: string }) {
-  if (state === 'done') {
-    return (
-      <span
-        className="flex items-center gap-0.5 text-[9px] font-bold text-emerald-300 flex-shrink-0"
-        title="완료"
-      >
-        <Check size={11} strokeWidth={3} />
-      </span>
-    )
-  }
-  if (state === 'active') {
-    return (
-      <span className="relative flex items-center justify-center w-2.5 h-2.5 flex-shrink-0" title="진행중">
-        <span className="absolute inset-0 rounded-full animate-ping opacity-60" style={{ background: accent }} />
-        <span className="relative w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
-      </span>
-    )
-  }
-  return (
-    <span
-      className="w-2 h-2 rounded-full border border-slate-600 flex-shrink-0"
-      title="대기"
-    />
-  )
-}
