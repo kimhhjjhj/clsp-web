@@ -63,9 +63,10 @@ export default function StagePage({
           <Link
             key={s}
             href={`/projects/${id}/stage/${s}`}
-            className={`relative flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold no-underline transition-colors ${
-              active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'
+            className={`relative flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-bold no-underline transition-colors ${
+              active ? '' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50 font-semibold'
             }`}
+            style={active ? { color: info.color } : undefined}
           >
             <span className="flex items-center gap-1.5">
               <span
