@@ -36,7 +36,9 @@
   - 완료 조건: 일보 저장/프로세스맵 저장/권한 거부 모두 토스트 표시
 - [ ] **로딩 스켈레톤** — 빈 스피너 대신 레이아웃 그대로의 스켈레톤 (프로젝트 목록·상세·일보)
   - 완료 조건: 첫 로드 시 점프 없는 skeleton→content 전환
-- [ ] **빈 상태(empty state) 가이드** — 프로젝트 없음/일보 없음/CPM 미계산 등 각 상황에 맞는 다음 액션 버튼
+- [x] **빈 상태(empty state) 가이드** — 프로젝트 없음/일보 없음/CPM 미계산 등 각 상황에 맞는 다음 액션 버튼
+  - 구현: `components/common/EmptyState.tsx` (icon·title·description·actions)
+  - 적용: 대시보드 프로젝트 목록, DailyReportPanel 목록, Stage1 CPM 미계산, PullPlanBoard 빈 레인
   - 완료 조건: 모든 주요 리스트 페이지에 0건일 때 친절한 CTA 표시
 
 ## Tier 2 — 데이터 활용 (도메인 임팩트)

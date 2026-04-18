@@ -14,8 +14,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, Pin, StickyNote, HelpCircle, Flag, GitFork, Circle,
-  ChevronUp, ChevronDown, Link2,
+  ChevronUp, ChevronDown, Link2, LayoutGrid,
 } from 'lucide-react'
+import EmptyState from '@/components/common/EmptyState'
 import type { ProcessMap, ProcessMapLane, ProcessMapCard, ProcessMapLink, CardKind, AskType, LaneKind } from '@/lib/process-map/types'
 import { genId, buildWeekAxis } from '@/lib/process-map/types'
 import type { MapAnalysis } from '@/lib/process-map/analyzer'
@@ -242,9 +243,12 @@ export default function PullPlanBoard({
 
   if (sortedLanes.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-sm text-gray-500">
-        <p className="mb-2">레인이 없습니다.</p>
-        <p className="text-xs text-gray-400">상단 툴바에서 프리셋을 적용하거나 공종 레인을 추가하세요.</p>
+      <div className="bg-white border border-gray-200 rounded-xl">
+        <EmptyState
+          icon={LayoutGrid}
+          title="Pull Planning 보드가 비어있습니다"
+          description="상단 툴바의 '강의자료 프리셋 적용' 버튼을 누르면 9개 기본 레인(시공사 + 토목·철골·골조·마감 + 지원공종)이 한번에 세팅됩니다. 베이스라인 CSV가 있다면 '베이스라인에서 가져오기'로 카드까지 자동 생성됩니다."
+        />
       </div>
     )
   }

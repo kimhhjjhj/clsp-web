@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Pencil, Trash2, CalendarDays, Cloud, Thermometer, Users, FileText, Search, X,
-  Image as ImageIcon,
+  Image as ImageIcon, Upload,
 } from 'lucide-react'
+import EmptyState from '@/components/common/EmptyState'
 
 interface ManpowerRow {
   trade: string
@@ -169,7 +170,16 @@ export default function DailyReportPanel({
         )}
         <div ref={listRef} className="bg-white border border-gray-200 rounded-xl overflow-hidden max-h-[540px] overflow-y-auto">
           {reports.length === 0 && (
-            <p className="text-center py-8 text-gray-400 text-sm">작성된 일보가 없습니다.</p>
+            <EmptyState
+              compact
+              icon={FileText}
+              title="작성된 일보가 없습니다"
+              description="매일 현장 작업을 기록하면 공종별 투입·자재·생산성이 자동 분석됩니다."
+              actions={[
+                { label: '첫 일보 작성', href: `/projects/${projectId}/daily-reports/new`, icon: <Plus size={12} />, variant: 'primary' },
+                { label: '엑셀 임포트', href: '/import', icon: <Upload size={12} />, variant: 'secondary' },
+              ]}
+            />
           )}
           {reports.length > 0 && visibleReports.length === 0 && (
             <p className="text-center py-8 text-gray-400 text-sm">

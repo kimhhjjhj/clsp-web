@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Building2, ChevronRight, Trash2, LayoutGrid, TrendingUp } from 'lucide-react'
+import { Plus, Building2, ChevronRight, Trash2, LayoutGrid, TrendingUp, Upload } from 'lucide-react'
+import EmptyState from '@/components/common/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -52,13 +53,22 @@ export default function DashboardPage() {
           <h2 className="text-base font-semibold text-foreground">전체 프로젝트</h2>
           <Badge variant="secondary" className="text-xs">{projects.length}개</Badge>
         </div>
-        <Link
-          href="/projects/new"
-          className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-[#2563eb] text-white text-sm font-medium hover:bg-[#2563eb]/90 transition-colors no-underline"
-        >
-          <Plus size={14} />
-          새 프로젝트
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/import"
+            className="inline-flex items-center gap-2 h-8 px-4 rounded-md border border-[#2563eb]/30 text-[#2563eb] text-sm font-medium hover:bg-[#2563eb]/5 transition-colors no-underline"
+          >
+            <Upload size={14} />
+            엑셀 임포트
+          </Link>
+          <Link
+            href="/projects/new"
+            className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-[#2563eb] text-white text-sm font-medium hover:bg-[#2563eb]/90 transition-colors no-underline"
+          >
+            <Plus size={14} />
+            새 프로젝트
+          </Link>
+        </div>
       </div>
 
       {/* 본문 */}
@@ -123,18 +133,16 @@ export default function DashboardPage() {
             불러오는 중...
           </div>
         ) : projects.length === 0 ? (
-          <div className="text-center py-20 bg-card border border-t-0 border-border rounded-b-lg">
-            <div className="w-14 h-14 rounded-2xl bg-[#2563eb]/5 border border-border flex items-center justify-center mx-auto mb-4">
-              <Building2 size={24} className="text-[#2563eb]/30" />
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">아직 프로젝트가 없습니다</p>
-            <Link
-              href="/projects/new"
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-[#2563eb] text-white text-sm font-medium hover:bg-[#2563eb]/90 transition-colors no-underline"
-            >
-              <Plus size={14} />
-              첫 프로젝트 만들기
-            </Link>
+          <div className="bg-card border border-t-0 border-border rounded-b-lg">
+            <EmptyState
+              icon={Building2}
+              title="아직 등록된 프로젝트가 없습니다"
+              description="신규 프로젝트를 만들어 개략공기 산정부터 시작하거나, 과거 엑셀 일보를 일괄 임포트해 데이터 자산화를 시작하세요."
+              actions={[
+                { label: '첫 프로젝트 만들기', href: '/projects/new', icon: <Plus size={14} />, variant: 'primary' },
+                { label: '엑셀 일괄 임포트', href: '/import', icon: <Upload size={14} />, variant: 'secondary' },
+              ]}
+            />
           </div>
         ) : (
           <div className="bg-card border border-t-0 border-border rounded-b-lg divide-y divide-border">

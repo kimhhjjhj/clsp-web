@@ -10,6 +10,7 @@ import MonteCarloPanel from '@/components/analysis/MonteCarloPanel'
 import ProductivityPanel from '@/components/analysis/ProductivityPanel'
 import CompanyStandardsPanel from '@/components/analysis/CompanyStandardsPanel'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
+import EmptyState from '@/components/common/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -285,10 +286,15 @@ export default function Stage1Page({ projectId, project }: Props) {
       {/* 우측 스크롤 영역 */}
       <div className="flex-1 overflow-auto bg-gray-50">
         {!cpmResult && !calculating && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <BarChart3 size={48} className="opacity-20 mb-4" />
-            <p className="mb-1 font-medium text-gray-600">아직 CPM 계산이 실행되지 않았습니다</p>
-            <p className="text-sm opacity-60">좌측 패널에서 모드를 선택 후 실행하세요</p>
+          <div className="flex items-center justify-center h-full">
+            <EmptyState
+              icon={BarChart3}
+              title="아직 CPM이 계산되지 않았습니다"
+              description="좌측 패널에서 모드(간략/상세)를 고르고 'CPM 계산 실행'을 누르세요. WBS가 자동 생성되고 크리티컬 패스·간트·몬테카를로·자원계획이 차례로 활성화됩니다."
+              actions={[
+                { label: 'CPM 계산 실행', onClick: calculate, icon: <Play size={14} />, variant: 'primary' },
+              ]}
+            />
           </div>
         )}
 
