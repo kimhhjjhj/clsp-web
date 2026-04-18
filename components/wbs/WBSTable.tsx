@@ -2,9 +2,10 @@
 
 import { useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { getWorkRate, explainDuration, type ProductivitySource } from '@/lib/engine/wbs'
+import { buildAbnormalIndex } from '@/lib/engine/abnormal-detection'
 import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
 import type { CPMResult } from '@/lib/types'
-import { ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react'
 
 export interface CompanyStandardSummary {
   trade: string
@@ -50,6 +51,14 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
   for (const s of standards ?? []) {
     if (s.unit === 'man/day') stdLookup.set(s.trade, s)
   }
+
+  // 비정상 공종 탐지 — 카테고리 평균 대비 과도 or 전체 공기 지배
+  const allTasks = Object.values(byCategory).flat()
+  const totalDuration = Math.max(0, ...allTasks.map(t => t.EF))
+  const abnormalIndex = buildAbnormalIndex(
+    allTasks.map(t => ({ name: t.name, category: t.category, duration: t.duration })),
+    totalDuration,
+  )
 
   function companyActual(taskName: string): { avg: number; approved: boolean; trades: string[]; totalSamples: number } | null {
     const trades = WBS_TRADE_MAP[taskName] ?? []
@@ -264,9 +273,19 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                                 ...(exp.source ? ['', exp.source] : []),
                               ].join('\n')
                             : '물량 정보 없음'
+                          const abn = abnormalIndex.map.get(task.name)
                           return (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               <span>{Math.round(task.duration)}</span>
+                              {abn && (
+                                <span
+                                  title={`⚠️ 비정상 공종\n${abn.message}\n\n이 공종의 기간이 다른 공종 대비 과도할 수 있습니다. 물량·생산성을 재확인하세요.`}
+                                  aria-label="비정상 공종"
+                                  style={{ display: 'inline-flex', cursor: 'help', color: '#dc2626' }}
+                                >
+                                  <AlertTriangle size={11} />
+                                </span>
+                              )}
                               <span
                                 title={tooltip}
                                 aria-label="기간 산정 근거"
