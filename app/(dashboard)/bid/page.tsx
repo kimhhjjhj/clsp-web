@@ -244,117 +244,138 @@ export default function BidPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* 좌측: 입력 폼 */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 lg:sticky lg:top-4">
-              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                <Building2 size={14} /> 프로젝트 개요
-              </h3>
-
-              <Field label="프로젝트명 (선택)">
-                <input value={input.name} onChange={e => set('name', e.target.value)} placeholder="예: 강남 ◯◯ 신축공사"
-                  className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500" />
-              </Field>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="유형">
-                  <select value={input.type} onChange={e => set('type', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm">
-                    <option>공동주택</option>
-                    <option>오피스텔</option>
-                    <option>업무시설</option>
-                    <option>데이터센터</option>
-                    <option>스튜디오</option>
-                    <option>기타</option>
-                  </select>
-                </Field>
-                <Field label="착공 예정일 (선택)" hint="공기 환산에 사용">
-                  <input type="date" value={input.startDate} onChange={e => set('startDate', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm" />
-                </Field>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden lg:sticky lg:top-4">
+              {/* 폼 헤더 */}
+              <div className="px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex items-center gap-2">
+                <Building2 size={15} className="text-gray-600" />
+                <h3 className="text-sm font-bold text-gray-900">입력 정보</h3>
+                <span className="ml-auto text-[10px] text-gray-400">저장 전 반복 시뮬</span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <Field label="지상 층수" icon={<Layers size={11} />}>
-                  <input type="number" value={input.ground} onChange={e => set('ground', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
-                <Field label="지하 층수">
-                  <input type="number" value={input.basement} onChange={e => set('basement', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
-                <Field label="저층부 층수" hint="없으면 0">
-                  <input type="number" value={input.lowrise} onChange={e => set('lowrise', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
+              <div className="divide-y divide-gray-100">
+                {/* ── 섹션 1: 기본 정보 ── */}
+                <Section color="#2563eb" label="기본 정보">
+                  <Field label="프로젝트명" hint="저장 시 사용 · 생략 가능">
+                    <input value={input.name} onChange={e => set('name', e.target.value)} placeholder="예: 강남 ◯◯ 신축공사"
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="건물 유형" required>
+                      <select value={input.type} onChange={e => set('type', e.target.value)}
+                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                        <option>공동주택</option>
+                        <option>오피스텔</option>
+                        <option>업무시설</option>
+                        <option>데이터센터</option>
+                        <option>스튜디오</option>
+                        <option>기타</option>
+                      </select>
+                    </Field>
+                    <Field label="착공 예정일" hint="월별 인력 집계 활성">
+                      <input type="date" value={input.startDate} onChange={e => set('startDate', e.target.value)}
+                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                    </Field>
+                  </div>
+                </Section>
+
+                {/* ── 섹션 2: 건물 규모 ── */}
+                <Section color="#16a34a" label="건물 규모" icon={<Layers size={12} />}>
+                  <div className="grid grid-cols-3 gap-3">
+                    <Field label="지상" unit="층" required>
+                      <NumInput value={input.ground} onChange={v => set('ground', v)} />
+                    </Field>
+                    <Field label="지하" unit="층">
+                      <NumInput value={input.basement} onChange={v => set('basement', v)} />
+                    </Field>
+                    <Field label="저층부" unit="층" hint="없으면 0">
+                      <NumInput value={input.lowrise} onChange={v => set('lowrise', v)} />
+                    </Field>
+                  </div>
+
+                  <label className={`flex items-center gap-2 px-3 h-10 rounded-lg border cursor-pointer transition-colors ${
+                    input.hasTransfer
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                      : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  }`}>
+                    <input type="checkbox" checked={input.hasTransfer}
+                      onChange={e => setInput(p => ({ ...p, hasTransfer: e.target.checked }))}
+                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-400" />
+                    <span className="text-xs font-medium">전이층(Transfer Slab) 포함</span>
+                  </label>
+                </Section>
+
+                {/* ── 섹션 3: 면적·둘레 ── */}
+                <Section color="#ea580c" label="면적·둘레" icon={<Ruler size={12} />}>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="건축면적" unit="㎡" required hint="1층 바닥 · 터파기 기준">
+                      <NumInput value={input.buildingArea} onChange={v => set('buildingArea', v)} />
+                    </Field>
+                    <Field label="연면적" unit="㎡" required hint="전 층 합계">
+                      <NumInput value={input.bldgArea} onChange={v => set('bldgArea', v)} />
+                    </Field>
+                    <Field label="대지면적" unit="㎡">
+                      <NumInput value={input.siteArea} onChange={v => set('siteArea', v)} />
+                    </Field>
+                    <Field label="대지둘레" unit="m">
+                      <NumInput value={input.sitePerim} onChange={v => set('sitePerim', v)} />
+                    </Field>
+                    <Field label="건물둘레" unit="m" className="col-span-2">
+                      <NumInput value={input.bldgPerim} onChange={v => set('bldgPerim', v)} />
+                    </Field>
+                  </div>
+                </Section>
+
+                {/* ── 섹션 4: 지반 조건 ── */}
+                {Number(input.basement) > 0 ? (
+                  <Section color="#a16207" label="지반 조건" hint="지하층이 있을 때만 터파기에 영향">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="풍화토 바닥" unit="m" hint="지표~풍화토 하단">
+                        <NumInput value={input.wtBottom} onChange={v => set('wtBottom', v)} step="0.1" />
+                      </Field>
+                      <Field label="풍화암 바닥" unit="m" hint="지표~풍화암 하단">
+                        <NumInput value={input.waBottom} onChange={v => set('waBottom', v)} step="0.1" />
+                      </Field>
+                    </div>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">
+                      미입력 시 전체 굴착을 연암으로 가정해 공기가 길게 산출됩니다.
+                    </p>
+                  </Section>
+                ) : (
+                  <Section color="#a16207" label="지반 조건" hint="지하층 없음 → 생략됨">
+                    <p className="text-[11px] text-gray-400">지하 층수가 1 이상일 때 입력칸이 열립니다.</p>
+                  </Section>
+                )}
+
+                {/* ── 섹션 5: 비용 가정 ── */}
+                <Section color="#7c3aed" label="비용 가정">
+                  <Field label="월 금융·관리비" unit="만원" hint="지연 시 추가 비용 계산용">
+                    <NumInput value={input.monthlyFinCost} onChange={v => set('monthlyFinCost', v)} />
+                  </Field>
+                </Section>
               </div>
 
-              <label className="flex items-center gap-2 text-xs text-gray-600">
-                <input type="checkbox" checked={input.hasTransfer}
-                  onChange={e => setInput(p => ({ ...p, hasTransfer: e.target.checked }))}
-                  className="rounded border-gray-300" />
-                전이층(Transfer Slab) 있음
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="건축면적 (㎡)" icon={<Ruler size={11} />} hint="1층 바닥면적. 터파기 기준">
-                  <input type="number" value={input.buildingArea} onChange={e => set('buildingArea', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
-                <Field label="연면적 (㎡)" hint="전 층 바닥면적 합">
-                  <input type="number" value={input.bldgArea} onChange={e => set('bldgArea', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <Field label="대지면적 (㎡)">
-                  <input type="number" value={input.siteArea} onChange={e => set('siteArea', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
-                <Field label="대지둘레 (m)">
-                  <input type="number" value={input.sitePerim} onChange={e => set('sitePerim', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
-                <Field label="건물둘레 (m)">
-                  <input type="number" value={input.bldgPerim} onChange={e => set('bldgPerim', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="풍화토 바닥 (m)" hint="지표~풍화토 하단 깊이">
-                  <input type="number" value={input.wtBottom} onChange={e => set('wtBottom', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
-                <Field label="풍화암 바닥 (m)" hint="지표~풍화암 하단 깊이">
-                  <input type="number" value={input.waBottom} onChange={e => set('waBottom', e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-                </Field>
-              </div>
-
-              <Field label="월 금융·관리비 (만원)" hint="지연 시 추가 비용 계산용">
-                <input type="number" value={input.monthlyFinCost} onChange={e => set('monthlyFinCost', e.target.value)}
-                  className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
-              </Field>
-
-              <button
-                onClick={estimate}
-                disabled={loading}
-                className="w-full h-10 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-                {loading ? '계산 중...' : '개략 견적 산출'}
-              </button>
-
-              {result && (
+              {/* 액션 버튼 — 하단 고정 영역 */}
+              <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 space-y-2">
                 <button
-                  onClick={saveAsProject}
-                  disabled={saving}
-                  className="w-full h-9 border border-gray-300 text-gray-700 bg-white rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  onClick={estimate}
+                  disabled={loading}
+                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm transition-colors"
                 >
-                  {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                  프로젝트로 저장
+                  {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={14} />}
+                  {loading ? '계산 중...' : '개략 견적 산출'}
                 </button>
-              )}
+
+                {result && (
+                  <button
+                    onClick={saveAsProject}
+                    disabled={saving}
+                    className="w-full h-10 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                    프로젝트로 저장
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -758,15 +779,70 @@ export default function BidPage() {
   )
 }
 
-function Field({ label, children, icon, hint }: { label: string; children: React.ReactNode; icon?: React.ReactNode; hint?: string }) {
+function Section({
+  color, label, icon, hint, children,
+}: {
+  color: string
+  label: string
+  icon?: React.ReactNode
+  hint?: string
+  children: React.ReactNode
+}) {
   return (
-    <div>
-      <label className="text-[11px] font-semibold text-gray-500 flex items-center gap-1 mb-1">
-        {icon}{label}
-      </label>
+    <div className="px-5 py-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="w-1 h-4 rounded-full" style={{ background: color }} />
+        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.1em] flex items-center gap-1">
+          {icon}{label}
+        </h4>
+        {hint && <span className="text-[10px] text-gray-400 ml-auto">{hint}</span>}
+      </div>
       {children}
-      {hint && <p className="text-[10px] text-gray-400 mt-1">{hint}</p>}
     </div>
+  )
+}
+
+function Field({
+  label, children, unit, hint, required, className,
+}: {
+  label: string
+  children: React.ReactNode
+  unit?: string
+  hint?: string
+  required?: boolean
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <div className="flex items-baseline justify-between mb-1">
+        <label className="text-[11px] font-semibold text-gray-700 flex items-center gap-1">
+          {label}
+          {required && <span className="text-blue-500">*</span>}
+        </label>
+        {unit && <span className="text-[10px] text-gray-400 font-mono">{unit}</span>}
+      </div>
+      {children}
+      {hint && <p className="text-[10px] text-gray-400 mt-1 leading-tight">{hint}</p>}
+    </div>
+  )
+}
+
+function NumInput({
+  value, onChange, step,
+}: {
+  value: string
+  onChange: (v: string) => void
+  step?: string
+}) {
+  return (
+    <input
+      type="number"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      onFocus={e => e.target.select()}
+      step={step}
+      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono text-right tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-shadow"
+    />
   )
 }
 
