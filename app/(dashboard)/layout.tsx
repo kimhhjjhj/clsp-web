@@ -45,11 +45,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* 사이드바 */}
             <aside className={`
-              w-56 flex-shrink-0 flex flex-col text-white
+              w-60 flex-shrink-0 flex flex-col text-white
               fixed lg:static inset-y-0 left-0 z-50
-              transition-transform duration-200
+              transition-transform duration-200 shadow-xl shadow-black/20
               ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-            `} style={{ background: '#1e293b' }}>
+            `} style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #172133 100%)' }}>
               <Sidebar onClose={() => setMobileSidebarOpen(false)} />
             </aside>
 
