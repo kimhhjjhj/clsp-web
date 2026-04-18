@@ -12,6 +12,8 @@ import {
 import { ToastProvider } from '@/components/common/Toast'
 import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
 import Breadcrumb from '@/components/common/Breadcrumb'
+import { ProjectProvider } from '@/lib/project-context/ProjectContext'
+import ProjectSwitcher from '@/components/common/ProjectSwitcher'
 
 // 업무 라이프사이클 4단계 기반 네비게이션
 interface NavItem { href: string; label: string; icon: typeof LayoutDashboard; desc?: string }
@@ -123,6 +125,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ToastProvider>
+    <ProjectProvider>
     <CommandPaletteProvider>
     <div className="flex h-full relative" style={{ background: '#fafafa' }}>
 
@@ -256,7 +259,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Menu size={20} />
           </button>
 
-          <Image src="/tongyang-logo.png" alt="TONGYANG" height={28} width={140} className="object-contain h-6 sm:h-7 w-auto" />
+          <Image src="/tongyang-logo.png" alt="TONGYANG" height={28} width={140} className="object-contain h-6 sm:h-7 w-auto flex-shrink-0" />
+
+          <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block" />
+          <ProjectSwitcher />
 
           <div className="ml-auto flex items-center gap-2">
             <TopBarSearch />
@@ -278,6 +284,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
     </div>
     </CommandPaletteProvider>
+    </ProjectProvider>
     </ToastProvider>
   )
 }
