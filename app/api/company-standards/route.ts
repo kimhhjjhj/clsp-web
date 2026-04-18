@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { normalizeTrade } from '@/lib/normalizers/aliases'
+import { normalizeTrade, isNonTrade } from '@/lib/normalizers/aliases'
 
 export async function GET(req: NextRequest) {
   const includeProposals = req.nextUrl.searchParams.get('includeProposals') === '1'
@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
   for (const p of proposals) {
     const tradeKey = normalizeTrade(p.trade)
     if (!tradeKey) continue
+    if (isNonTrade(tradeKey)) continue  // 비공종(관리·안전관리자 등) 집계 제외
     const key = `${tradeKey}|${p.unit}`
     const cur = candidateMap.get(key) ?? {
       trade: tradeKey,

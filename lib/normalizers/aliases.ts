@@ -43,6 +43,21 @@ export function normalizeCompany(raw: string | null | undefined): string {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 비공종 필터 — 관리·안전관리자·현장소장 등
+// 목적: 이들은 "공종"이 아니므로 생산성 DB 집계에서 제외해야 함
+// 정책: DB 값은 비파괴. 저장 시·읽기 시 양쪽 필터 (이미 저장된 것 방어)
+// ═══════════════════════════════════════════════════════════
+const NON_TRADE_SET = new Set<string>([
+  '관리', '직영인부', '직원', '안전관리자', '현장소장', '감리',
+])
+
+export function isNonTrade(trade: string | null | undefined): boolean {
+  if (!trade) return true
+  const cleaned = cleanSpaces(String(trade))
+  return NON_TRADE_SET.has(cleaned)
+}
+
+// ═══════════════════════════════════════════════════════════
 // 공종 대분류 매핑 — 키워드 기반
 // 활용: 생산성 DB · 전사 분석에서 필터/그룹핑
 // 분류 불가능한 경우 '기타'

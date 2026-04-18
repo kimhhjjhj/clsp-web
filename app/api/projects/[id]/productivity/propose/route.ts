@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { normalizeTrade } from '@/lib/normalizers/aliases'
+import { normalizeTrade, isNonTrade } from '@/lib/normalizers/aliases'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -43,6 +43,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
       if (!m.today || m.today <= 0) continue
       const tradeKey = normalizeTrade(m.trade)
       if (!tradeKey) continue
+      if (isNonTrade(tradeKey)) continue  // 비공종(관리·안전관리자 등) 제외
       const cur = tradeStats.get(tradeKey) ?? {
         totalManDays: 0,
         activeDays: new Set<string>(),
