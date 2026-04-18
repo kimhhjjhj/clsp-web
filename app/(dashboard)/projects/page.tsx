@@ -128,7 +128,7 @@ export default function ProjectsPage() {
           <>
             <Link
               href="/import"
-              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-white/15 bg-white/5 text-sm font-semibold text-slate-200 hover:bg-white/10"
             >
               <Upload size={14} /> 엑셀 임포트
             </Link>

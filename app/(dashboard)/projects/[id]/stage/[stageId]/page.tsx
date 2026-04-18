@@ -64,14 +64,14 @@ export default function StagePage({
             key={s}
             href={`/projects/${id}/stage/${s}`}
             className={`relative flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-bold no-underline transition-colors ${
-              active ? '' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50 font-semibold'
+              active ? '' : 'text-slate-400 hover:text-white hover:bg-white/5 font-semibold'
             }`}
             style={active ? { color: info.color } : undefined}
           >
             <span className="flex items-center gap-1.5">
               <span
                 className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: active ? info.color : '#d1d5db' }}
+                style={{ background: active ? info.color : '#475569' }}
               />
               {info.label}
             </span>
@@ -105,7 +105,7 @@ export default function StagePage({
             {hasPrev && (
               <Link
                 href={`/projects/${id}/stage/${prevStage}`}
-                className="hidden sm:inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                className="hidden sm:inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-white/15 bg-white/5 text-xs font-semibold text-slate-200 hover:bg-white/10"
               >
                 <ChevronLeft size={12} /> 이전
               </Link>
@@ -113,7 +113,7 @@ export default function StagePage({
             {hasNext ? (
               <Link
                 href={`/projects/${id}/stage/${nextStage}`}
-                className="inline-flex items-center gap-1 h-9 px-3 sm:px-4 rounded-lg text-white text-xs font-semibold transition-opacity hover:opacity-90"
+                className="inline-flex items-center gap-1 h-9 px-3 sm:px-4 rounded-lg text-white text-xs font-semibold transition-opacity hover:opacity-90 shadow-md"
                 style={{ background: stageInfo?.color ?? '#64748b' }}
               >
                 <span className="hidden sm:inline">다음 단계</span>
@@ -123,7 +123,7 @@ export default function StagePage({
             ) : (
               <Link
                 href={`/projects/${id}`}
-                className="inline-flex items-center gap-1 h-9 px-3 sm:px-4 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800"
+                className="inline-flex items-center gap-1 h-9 px-3 sm:px-4 rounded-lg bg-white text-slate-900 text-xs font-semibold hover:bg-slate-100"
               >
                 프로젝트로
               </Link>

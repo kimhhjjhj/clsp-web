@@ -22,14 +22,15 @@ interface Props {
   accent?: AccentKey
 }
 
+// 다크 헤더 전용 accent — 아이콘 박스 배경·글자 색
 const ACCENT: Record<AccentKey, { bg: string; text: string; ring: string }> = {
-  blue:    { bg: 'bg-blue-50',    text: 'text-blue-600',    ring: 'ring-blue-100/60' },
-  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', ring: 'ring-emerald-100/60' },
-  orange:  { bg: 'bg-orange-50',  text: 'text-orange-600',  ring: 'ring-orange-100/60' },
-  violet:  { bg: 'bg-violet-50',  text: 'text-violet-600',  ring: 'ring-violet-100/60' },
-  slate:   { bg: 'bg-slate-100',  text: 'text-slate-700',   ring: 'ring-slate-200/60' },
-  amber:   { bg: 'bg-amber-50',   text: 'text-amber-600',   ring: 'ring-amber-100/60' },
-  pink:    { bg: 'bg-pink-50',    text: 'text-pink-600',    ring: 'ring-pink-100/60' },
+  blue:    { bg: 'bg-blue-500/20',    text: 'text-blue-300',    ring: 'ring-blue-400/30' },
+  emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', ring: 'ring-emerald-400/30' },
+  orange:  { bg: 'bg-orange-500/20',  text: 'text-orange-300',  ring: 'ring-orange-400/30' },
+  violet:  { bg: 'bg-violet-500/20',  text: 'text-violet-300',  ring: 'ring-violet-400/30' },
+  slate:   { bg: 'bg-slate-500/20',   text: 'text-slate-200',   ring: 'ring-slate-400/30' },
+  amber:   { bg: 'bg-amber-500/20',   text: 'text-amber-300',   ring: 'ring-amber-400/30' },
+  pink:    { bg: 'bg-pink-500/20',    text: 'text-pink-300',    ring: 'ring-pink-400/30' },
 }
 
 function renderIcon(icon: Props['icon']): React.ReactNode {
@@ -49,22 +50,25 @@ export default function PageHeader({ icon, title, subtitle, actions, tabs, stick
   const isCustomNode = isValidElement(icon)
 
   return (
-    <div className={`bg-white/95 backdrop-blur-sm border-b border-gray-200 ${stickyTop ? 'sticky top-0 z-20' : ''}`}>
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 gap-3">
+    <div
+      className={`border-b border-slate-700/50 ${stickyTop ? 'sticky top-0 z-20' : ''}`}
+      style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}
+    >
+      <div className="flex items-center justify-between px-4 sm:px-6 py-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {iconNode && (
             isCustomNode ? (
               <div className="flex-shrink-0">{iconNode}</div>
             ) : (
-              <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${a.bg} ${a.text} flex-shrink-0 ring-1 ${a.ring} shadow-sm`}>
+              <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${a.bg} ${a.text} flex-shrink-0 ring-1 ${a.ring}`}>
                 {iconNode}
               </div>
             )
           )}
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate tracking-tight">{title}</h1>
+            <h1 className="text-base sm:text-lg font-bold text-white truncate tracking-tight">{title}</h1>
             {subtitle && (
-              <p className="text-[11px] sm:text-xs text-gray-500 truncate mt-0.5">{subtitle}</p>
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate mt-0.5">{subtitle}</p>
             )}
           </div>
         </div>
@@ -75,7 +79,7 @@ export default function PageHeader({ icon, title, subtitle, actions, tabs, stick
         )}
       </div>
       {tabs && (
-        <div className="px-4 sm:px-6 border-t border-gray-100 overflow-x-auto">
+        <div className="px-4 sm:px-6 border-t border-slate-700/50 overflow-x-auto">
           {tabs}
         </div>
       )}
