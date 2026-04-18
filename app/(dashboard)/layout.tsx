@@ -7,16 +7,17 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, Plus, Bell, Settings,
   Search, LayoutGrid, BarChart3, FileText, ChevronRight, Menu, X,
+  Upload, ShieldCheck,
 } from 'lucide-react'
 import { ToastProvider } from '@/components/common/Toast'
 import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
 import Breadcrumb from '@/components/common/Breadcrumb'
 
 const NAV_ITEMS = [
-  { href: '/',         label: '대시보드',     icon: LayoutDashboard, desc: '전체 현황' },
-  { href: '/projects', label: '프로젝트',     icon: FolderKanban,    desc: '공정 관리' },
-  { href: '#',         label: '보고서',       icon: FileText,        desc: '문서 출력',  disabled: true },
-  { href: '#',         label: '분석',         icon: BarChart3,       desc: '데이터 환류', disabled: true },
+  { href: '/',                    label: '대시보드',   icon: LayoutDashboard, desc: '전체 현황' },
+  { href: '/projects',            label: '프로젝트',   icon: FolderKanban,    desc: '공정 관리' },
+  { href: '/import',              label: '엑셀 임포트', icon: Upload,          desc: '일보 일괄 등록' },
+  { href: '/admin/productivity',  label: '관리자',     icon: ShieldCheck,     desc: '생산성 승인' },
 ]
 
 function TopBarSearch() {
@@ -75,17 +76,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <p className="px-5 pt-5 pb-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">메뉴</p>
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ href, label, icon: Icon, desc, disabled }) => {
-            const active = !disabled && (href === '/' ? pathname === '/' : pathname.startsWith(href))
+          {NAV_ITEMS.map(({ href, label, icon: Icon, desc }) => {
+            const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
             return (
               <Link key={label} href={href}
                 onClick={() => setMobileSidebarOpen(false)}
                 className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all no-underline ${
-                  disabled
-                    ? 'opacity-30 pointer-events-none'
-                    : active
-                      ? 'bg-gradient-to-r from-[#2563eb] to-[#3b82f6] text-white shadow-lg shadow-blue-500/20 font-medium'
-                      : 'text-slate-400 hover:text-white hover:bg-white/[0.07]'
+                  active
+                    ? 'bg-gradient-to-r from-[#2563eb] to-[#3b82f6] text-white shadow-lg shadow-blue-500/20 font-medium'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.07]'
                 }`}
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
@@ -133,12 +132,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div className="ml-auto flex items-center gap-2">
             <TopBarSearch />
-            <button className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors relative">
-              <Bell size={15} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#2563eb] ring-2 ring-white" />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"><LayoutGrid size={15} /></button>
-            <div className="w-px h-5 bg-gray-200 mx-1" />
+            <div className="w-px h-5 bg-gray-200 mx-1 hidden sm:block" />
             <button className="flex items-center gap-2 h-8 pl-1 pr-3 rounded-full hover:bg-gray-50 transition-colors">
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#2563eb] to-[#7c3aed] flex items-center justify-center text-white text-[11px] font-bold shadow-sm">K</div>
               <span className="text-xs font-medium text-gray-600 hidden lg:block">관리자</span>
