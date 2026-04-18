@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, Plus, Bell, Settings,
   Search, LayoutGrid, BarChart3, FileText, ChevronRight, Menu, X,
-  Upload, ShieldCheck, Database, Users2, Calculator,
+  Upload, ShieldCheck, Database, Users2, Calculator, ShieldAlert,
 } from 'lucide-react'
 import { ToastProvider } from '@/components/common/Toast'
 import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: '/bid',                 label: '입찰·견적',  icon: Calculator,      desc: '개략 견적 시뮬' },
   { href: '/analytics',           label: '분석',      icon: BarChart3,       desc: '전사 현황 분석' },
   { href: '/standards',           label: '생산성 DB', icon: Database,        desc: '공종별 표준' },
+  { href: '/risks',               label: 'R&O',       icon: ShieldAlert,     desc: '리스크·기회 라이브러리' },
   { href: '/companies',           label: '협력사',    icon: Users2,          desc: '거래 이력' },
   { href: '/import',              label: '엑셀 임포트', icon: Upload,          desc: '일보 일괄 등록' },
   { href: '/admin/productivity',  label: '관리자',     icon: ShieldCheck,     desc: '생산성 승인' },
