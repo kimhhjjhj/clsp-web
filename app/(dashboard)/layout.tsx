@@ -13,16 +13,32 @@ import { ToastProvider } from '@/components/common/Toast'
 import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
 import Breadcrumb from '@/components/common/Breadcrumb'
 
-const NAV_ITEMS = [
-  { href: '/',                    label: '대시보드',   icon: LayoutDashboard, desc: '전체 현황' },
-  { href: '/projects',            label: '프로젝트',   icon: FolderKanban,    desc: '공정 관리' },
-  { href: '/bid',                 label: '입찰·견적',  icon: Calculator,      desc: '개략 견적 시뮬' },
-  { href: '/analytics',           label: '분석',      icon: BarChart3,       desc: '전사 현황 분석' },
-  { href: '/standards',           label: '생산성 DB', icon: Database,        desc: '공종별 표준' },
-  { href: '/risks',               label: 'R&O',       icon: ShieldAlert,     desc: '리스크·기회 라이브러리' },
-  { href: '/companies',           label: '협력사',    icon: Users2,          desc: '거래 이력' },
-  { href: '/import',              label: '엑셀 임포트', icon: Upload,          desc: '일보 일괄 등록' },
-  { href: '/admin/productivity',  label: '관리자',     icon: ShieldCheck,     desc: '생산성 승인' },
+// 3개 그룹으로 정리
+const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
+  {
+    label: '운영',
+    items: [
+      { href: '/',          label: '대시보드',  icon: LayoutDashboard },
+      { href: '/projects',  label: '프로젝트',  icon: FolderKanban },
+      { href: '/bid',       label: '입찰·견적', icon: Calculator },
+    ],
+  },
+  {
+    label: '데이터',
+    items: [
+      { href: '/analytics', label: '전사 분석',  icon: BarChart3 },
+      { href: '/standards', label: '생산성 DB', icon: Database },
+      { href: '/risks',     label: 'R&O',      icon: ShieldAlert },
+      { href: '/companies', label: '협력사',    icon: Users2 },
+    ],
+  },
+  {
+    label: '도구',
+    items: [
+      { href: '/import',             label: '엑셀 임포트', icon: Upload },
+      { href: '/admin/productivity', label: '관리자',     icon: ShieldCheck },
+    ],
+  },
 ]
 
 function TopBarSearch() {
@@ -58,64 +74,74 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* 사이드바 (lg 이상 고정, 이하는 슬라이드인) */}
       <aside className={`
-        w-56 flex-shrink-0 flex flex-col text-white
+        sidebar-nav w-56 flex-shrink-0 flex flex-col text-white
         fixed lg:static inset-y-0 left-0 z-50
         transition-transform duration-200
         ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `} style={{ background: '#1e293b' }}>
-        <div className="flex items-start justify-between px-5 py-6 border-b border-white/10">
-          <Link href="/" onClick={() => setMobileSidebarOpen(false)} className="block no-underline group flex-1">
-          <h1 className="text-lg font-extrabold tracking-tight text-white leading-tight">
-            Quick<span className="text-[#3b82f6]">Plan</span>
-          </h1>
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] mt-1">Construction Lifecycle</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">통합 공정관리 플랫폼</p>
+        {/* 로고 영역 — 컴팩트 */}
+        <div className="flex items-center justify-between px-5 h-14 border-b border-white/10 flex-shrink-0">
+          <Link href="/" onClick={() => setMobileSidebarOpen(false)} className="flex items-baseline gap-1.5 no-underline">
+            <h1 className="text-base font-extrabold tracking-tight text-white leading-none">
+              Quick<span className="text-[#3b82f6]">Plan</span>
+            </h1>
+            <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-[0.1em]">CLSP</span>
           </Link>
-          {/* 모바일 닫기 버튼 */}
           <button
             onClick={() => setMobileSidebarOpen(false)}
-            className="lg:hidden p-1 -mt-1 -mr-2 text-slate-400 hover:text-white"
+            className="lg:hidden p-1 -mr-1 text-slate-400 hover:text-white"
             aria-label="메뉴 닫기"
-          ><X size={18} /></button>
+          ><X size={16} /></button>
         </div>
 
-        <p className="px-5 pt-5 pb-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">메뉴</p>
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ href, label, icon: Icon, desc }) => {
-            const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
-            return (
-              <Link key={label} href={href}
-                onClick={() => setMobileSidebarOpen(false)}
-                className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all no-underline ${
-                  active
-                    ? 'bg-gradient-to-r from-[#2563eb] to-[#3b82f6] text-white shadow-lg shadow-blue-500/20 font-medium'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.07]'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
-                  active ? 'bg-white/20' : 'bg-white/[0.05] group-hover:bg-white/10'
-                }`}>
-                  <Icon size={16} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium leading-tight">{label}</div>
-                  <div className={`text-[10px] leading-tight mt-0.5 ${active ? 'text-white/60' : 'text-slate-600'}`}>{desc}</div>
-                </div>
-                {active && <ChevronRight size={14} className="text-white/40 flex-shrink-0" />}
-              </Link>
-            )
-          })}
+        {/* 신규 프로젝트 CTA — 상단 배치 */}
+        <div className="px-3 pt-3 flex-shrink-0">
+          <Link href="/projects/new"
+            onClick={() => setMobileSidebarOpen(false)}
+            className="flex items-center justify-center gap-1.5 w-full h-9 rounded-lg text-white text-xs font-semibold transition-all no-underline bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:shadow-md hover:shadow-blue-500/25 active:scale-[0.98]"
+          >
+            <Plus size={13} />새 프로젝트
+          </Link>
+        </div>
+
+        {/* 네비 — 그룹 구분, 컴팩트 */}
+        <nav className="sidebar-scroll flex-1 px-2 py-3 overflow-y-auto">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={group.label} className={gi > 0 ? 'mt-3 pt-3 border-t border-white/[0.06]' : ''}>
+              <p className="px-2 pb-1 text-[9px] font-bold text-slate-500 uppercase tracking-[0.12em]">
+                {group.label}
+              </p>
+              <div className="space-y-0.5">
+                {group.items.map(({ href, label, icon: Icon }) => {
+                  const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setMobileSidebarOpen(false)}
+                      className={`group flex items-center gap-2.5 px-2 h-9 rounded-lg text-sm transition-all no-underline ${
+                        active
+                          ? 'bg-blue-600/90 text-white font-semibold shadow-sm'
+                          : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <Icon size={15} className="flex-shrink-0" />
+                      <span className="flex-1 text-[13px] leading-none">{label}</span>
+                      {active && <span className="w-1 h-4 bg-white/60 rounded-full flex-shrink-0" />}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        <div className="px-3 pb-3 border-t border-white/[0.06] pt-3 space-y-2">
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-slate-500 hover:text-slate-300 hover:bg-white/[0.05] transition-colors">
-            <Settings size={14} />설정
+        {/* 하단 설정 */}
+        <div className="px-2 py-3 border-t border-white/[0.06] flex-shrink-0">
+          <button className="w-full flex items-center gap-2.5 px-2 h-8 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-colors">
+            <Settings size={13} />
+            <span className="flex-1 text-left">설정</span>
           </button>
-          <Link href="/projects/new"
-            className="flex items-center justify-center gap-2 w-full h-10 rounded-xl text-white text-sm font-semibold transition-all no-underline bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:shadow-lg hover:shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Plus size={15} />새 프로젝트
-          </Link>
         </div>
       </aside>
 
