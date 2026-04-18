@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -16,6 +16,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'CLSP Scheduler — 건설 공기산정 플랫폼',
   description: '공동주택 공기산정 및 공정 관리 통합 플랫폼',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  minimumScale: 1,
+  // 사용자 확대 허용 (현장에서 작은 글자 줌 가능)
+  maximumScale: 5,
+  themeColor: '#1e293b',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

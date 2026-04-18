@@ -120,9 +120,9 @@ export default function DailyReportPanel({
   }
 
   return (
-    <div className="flex gap-4" style={{ minHeight: 500 }}>
+    <div className="flex flex-col lg:flex-row gap-4" style={{ minHeight: 500 }}>
       {/* 왼쪽: 목록 */}
-      <div className="w-72 flex-shrink-0 space-y-2">
+      <div className="w-full lg:w-72 flex-shrink-0 space-y-2">
         <Link
           href={`/projects/${projectId}/daily-reports/new`}
           className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#2563eb] text-white rounded-xl text-sm font-semibold hover:bg-[#1d4ed8]"
@@ -262,7 +262,7 @@ export default function DailyReportPanel({
             </div>
 
             {/* 기상 / 총인원 */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <InfoCard icon={<Cloud size={16} className="text-blue-400" />} label="날씨" value={selected.weather || '—'} />
               <InfoCard
                 icon={<Thermometer size={16} className="text-orange-400" />}
@@ -284,7 +284,7 @@ export default function DailyReportPanel({
 
             {/* 금일 / 명일 작업 */}
             {(selected.workToday || selected.workTomorrow) && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <WorkSectionView label="금일 작업" section={selected.workToday} />
                 <WorkSectionView label="명일 작업" section={selected.workTomorrow} />
               </div>

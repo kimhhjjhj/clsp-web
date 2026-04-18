@@ -1,11 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, Plus, Bell, Settings,
-  Search, LayoutGrid, BarChart3, FileText, ChevronRight,
+  Search, LayoutGrid, BarChart3, FileText, ChevronRight, Menu, X,
 } from 'lucide-react'
 import { ToastProvider } from '@/components/common/Toast'
 import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
@@ -39,21 +40,43 @@ function TopBarSearch() {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   return (
     <ToastProvider>
     <CommandPaletteProvider>
-    <div className="flex h-full" style={{ background: '#fafafa' }}>
+    <div className="flex h-full relative" style={{ background: '#fafafa' }}>
 
-      {/* 사이드바 */}
-      <aside className="w-56 flex-shrink-0 flex flex-col text-white" style={{ background: '#1e293b' }}>
-        <Link href="/" className="block px-5 py-6 border-b border-white/10 no-underline group">
+      {/* 모바일 사이드바 오버레이 */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* 사이드바 (lg 이상 고정, 이하는 슬라이드인) */}
+      <aside className={`
+        w-56 flex-shrink-0 flex flex-col text-white
+        fixed lg:static inset-y-0 left-0 z-50
+        transition-transform duration-200
+        ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `} style={{ background: '#1e293b' }}>
+        <div className="flex items-start justify-between px-5 py-6 border-b border-white/10">
+          <Link href="/" onClick={() => setMobileSidebarOpen(false)} className="block no-underline group flex-1">
           <h1 className="text-lg font-extrabold tracking-tight text-white leading-tight">
             Quick<span className="text-[#3b82f6]">Plan</span>
           </h1>
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] mt-1">Construction Lifecycle</p>
           <p className="text-[11px] text-slate-500 mt-0.5">통합 공정관리 플랫폼</p>
-        </Link>
+          </Link>
+          {/* 모바일 닫기 버튼 */}
+          <button
+            onClick={() => setMobileSidebarOpen(false)}
+            className="lg:hidden p-1 -mt-1 -mr-2 text-slate-400 hover:text-white"
+            aria-label="메뉴 닫기"
+          ><X size={18} /></button>
+        </div>
 
         <p className="px-5 pt-5 pb-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">메뉴</p>
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
@@ -61,6 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             const active = !disabled && (href === '/' ? pathname === '/' : pathname.startsWith(href))
             return (
               <Link key={label} href={href}
+                onClick={() => setMobileSidebarOpen(false)}
                 className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all no-underline ${
                   disabled
                     ? 'opacity-30 pointer-events-none'
@@ -100,12 +124,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* 상단 네비 */}
-        <header className="h-14 bg-white border-b border-gray-100 flex items-center px-6 gap-4 flex-shrink-0">
-          <Image src="/tongyang-logo.png" alt="TONGYANG" height={28} width={140} className="object-contain h-7 w-auto" />
+        <header className="h-14 bg-white border-b border-gray-100 flex items-center px-3 sm:px-6 gap-2 sm:gap-4 flex-shrink-0">
+          {/* 모바일 햄버거 */}
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="lg:hidden p-2 -ml-1 rounded-md hover:bg-gray-100 text-gray-600"
+            aria-label="메뉴 열기"
+          >
+            <Menu size={20} />
+          </button>
 
-          <div className="w-px h-6 bg-gray-200 mx-1" />
+          <Image src="/tongyang-logo.png" alt="TONGYANG" height={28} width={140} className="object-contain h-6 sm:h-7 w-auto" />
 
-          <nav className="flex items-center h-full gap-0.5 ml-1">
+          <div className="hidden sm:block w-px h-6 bg-gray-200 mx-1" />
+
+          <nav className="hidden sm:flex items-center h-full gap-0.5 ml-1">
             {TOP_TABS.map(({ href, label, icon: Icon }) => {
               const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
               return (

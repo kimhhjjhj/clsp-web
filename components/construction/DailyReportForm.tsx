@@ -207,7 +207,7 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
     <div className="min-h-full bg-gray-50">
       {/* 상단 바 */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
-        <div className="px-8 py-3 flex items-center justify-between">
+        <div className="px-4 sm:px-8 py-3 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push(`/projects/${projectId}/stage/3`)}
@@ -223,21 +223,27 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <SummaryChip icon={<Calendar size={14} />} label={data.date || '—'} />
-            <SummaryChip
-              icon={<Cloud size={14} />}
-              label={`${data.weather ?? '—'} · ${data.tempMin ?? '—'}°/${data.tempMax ?? '—'}°`}
-            />
-            <SummaryChip
-              icon={<Users size={14} />}
-              label={`총 ${totalToday}명 · ${activeCompanies}개 업체`}
-              highlight
-            />
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            <div className="hidden sm:flex items-center gap-4">
+              <SummaryChip icon={<Calendar size={14} />} label={data.date || '—'} />
+              <SummaryChip
+                icon={<Cloud size={14} />}
+                label={`${data.weather ?? '—'} · ${data.tempMin ?? '—'}°/${data.tempMax ?? '—'}°`}
+              />
+              <SummaryChip
+                icon={<Users size={14} />}
+                label={`총 ${totalToday}명 · ${activeCompanies}개 업체`}
+                highlight
+              />
+            </div>
+            {/* 모바일: 요약만 */}
+            <div className="sm:hidden text-xs text-gray-600 font-semibold">
+              {data.date} · {totalToday}명
+            </div>
             {!isEdit && (
               <button
                 onClick={copyYesterday}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
               >
                 <Copy size={12} /> 어제 일보 복제
               </button>
@@ -245,7 +251,7 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
             <button
               onClick={save}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 text-xs font-semibold bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
             >
               <Save size={12} /> {saving ? '저장 중...' : '저장'}
             </button>
@@ -253,7 +259,7 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
         </div>
 
         {/* 스텝 */}
-        <div className="px-8 pb-2 flex items-center gap-1">
+        <div className="px-4 sm:px-8 pb-2 flex items-center gap-1 overflow-x-auto">
           {STEPS.map((s, i) => {
             const Icon = s.icon
             const active = step === s.id
@@ -279,7 +285,7 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
       </div>
 
       {/* 본문 */}
-      <div className="px-8 py-6 max-w-6xl">
+      <div className="px-4 sm:px-8 py-4 sm:py-6 max-w-6xl">
         {/* 초안 복원 배너 */}
         {hasDraft && draftEnvelope && (
           <div className="mb-4">

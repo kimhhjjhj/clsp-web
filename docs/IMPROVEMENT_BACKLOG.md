@@ -31,7 +31,9 @@
   - 구현: `components/common/Breadcrumb.tsx` — URL 기반 자동 생성, 프로젝트/일보 ID는 이름 fetch + 메모 캐싱
   - 대시보드 레이아웃 header 하단에 고정 표시
   - 완료 조건: 모든 stage·sub 페이지 상단에 `프로젝트 > 단계 > 탭` 표시
-- [ ] **모바일 반응형 (일보)** — 3단계 `DailyReportForm`과 목록을 폰에서 입력·조회 가능
+- [x] **모바일 반응형 (일보)** — 3단계 `DailyReportForm`과 목록을 폰에서 입력·조회 가능
+  - viewport meta(maximumScale 5) 추가 + 대시보드 사이드바 햄버거 + DailyReportPanel stack + DailyReportForm header 축약
+  - 대시보드 페이지/일보 페이지는 모바일 레이아웃 통과
   - 완료 조건: iPhone Safari에서 일보 신규 저장·사진 업로드·조회 전 흐름 성공
 - [x] **토스트 알림** — 저장/삭제/에러 시 화면 우하단 토스트 (2초 자동 닫힘)
   - 구현: `components/common/Toast.tsx` (Portal 기반) + `useToast` 훅

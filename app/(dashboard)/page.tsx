@@ -49,7 +49,7 @@ export default function DashboardPage() {
     <div className="flex flex-col h-full">
 
       {/* 프로젝트 타이틀바 */}
-      <div className="h-14 bg-card border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+      <div className="h-14 bg-card border-b border-border flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
         <div className="flex items-center gap-3">
           <h2 className="text-base font-semibold text-foreground">전체 프로젝트</h2>
           <Badge variant="secondary" className="text-xs">{projects.length}개</Badge>
@@ -57,26 +57,27 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/import"
-            className="inline-flex items-center gap-2 h-8 px-4 rounded-md border border-[#2563eb]/30 text-[#2563eb] text-sm font-medium hover:bg-[#2563eb]/5 transition-colors no-underline"
+            className="hidden sm:inline-flex items-center gap-2 h-8 px-4 rounded-md border border-[#2563eb]/30 text-[#2563eb] text-sm font-medium hover:bg-[#2563eb]/5 transition-colors no-underline"
           >
             <Upload size={14} />
             엑셀 임포트
           </Link>
           <Link
             href="/projects/new"
-            className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-[#2563eb] text-white text-sm font-medium hover:bg-[#2563eb]/90 transition-colors no-underline"
+            className="inline-flex items-center gap-2 h-8 px-3 sm:px-4 rounded-md bg-[#2563eb] text-white text-sm font-medium hover:bg-[#2563eb]/90 transition-colors no-underline"
           >
             <Plus size={14} />
-            새 프로젝트
+            <span className="hidden sm:inline">새 프로젝트</span>
+            <span className="sm:hidden">추가</span>
           </Link>
         </div>
       </div>
 
       {/* 본문 */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
 
         {/* 통계 카드 */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
           <div className="bg-card rounded-lg border border-border p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">전체 프로젝트</p>
