@@ -84,16 +84,14 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
   const activeStageMatch = pathname.match(/\/projects\/[^/]+\/stage\/(\d)/)
   const activeStage = activeStageMatch ? Number(activeStageMatch[1]) : null
 
-  return (
-    <div className="mt-3">
-      {/* 프로젝트 헤더 */}
-      <div className="px-2 pb-1 flex items-center gap-1.5">
-        <span className="w-1 h-3 bg-blue-500 rounded-full flex-shrink-0" />
-        <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
-          현재 프로젝트
-        </span>
-      </div>
+  const lifecycle = getProjectStatus({
+    latestReportDate: status?.stage3.lastReportDate ?? null,
+    _count: { dailyReports: status?.stage3.dailyReportCount ?? 0 },
+  })
+  const info = STATUS_META[lifecycle]
 
+  return (
+    <div>
       <Link
         href={`/projects/${project.id}`}
         onClick={onNavigate}
@@ -102,22 +100,15 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
         }`}
       >
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold truncate">{project.name}</p>
-          {(() => {
-            const lc = getProjectStatus({
-              latestReportDate: status?.stage3.lastReportDate ?? null,
-              _count: { dailyReports: status?.stage3.dailyReportCount ?? 0 },
-            })
-            const info = STATUS_META[lc]
-            return (
-              <span className="inline-flex items-center gap-1 mt-0.5">
-                <span className={`w-1 h-1 rounded-full ${info.dot}`} />
-                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">
-                  {info.label}
-                </span>
-              </span>
-            )
-          })()}
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span
+              className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded text-white flex-shrink-0"
+              style={{ background: info.color }}
+            >
+              {info.label}
+            </span>
+          </div>
+          <p className="text-xs font-bold truncate text-slate-100">{project.name}</p>
         </div>
       </Link>
 

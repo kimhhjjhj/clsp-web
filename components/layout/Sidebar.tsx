@@ -1,18 +1,23 @@
 'use client'
 
 // ═══════════════════════════════════════════════════════════
-// 사이드바 — 2층 구조
-// 1) 전역 메뉴: 대시보드·프로젝트·입찰견적
-// 2) 현재 프로젝트 (선택 시만): 4단계 + 상태 배지
-// 3) 전사 자산: 분석·생산성DB·R&O·협력사
-// 4) 관리: 엑셀임포트·관리자·설정
+// 사이드바 — 접이식 2+3 구조
+//  [전역] 대시보드·프로젝트
+//  [사업 초기 검토]  ▼ 공사비·공기
+//  [현재 프로젝트]   ▼ 프리콘·시공·분석
+//  [DB]              ▼ 분석·생산성·R&O·협력사
+//  [관리]            ▼ 임포트·승인·설정
+//
+// 각 섹션은 토글 가능. 상태는 localStorage에 기억.
+// 현재 페이지가 섹션 내부면 자동 펼침(최초 1회).
 // ═══════════════════════════════════════════════════════════
 
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, BarChart3, Database, ShieldAlert, Users2,
-  Upload, ShieldCheck, Settings, X, DollarSign,
+  Upload, ShieldCheck, Settings, X, DollarSign, ChevronRight,
 } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
 import CurrentProjectSection from './CurrentProjectSection'
@@ -24,14 +29,13 @@ const GLOBAL_ITEMS: NavItem[] = [
   { href: '/projects', label: '프로젝트',        icon: FolderKanban },
 ]
 
-// 사업 초기 검토는 서브 메뉴가 있어 별도로 렌더
 const BID_ITEM: NavItem = { href: '/bid', label: '사업 초기 검토', icon: ClipboardCheck }
 const BID_SUB: { tab: string; label: string; icon: typeof DollarSign }[] = [
   { tab: 'cost',     label: '공사비',   icon: DollarSign },
   { tab: 'schedule', label: '공기',     icon: BarChart3 },
 ]
 
-const ASSET_ITEMS: NavItem[] = [
+const DB_ITEMS: NavItem[] = [
   { href: '/analytics', label: '분석',      icon: BarChart3 },
   { href: '/standards', label: '생산성 DB', icon: Database },
   { href: '/risks',     label: 'R&O',      icon: ShieldAlert },
@@ -43,6 +47,27 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: '/admin/productivity', label: '관리자 승인',      icon: ShieldCheck },
 ]
 
+// localStorage 토글 상태 유지
+function useToggle(key: string, initial: boolean): [boolean, (v?: boolean) => void] {
+  const [open, setOpen] = useState<boolean>(initial)
+  // 최초 1회 localStorage 복원
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`sidebar:${key}`)
+      if (raw !== null) setOpen(raw === '1')
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const toggle = useCallback((v?: boolean) => {
+    setOpen(prev => {
+      const next = typeof v === 'boolean' ? v : !prev
+      try { localStorage.setItem(`sidebar:${key}`, next ? '1' : '0') } catch {}
+      return next
+    })
+  }, [key])
+  return [open, toggle]
+}
+
 interface Props {
   onClose: () => void
 }
@@ -52,7 +77,21 @@ export default function Sidebar({ onClose }: Props) {
   const searchParams = useSearchParams()
   const activeBidTab = searchParams?.get('tab') ?? 'cost'
   const isBid = pathname.startsWith('/bid')
+  const isProjectDetail = /^\/projects\/[^/]+/.test(pathname) && !pathname.startsWith('/projects/new')
+  const isDbArea = DB_ITEMS.some(i => pathname.startsWith(i.href))
+  const isAdminArea = ADMIN_ITEMS.some(i => pathname.startsWith(i.href))
   const { currentProject } = useProjectContext()
+
+  const [bidOpen, setBidOpen] = useToggle('bid', false)
+  const [projectOpen, setProjectOpen] = useToggle('project', true)
+  const [dbOpen, setDbOpen] = useToggle('db', true)
+  const [adminOpen, setAdminOpen] = useToggle('admin', false)
+
+  // 현재 경로가 섹션 내부면 자동 펼침 (사용자가 수동으로 접은 상태는 존중)
+  useEffect(() => { if (isBid && !bidOpen) setBidOpen(true) }, [isBid]) // eslint-disable-line
+  useEffect(() => { if (isProjectDetail && !projectOpen) setProjectOpen(true) }, [isProjectDetail]) // eslint-disable-line
+  useEffect(() => { if (isDbArea && !dbOpen) setDbOpen(true) }, [isDbArea]) // eslint-disable-line
+  useEffect(() => { if (isAdminArea && !adminOpen) setAdminOpen(true) }, [isAdminArea]) // eslint-disable-line
 
   return (
     <>
@@ -77,8 +116,8 @@ export default function Sidebar({ onClose }: Props) {
       </div>
 
       {/* 본문 — 스크롤 */}
-      <nav className="sidebar-scroll flex-1 px-2 py-3 overflow-y-auto">
-        {/* 전역 메뉴 */}
+      <nav className="sidebar-scroll flex-1 px-2 py-3 overflow-y-auto overscroll-contain">
+        {/* 전역 메뉴 (항상 표시) */}
         <NavGroup>
           {GLOBAL_ITEMS.map(item => (
             <SidebarLink
@@ -89,12 +128,18 @@ export default function Sidebar({ onClose }: Props) {
             />
           ))}
 
-          {/* 사업 초기 검토 — 서브메뉴 포함 */}
-          <SidebarLink item={BID_ITEM} active={isBid} onNavigate={onClose} />
-          {isBid && (
+          {/* 사업 초기 검토 — 토글 서브메뉴 */}
+          <CollapsibleItem
+            item={BID_ITEM}
+            active={isBid}
+            open={bidOpen}
+            onToggle={() => setBidOpen()}
+            onNavigate={onClose}
+          />
+          {bidOpen && (
             <div className="ml-3 pl-3 border-l border-white/[0.08] space-y-0.5 mt-0.5 mb-1">
               {BID_SUB.map(sub => {
-                const subActive = activeBidTab === sub.tab
+                const subActive = isBid && activeBidTab === sub.tab
                 const Icon = sub.icon
                 return (
                   <Link
@@ -117,20 +162,22 @@ export default function Sidebar({ onClose }: Props) {
           )}
         </NavGroup>
 
-        {/* 현재 프로젝트 섹션 */}
+        {/* 현재 프로젝트 섹션 — 토글 */}
         {currentProject && (
-          <div className="mt-3 pt-3 border-t border-white/[0.06]">
+          <Section
+            label="현재 프로젝트"
+            open={projectOpen}
+            onToggle={() => setProjectOpen()}
+            accent="#3b82f6"
+          >
             <CurrentProjectSection project={currentProject} onNavigate={onClose} />
-          </div>
+          </Section>
         )}
 
-        {/* 전사 자산 */}
-        <div className="mt-4 pt-3 border-t border-white/[0.06]">
-          <p className="px-2 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">
-            전사 자산
-          </p>
+        {/* DB — 토글 */}
+        <Section label="DB" open={dbOpen} onToggle={() => setDbOpen()}>
           <NavGroup>
-            {ASSET_ITEMS.map(item => (
+            {DB_ITEMS.map(item => (
               <SidebarLink
                 key={item.href}
                 item={item}
@@ -139,13 +186,10 @@ export default function Sidebar({ onClose }: Props) {
               />
             ))}
           </NavGroup>
-        </div>
+        </Section>
 
-        {/* 관리 */}
-        <div className="mt-4 pt-3 border-t border-white/[0.06]">
-          <p className="px-2 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">
-            관리
-          </p>
+        {/* 관리 — 토글 */}
+        <Section label="관리" open={adminOpen} onToggle={() => setAdminOpen()}>
           <NavGroup>
             {ADMIN_ITEMS.map(item => (
               <SidebarLink
@@ -163,7 +207,7 @@ export default function Sidebar({ onClose }: Props) {
               <span className="flex-1 text-left">설정</span>
             </button>
           </NavGroup>
-        </div>
+        </Section>
       </nav>
     </>
   )
@@ -195,5 +239,80 @@ function SidebarLink({
       <span className="flex-1 text-[13px] leading-none truncate">{item.label}</span>
       {active && <span className="w-1 h-4 bg-white/60 rounded-full flex-shrink-0" />}
     </Link>
+  )
+}
+
+// 사업 초기 검토처럼 '클릭=이동' + '토글 버튼'이 필요한 아이템
+function CollapsibleItem({
+  item, active, open, onToggle, onNavigate,
+}: {
+  item: NavItem
+  active: boolean
+  open: boolean
+  onToggle: () => void
+  onNavigate: () => void
+}) {
+  const Icon = item.icon
+  return (
+    <div
+      className={`flex items-center gap-1 h-9 rounded-lg transition-colors overflow-hidden ${
+        active
+          ? 'bg-blue-600 text-white font-semibold shadow-sm'
+          : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+      }`}
+    >
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        className="flex items-center gap-2.5 pl-2 pr-1 h-full flex-1 min-w-0 no-underline"
+      >
+        <Icon size={15} className="flex-shrink-0" />
+        <span className="flex-1 text-[13px] leading-none truncate">{item.label}</span>
+      </Link>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={open ? '접기' : '펼치기'}
+        className={`h-full px-2 flex items-center justify-center transition-colors ${
+          active ? 'hover:bg-white/10' : 'hover:bg-white/[0.04]'
+        }`}
+      >
+        <ChevronRight
+          size={13}
+          className={`transition-transform ${open ? 'rotate-90' : ''} ${active ? 'text-white/80' : 'text-slate-500'}`}
+        />
+      </button>
+    </div>
+  )
+}
+
+// DB · 관리 · 현재프로젝트 섹션 헤더 (접기 가능)
+function Section({
+  label, open, onToggle, accent, children,
+}: {
+  label: string
+  open: boolean
+  onToggle: () => void
+  accent?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="mt-4 pt-3 border-t border-white/[0.06]">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center gap-1.5 px-2 pb-1 group"
+      >
+        {accent && <span className="w-1 h-3 rounded-full flex-shrink-0" style={{ background: accent }} />}
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em] group-hover:text-slate-400 transition-colors">
+          {label}
+        </span>
+        <ChevronRight
+          size={11}
+          className={`ml-auto text-slate-600 group-hover:text-slate-400 transition-all ${open ? 'rotate-90' : ''}`}
+        />
+      </button>
+      {open && <div className="mt-0.5">{children}</div>}
+    </div>
   )
 }
