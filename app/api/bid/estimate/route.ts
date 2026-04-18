@@ -10,8 +10,6 @@ import type { ProjectInput } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as Partial<ProjectInput> & {
-    monthlyFinCost?: number      // 월 금융·관리비 (만원)
-    delayScenarios?: number[]    // 몇 주 지연 시나리오 (기본 [2, 4, 8])
     startDate?: string           // 착공 예정일 (있으면 월별 인력 집계 활성)
   }
 
@@ -68,14 +66,6 @@ export async function POST(req: NextRequest) {
   // 자재·경비 대략 노무비의 1.4배로 가정 (일반 건축)
   const totalEstimateKRW = laborCostKRW * (1 + 1.4)
 
-  // 지연 시나리오
-  const monthlyFinCost = body.monthlyFinCost ?? 0  // 만원
-  const delayWeeks = body.delayScenarios ?? [2, 4, 8]
-  const delayScenarios = delayWeeks.map(w => ({
-    weeks: w,
-    additionalCostKRW: Math.round((w / 4) * (monthlyFinCost * 10000)),
-  }))
-
   return NextResponse.json({
     input,
     cpm: {
@@ -98,6 +88,5 @@ export async function POST(req: NextRequest) {
       dailyWage: DAILY_WAGE,
       laborRatio: 0.417, // laborCost / totalEstimate
     },
-    delayScenarios,
   })
 }

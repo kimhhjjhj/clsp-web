@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   ClipboardCheck, Building2, Ruler, Layers, Play, Save, TrendingUp,
   Calendar, Users, DollarSign, AlertTriangle, Loader2, ArrowRight,
-  BarChart3, ChevronRight,
+  BarChart3, ChevronRight, MapPin, Search, Drill, Check, X,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
@@ -23,6 +23,7 @@ import type { CPMResult } from '@/lib/types'
 interface BidInput {
   name: string
   type: string
+  location: string
   ground: string
   basement: string
   lowrise: string
@@ -35,7 +36,20 @@ interface BidInput {
   wtBottom: string
   waBottom: string
   startDate: string
-  monthlyFinCost: string
+}
+
+interface BoreholeResult {
+  id: string
+  distance_m: number
+  lat: number
+  lng: number
+  depth: number | null
+  addr: string
+  wt: number | null
+  wtr: number | null
+  wt_display: string
+  wtr_display: string
+  layers: { soil_type: string; depth_from: number; depth_to: number }[]
 }
 
 interface EstimateResult {
@@ -54,20 +68,18 @@ interface EstimateResult {
     uncoveredTasks: string[]
   }
   estimate: { laborCostKRW: number; totalEstimateKRW: number; dailyWage: number; laborRatio: number }
-  delayScenarios: { weeks: number; additionalCostKRW: number }[]
 }
 
 type TopTab = 'cost' | 'schedule'
 type SubTab = 'wbs' | 'summary' | 'critical' | 'gantt' | 'resource' | 'standards'
 
 const INITIAL: BidInput = {
-  name: '', type: '공동주택',
+  name: '', type: '공동주택', location: '',
   ground: '20', basement: '2', lowrise: '0', hasTransfer: false,
   bldgArea: '30000', buildingArea: '1500', siteArea: '6000',
   sitePerim: '300', bldgPerim: '220',
   wtBottom: '3', waBottom: '6',
   startDate: '',
-  monthlyFinCost: '5000',
 }
 
 const CATEGORY_COLORS_HEX: Record<string, string> = {
@@ -104,6 +116,53 @@ export default function BidPage() {
   const [ganttView, setGanttView] = useState<GanttViewMode>('week')
   const [standards, setStandards] = useState<CompanyStandardSummary[]>([])
   const wbsTableRef = useRef<WBSTableHandle>(null)
+
+  // 위치·지반 로드
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [geocoding, setGeocoding] = useState(false)
+  const [geocodeError, setGeocodeError] = useState('')
+  const [boreholes, setBoreholes] = useState<BoreholeResult[]>([])
+  const [loadingBH, setLoadingBH] = useState(false)
+  const [bhError, setBhError] = useState('')
+
+  async function handleGeocode() {
+    if (!input.location.trim()) return
+    setGeocoding(true)
+    setGeocodeError('')
+    setCoords(null)
+    setBoreholes([])
+    try {
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(input.location)}`)
+      const data = await res.json()
+      if (!res.ok) setGeocodeError(data.error ?? '주소 검색 실패')
+      else setCoords({ lat: data.lat, lng: data.lng })
+    } catch { setGeocodeError('네트워크 오류') }
+    finally { setGeocoding(false) }
+  }
+
+  async function handleLoadBoreholes() {
+    if (!coords) { setBhError('먼저 주소를 검색하세요'); return }
+    setLoadingBH(true); setBhError('')
+    try {
+      const res = await fetch('/api/ground-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: coords.lat, lng: coords.lng }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setBhError(data.error ?? '시추공 검색 실패'); return }
+      const list: BoreholeResult[] = data ?? []
+      setBoreholes(list)
+      if (list.length === 0) { setBhError('500m 반경 내 시추공 데이터가 없습니다'); return }
+      // 평균 자동 적용
+      const wtVals = list.map(b => b.wt).filter((v): v is number => v != null && v > 0)
+      const waVals = list.map(b => b.wtr).filter((v): v is number => v != null && v > 0)
+      if (wtVals.length) set('wtBottom', (wtVals.reduce((a, b) => a + b, 0) / wtVals.length).toFixed(1))
+      if (waVals.length) set('waBottom', (waVals.reduce((a, b) => a + b, 0) / waVals.length).toFixed(1))
+      toast.success(`${list.length}개 시추공 평균값 적용`, `풍화토·풍화암 자동 입력`)
+    } catch { setBhError('네트워크 오류') }
+    finally { setLoadingBH(false) }
+  }
 
   function set<K extends keyof BidInput>(key: K, v: string) {
     setInput(p => ({ ...p, [key]: v }))
@@ -147,7 +206,6 @@ export default function BidPage() {
           wtBottom: Number(input.wtBottom) || undefined,
           waBottom: Number(input.waBottom) || undefined,
           startDate: input.startDate || undefined,
-          monthlyFinCost: Number(input.monthlyFinCost) || 0,
         }),
       })
       const data = await res.json()
@@ -170,6 +228,7 @@ export default function BidPage() {
         body: JSON.stringify({
           name: input.name,
           type: input.type,
+          location: input.location || null,
           ground: Number(input.ground) || 0,
           basement: Number(input.basement) || 0,
           lowrise: Number(input.lowrise) || 0,
@@ -253,41 +312,100 @@ export default function BidPage() {
               </div>
 
               <div className="divide-y divide-gray-100">
-                {/* ── 섹션 1: 기본 정보 ── */}
-                <Section color="#2563eb" label="기본 정보">
-                  <Field label="프로젝트명" hint="저장 시 사용 · 생략 가능">
-                    <input value={input.name} onChange={e => set('name', e.target.value)} placeholder="예: 강남 ◯◯ 신축공사"
-                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                {/* ── 섹션 1: 현장 위치 · 지반 (맨 앞) ── */}
+                <Section color="#a16207" label="현장 위치 · 지반" icon={<MapPin size={12} />}>
+                  <Field label="공사 주소" hint="검색 후 지오코딩 → 좌표 획득">
+                    <div className="flex gap-2">
+                      <input
+                        value={input.location}
+                        onChange={e => set('location', e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleGeocode() } }}
+                        placeholder="예: 서울시 강남구 역삼동 737"
+                        className="flex-1 h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGeocode}
+                        disabled={geocoding || !input.location.trim()}
+                        className="h-10 px-3 rounded-lg bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold disabled:opacity-40 flex items-center gap-1.5 flex-shrink-0"
+                      >
+                        {geocoding ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                        검색
+                      </button>
+                    </div>
                   </Field>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="건물 유형" required>
-                      <select value={input.type} onChange={e => set('type', e.target.value)}
-                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                        <option>공동주택</option>
-                        <option>오피스텔</option>
-                        <option>업무시설</option>
-                        <option>데이터센터</option>
-                        <option>스튜디오</option>
-                        <option>기타</option>
-                      </select>
-                    </Field>
-                    <Field label="착공 예정일" hint="월별 인력 집계 활성">
-                      <input type="date" value={input.startDate} onChange={e => set('startDate', e.target.value)}
-                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-                    </Field>
-                  </div>
+
+                  {geocodeError && (
+                    <p className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded px-2 py-1.5">{geocodeError}</p>
+                  )}
+                  {coords && (
+                    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-emerald-50 border border-emerald-100 text-[11px] text-emerald-800">
+                      <Check size={12} />
+                      <span className="font-mono">{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
+                      <span className="ml-auto text-[10px] text-emerald-600">좌표 확보</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleLoadBoreholes}
+                    disabled={!coords || loadingBH}
+                    className={`w-full h-10 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                      coords
+                        ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    } disabled:opacity-60`}
+                  >
+                    {loadingBH ? <Loader2 size={13} className="animate-spin" /> : <Drill size={13} />}
+                    {coords ? '근처 시추공 자동 로드 (500m)' : '주소 검색 먼저'}
+                  </button>
+
+                  {bhError && <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">{bhError}</p>}
+                  {boreholes.length > 0 && (
+                    <div className="text-[11px] text-amber-900 bg-amber-50 border border-amber-100 rounded px-2.5 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <Check size={11} className="text-amber-600" />
+                        <strong>{boreholes.length}개 시추공 평균값 적용됨</strong>
+                      </div>
+                      <p className="text-[10px] text-amber-700 mt-0.5">아래 지반 입력란 자동 채움 · 수동으로 덮어쓸 수 있음</p>
+                    </div>
+                  )}
+
+                  {Number(input.basement) > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="풍화토 바닥" unit="m">
+                        <NumInput value={input.wtBottom} onChange={v => set('wtBottom', v)} step="0.1" />
+                      </Field>
+                      <Field label="풍화암 바닥" unit="m">
+                        <NumInput value={input.waBottom} onChange={v => set('waBottom', v)} step="0.1" />
+                      </Field>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-gray-400">지하 층수가 1 이상일 때 풍화토/풍화암 깊이 입력칸이 표시됩니다.</p>
+                  )}
                 </Section>
 
-                {/* ── 섹션 2: 건물 규모 ── */}
-                <Section color="#16a34a" label="건물 규모" icon={<Layers size={12} />}>
-                  <div className="grid grid-cols-3 gap-3">
+                {/* ── 섹션 2: 건물 유형·규모 ── */}
+                <Section color="#16a34a" label="건물 유형 · 규모" icon={<Layers size={12} />}>
+                  <Field label="건물 유형" required>
+                    <select value={input.type} onChange={e => set('type', e.target.value)}
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                      <option>공동주택</option>
+                      <option>오피스텔</option>
+                      <option>업무시설</option>
+                      <option>데이터센터</option>
+                      <option>스튜디오</option>
+                      <option>기타</option>
+                    </select>
+                  </Field>
+                  <div className="grid grid-cols-3 gap-2">
                     <Field label="지상" unit="층" required>
                       <NumInput value={input.ground} onChange={v => set('ground', v)} />
                     </Field>
                     <Field label="지하" unit="층">
                       <NumInput value={input.basement} onChange={v => set('basement', v)} />
                     </Field>
-                    <Field label="저층부" unit="층" hint="없으면 0">
+                    <Field label="저층부" unit="층">
                       <NumInput value={input.lowrise} onChange={v => set('lowrise', v)} />
                     </Field>
                   </div>
@@ -305,9 +423,9 @@ export default function BidPage() {
                 </Section>
 
                 {/* ── 섹션 3: 면적·둘레 ── */}
-                <Section color="#ea580c" label="면적·둘레" icon={<Ruler size={12} />}>
+                <Section color="#ea580c" label="면적 · 둘레" icon={<Ruler size={12} />}>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="건축면적" unit="㎡" required hint="1층 바닥 · 터파기 기준">
+                    <Field label="건축면적" unit="㎡" required hint="1층 footprint">
                       <NumInput value={input.buildingArea} onChange={v => set('buildingArea', v)} />
                     </Field>
                     <Field label="연면적" unit="㎡" required hint="전 층 합계">
@@ -325,31 +443,15 @@ export default function BidPage() {
                   </div>
                 </Section>
 
-                {/* ── 섹션 4: 지반 조건 ── */}
-                {Number(input.basement) > 0 ? (
-                  <Section color="#a16207" label="지반 조건" hint="지하층이 있을 때만 터파기에 영향">
-                    <div className="grid grid-cols-2 gap-3">
-                      <Field label="풍화토 바닥" unit="m" hint="지표~풍화토 하단">
-                        <NumInput value={input.wtBottom} onChange={v => set('wtBottom', v)} step="0.1" />
-                      </Field>
-                      <Field label="풍화암 바닥" unit="m" hint="지표~풍화암 하단">
-                        <NumInput value={input.waBottom} onChange={v => set('waBottom', v)} step="0.1" />
-                      </Field>
-                    </div>
-                    <p className="text-[10px] text-gray-400 leading-relaxed">
-                      미입력 시 전체 굴착을 연암으로 가정해 공기가 길게 산출됩니다.
-                    </p>
-                  </Section>
-                ) : (
-                  <Section color="#a16207" label="지반 조건" hint="지하층 없음 → 생략됨">
-                    <p className="text-[11px] text-gray-400">지하 층수가 1 이상일 때 입력칸이 열립니다.</p>
-                  </Section>
-                )}
-
-                {/* ── 섹션 5: 비용 가정 ── */}
-                <Section color="#7c3aed" label="비용 가정">
-                  <Field label="월 금융·관리비" unit="만원" hint="지연 시 추가 비용 계산용">
-                    <NumInput value={input.monthlyFinCost} onChange={v => set('monthlyFinCost', v)} />
+                {/* ── 섹션 4: 메타 (선택) ── */}
+                <Section color="#2563eb" label="메타 (선택)">
+                  <Field label="프로젝트명" hint="저장할 때 사용">
+                    <input value={input.name} onChange={e => set('name', e.target.value)} placeholder="예: 강남 ◯◯ 신축공사"
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                  </Field>
+                  <Field label="착공 예정일" hint="월별 인력 집계 활성">
+                    <input type="date" value={input.startDate} onChange={e => set('startDate', e.target.value)}
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                   </Field>
                 </Section>
               </div>
@@ -443,22 +545,6 @@ export default function BidPage() {
                         totalDuration={result.cpm.totalDuration}
                         tasks={result.cpm.tasks}
                       />
-
-                      {/* 지연 시나리오 */}
-                      <div className="border-t border-gray-100 pt-5">
-                        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
-                          <AlertTriangle size={14} className="text-amber-500" /> 지연 민감도 (추가 금융·관리비)
-                        </h3>
-                        <div className="grid grid-cols-3 gap-3">
-                          {result.delayScenarios.map(s => (
-                            <div key={s.weeks} className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-center">
-                              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">+{s.weeks}주 지연 시</p>
-                              <p className="text-lg font-bold text-amber-900 mt-1 font-mono">+{fmtKRW(s.additionalCostKRW)}</p>
-                            </div>
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-2">※ 월 금융·관리비 × 지연 기간 기준 · 손해 최소 추정</p>
-                      </div>
 
                       {/* 월별 필요 인력 */}
                       <div className="border-t border-gray-100 pt-5">
