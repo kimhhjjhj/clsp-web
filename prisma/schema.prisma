@@ -27,6 +27,7 @@ model Project {
   wtBottom    Float?
   waBottom    Float?
   lastCpmDuration        Int?
+  industrySpecific       Json?                  // 유형별 특화 필드 (데이터센터: tier/racks/mwCapacity/cooling 등)
   processMap             Json?                  // { lanes: [], cards: [], links: [] }
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt

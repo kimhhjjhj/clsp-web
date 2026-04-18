@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import DxfUpload from '@/components/precon/DxfUpload'
+import IndustrySpecificFields, { type IndustrySpecific } from '@/components/common/IndustrySpecificFields'
 
 interface FormData {
   name: string
@@ -36,6 +37,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params)
   const router = useRouter()
   const [form, setForm] = useState<FormData | null>(null)
+  const [industrySpecific, setIndustrySpecific] = useState<IndustrySpecific>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -62,6 +64,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           wtBottom: p.wtBottom != null ? String(p.wtBottom) : '',
           waBottom: p.waBottom != null ? String(p.waBottom) : '',
         })
+        setIndustrySpecific((p.industrySpecific as IndustrySpecific | null) ?? {})
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -100,6 +103,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         bldgPerim: form.bldgPerim ? Number(form.bldgPerim) : null,
         wtBottom: form.wtBottom ? Number(form.wtBottom) : null,
         waBottom: form.waBottom ? Number(form.waBottom) : null,
+        industrySpecific: Object.keys(industrySpecific).length > 0 ? industrySpecific : null,
       }),
     })
 
@@ -224,6 +228,15 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </div>
           </CardContent>
         </Card>
+
+        {/* 유형별 특화 필드 */}
+        {['데이터센터', '공동주택', '오피스텔'].includes(form.type) && (
+          <IndustrySpecificFields
+            type={form.type}
+            value={industrySpecific}
+            onChange={setIndustrySpecific}
+          />
+        )}
 
         {/* 면적 정보 */}
         <Card>

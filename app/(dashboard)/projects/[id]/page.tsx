@@ -10,6 +10,7 @@ import {
 import PageHeader from '@/components/common/PageHeader'
 import { Skeleton } from '@/components/common/Skeleton'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
+import { IndustrySpecificSummary, type IndustrySpecific } from '@/components/common/IndustrySpecificFields'
 
 interface Project {
   id: string
@@ -23,6 +24,7 @@ interface Project {
   bldgArea?: number
   siteArea?: number
   startDate?: string
+  industrySpecific?: IndustrySpecific | null
 }
 
 interface StageStatus {
@@ -227,6 +229,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                 {currentPhase}
               </div>
               <span className="text-xs text-slate-300">{project.type || '건축 공사'}</span>
+              <IndustrySpecificSummary type={project.type} value={project.industrySpecific ?? undefined} />
             </div>
             <div className="flex items-center gap-5 text-xs text-slate-300">
               {project.startDate && (
