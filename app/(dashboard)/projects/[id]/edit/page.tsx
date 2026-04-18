@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import DxfUpload from '@/components/precon/DxfUpload'
 import IndustrySpecificFields, { type IndustrySpecific } from '@/components/common/IndustrySpecificFields'
+import PageHeader from '@/components/common/PageHeader'
 
 interface FormData {
   name: string
@@ -119,30 +120,37 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     router.push(`/projects/${id}`)
   }
 
-  if (loading) return <div className="p-8 text-muted-foreground">불러오는 중...</div>
-  if (!form) return <div className="p-8 text-muted-foreground">프로젝트를 찾을 수 없습니다.</div>
+  if (loading) return (
+    <div className="flex flex-col h-full">
+      <PageHeader icon={Pencil} title="프로젝트 수정" subtitle="불러오는 중…" accent="emerald" />
+      <div className="p-6 text-sm text-muted-foreground">불러오는 중...</div>
+    </div>
+  )
+  if (!form) return (
+    <div className="flex flex-col h-full">
+      <PageHeader icon={Pencil} title="프로젝트 수정" subtitle="찾을 수 없음" accent="emerald" />
+      <div className="p-6 text-sm text-muted-foreground">프로젝트를 찾을 수 없습니다.</div>
+    </div>
+  )
 
   return (
-    <div className="p-8 max-w-2xl">
-      {/* 브레드크럼 */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <Link href="/" className="hover:text-foreground transition-colors">대시보드</Link>
-        <ChevronRight size={14} />
-        <Link href={`/projects/${id}`} className="hover:text-foreground transition-colors truncate max-w-[160px]">
-          {form.name}
-        </Link>
-        <ChevronRight size={14} />
-        <span className="text-foreground">프로젝트 수정</span>
-      </div>
-
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">프로젝트 수정</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          수정 후 저장하면 다음 공기산정 시 반영됩니다
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="flex flex-col h-full">
+      <PageHeader
+        icon={Pencil}
+        title="프로젝트 수정"
+        subtitle={form.name}
+        accent="emerald"
+        actions={
+          <Link
+            href={`/projects/${id}`}
+            className="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            <ArrowLeft size={12} /> 프로젝트로
+          </Link>
+        }
+      />
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
         {/* 프로젝트 기본 정보 */}
         <Card>
           <CardHeader>
@@ -322,7 +330,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             취소
           </Button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   )
 }
