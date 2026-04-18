@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Settings, Check } from 'lucide-react'
+import { Settings, Check, ShieldCheck, HardHat, BarChart3 } from 'lucide-react'
 import { getProjectStatus, STATUS_META } from '@/lib/project-status'
 
 interface StageStatus {
@@ -26,10 +26,15 @@ interface ProjectLite {
   type?: string
 }
 
-const STAGES: { urlN: number; label: string }[] = [
-  { urlN: 2, label: '프리콘' },
-  { urlN: 3, label: '시공 관리' },
-  { urlN: 4, label: '분석·준공' },
+const STAGES: {
+  urlN: number
+  label: string
+  icon: typeof ShieldCheck
+  accent: string   // dot color (CSS hex)
+}[] = [
+  { urlN: 2, label: '프리콘',    icon: ShieldCheck, accent: '#10b981' }, // emerald
+  { urlN: 3, label: '시공 관리', icon: HardHat,     accent: '#f97316' }, // orange
+  { urlN: 4, label: '분석·준공', icon: BarChart3,   accent: '#a855f7' }, // purple
 ]
 
 function computeState(status: StageStatus | null, n: number): State {
@@ -108,21 +113,35 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
           {STAGES.map(st => {
             const s = computeState(status, st.urlN)
             const isActive = activeStage === st.urlN
+            const Icon = st.icon
             return (
               <Link
                 key={st.urlN}
                 href={`/projects/${project.id}/stage/${st.urlN}`}
                 onClick={onNavigate}
-                className={`relative flex items-center gap-2 px-2 h-7 rounded-md text-[12px] no-underline transition-colors ${
+                className={`relative flex items-center gap-2.5 px-2 h-8 rounded-md text-[12px] no-underline transition-colors ${
                   isActive
-                    ? 'bg-white/[0.08] text-white font-medium'
+                    ? 'bg-white/[0.1] text-white font-semibold'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
                 }`}
               >
-                <span className="flex-1 truncate">{st.label}</span>
-                {s === 'done' && (
-                  <Check size={11} strokeWidth={2.5} className="text-slate-300 flex-shrink-0" />
+                {/* 활성 좌측 accent */}
+                {isActive && (
+                  <span
+                    className="absolute -left-[13px] top-1.5 bottom-1.5 w-[2px] rounded-r-full"
+                    style={{ background: st.accent }}
+                  />
                 )}
+                {/* 단계별 고유 아이콘 */}
+                <Icon
+                  size={12}
+                  strokeWidth={isActive ? 2.5 : 1.75}
+                  className="flex-shrink-0"
+                  style={{ color: isActive ? st.accent : undefined }}
+                />
+                <span className="flex-1 truncate">{st.label}</span>
+                {/* 상태 인디케이터 — 텍스트 or 아이콘 */}
+                <StageState state={s} accent={st.accent} />
               </Link>
             )
           })}
@@ -146,5 +165,38 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
         <span className="flex-1 truncate">프로젝트 설정</span>
       </Link>
     </div>
+  )
+}
+
+// ──────────────────────────────────────────────────
+// 단계 상태 인디케이터 — 텍스트로 명확히 전달
+// done    → '완료' (체크 + 녹색 작은 뱃지)
+// active  → pulse dot (진행중)
+// pending → 빈 원 (대기)
+// ──────────────────────────────────────────────────
+function StageState({ state, accent }: { state: State; accent: string }) {
+  if (state === 'done') {
+    return (
+      <span
+        className="flex items-center gap-0.5 text-[9px] font-bold text-emerald-300 flex-shrink-0"
+        title="완료"
+      >
+        <Check size={11} strokeWidth={3} />
+      </span>
+    )
+  }
+  if (state === 'active') {
+    return (
+      <span className="relative flex items-center justify-center w-2.5 h-2.5 flex-shrink-0" title="진행중">
+        <span className="absolute inset-0 rounded-full animate-ping opacity-60" style={{ background: accent }} />
+        <span className="relative w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
+      </span>
+    )
+  }
+  return (
+    <span
+      className="w-2 h-2 rounded-full border border-slate-600 flex-shrink-0"
+      title="대기"
+    />
   )
 }

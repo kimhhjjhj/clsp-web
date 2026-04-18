@@ -24,11 +24,10 @@ import CurrentProjectSection from './CurrentProjectSection'
 
 interface NavItem { href: string; label: string; icon: typeof LayoutDashboard }
 
-const GLOBAL_ITEMS: NavItem[] = [
-  { href: '/',         label: '대시보드',        icon: LayoutDashboard },
-  { href: '/projects', label: '프로젝트',        icon: FolderKanban },
-]
-
+// 전역 메뉴 순서: 대시보드 → 사업 초기 검토 → 프로젝트
+// (기획·검토가 앞단, 저장된 프로젝트 운영이 뒤)
+const DASH_ITEM: NavItem = { href: '/', label: '대시보드', icon: LayoutDashboard }
+const PROJECTS_ITEM: NavItem = { href: '/projects', label: '프로젝트', icon: FolderKanban }
 const BID_ITEM: NavItem = { href: '/bid', label: '사업 초기 검토', icon: ClipboardCheck }
 const BID_SUB: { tab: string; label: string; icon: typeof DollarSign }[] = [
   { tab: 'cost',     label: '공사비',   icon: DollarSign },
@@ -120,18 +119,15 @@ export default function Sidebar({ onClose }: Props) {
 
       {/* 본문 — 스크롤 */}
       <nav className="sidebar-scroll flex-1 px-2 py-3 overflow-y-auto overscroll-contain">
-        {/* 전역 메뉴 (항상 표시) */}
+        {/* 전역 메뉴 — 대시보드 / 사업 초기 검토(토글) / 프로젝트 */}
         <NavGroup>
-          {GLOBAL_ITEMS.map(item => (
-            <SidebarLink
-              key={item.href}
-              item={item}
-              active={item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)}
-              onNavigate={onClose}
-            />
-          ))}
+          <SidebarLink
+            item={DASH_ITEM}
+            active={pathname === '/'}
+            onNavigate={onClose}
+          />
 
-          {/* 사업 초기 검토 — 토글 서브메뉴 */}
+          {/* 사업 초기 검토 — 토글 서브메뉴, 대시보드 바로 아래 */}
           <CollapsibleItem
             item={BID_ITEM}
             active={isBid}
@@ -162,12 +158,18 @@ export default function Sidebar({ onClose }: Props) {
               })}
             </div>
           )}
+
+          <SidebarLink
+            item={PROJECTS_ITEM}
+            active={pathname.startsWith('/projects')}
+            onNavigate={onClose}
+          />
         </NavGroup>
 
         {/* 현재 프로젝트 섹션 — 토글 */}
         {currentProject && (
           <Section
-            label="진행 단계"
+            label="현재 프로젝트"
             open={projectOpen}
             onToggle={() => setProjectOpen()}
             accent="#3b82f6"
