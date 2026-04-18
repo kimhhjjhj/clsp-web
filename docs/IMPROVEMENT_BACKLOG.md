@@ -34,7 +34,9 @@
   - 적용: 대시보드 레이아웃 Provider + ProcessMapBoard + DailyReportForm (저장/에러/복원/폐기 등)
   - 다른 패널들(RiskPanel, PhotoUpload 등)의 alert/confirm은 점진 마이그레이션 예정
   - 완료 조건: 일보 저장/프로세스맵 저장/권한 거부 모두 토스트 표시
-- [ ] **로딩 스켈레톤** — 빈 스피너 대신 레이아웃 그대로의 스켈레톤 (프로젝트 목록·상세·일보)
+- [x] **로딩 스켈레톤** — 빈 스피너 대신 레이아웃 그대로의 스켈레톤 (프로젝트 목록·상세·일보)
+  - 구현: `components/common/Skeleton.tsx` (Skeleton + SkeletonText/Card/Table/KpiGrid/List 프리셋)
+  - 적용: 대시보드 프로젝트 목록, Stage1 CPM 계산 중, Stage2 CPM 계산 중, 일보 상세 페이지 초기 로딩
   - 완료 조건: 첫 로드 시 점프 없는 skeleton→content 전환
 - [x] **빈 상태(empty state) 가이드** — 프로젝트 없음/일보 없음/CPM 미계산 등 각 상황에 맞는 다음 액션 버튼
   - 구현: `components/common/EmptyState.tsx` (icon·title·description·actions)

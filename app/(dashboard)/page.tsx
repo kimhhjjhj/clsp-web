@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Plus, Building2, ChevronRight, Trash2, LayoutGrid, TrendingUp, Upload } from 'lucide-react'
 import EmptyState from '@/components/common/EmptyState'
+import { SkeletonList, SkeletonKpiGrid } from '@/components/common/Skeleton'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -129,8 +130,8 @@ export default function DashboardPage() {
 
         {/* 프로젝트 목록 */}
         {loading ? (
-          <div className="text-center text-muted-foreground py-20 bg-card border border-t-0 border-border rounded-b-lg">
-            불러오는 중...
+          <div className="bg-card border border-t-0 border-border rounded-b-lg p-3">
+            <SkeletonList rows={5} />
           </div>
         ) : projects.length === 0 ? (
           <div className="bg-card border border-t-0 border-border rounded-b-lg">

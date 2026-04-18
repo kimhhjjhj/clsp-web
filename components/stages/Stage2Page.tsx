@@ -8,6 +8,7 @@ import BaselineImportPanel from '@/components/precon/BaselineImportPanel'
 import ScenarioDashboard from '@/components/precon/ScenarioDashboard'
 import BaselineCompare from '@/components/precon/BaselineCompare'
 import ProcessMapBoard from '@/components/precon/ProcessMapBoard'
+import { SkeletonKpiGrid } from '@/components/common/Skeleton'
 import type { CPMSummary } from '@/lib/types'
 
 interface RO {
@@ -179,9 +180,12 @@ export default function Stage2Page({ projectId }: Props) {
             </div>
           )}
           {calculating && (
-            <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-3 text-sm text-gray-600">
-              <Loader2 size={14} className="animate-spin text-blue-600" />
-              CPM 계산 중...
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Loader2 size={12} className="animate-spin text-blue-600" />
+                CPM 계산 중...
+              </div>
+              <SkeletonKpiGrid count={4} />
             </div>
           )}
           {cpmResult && (

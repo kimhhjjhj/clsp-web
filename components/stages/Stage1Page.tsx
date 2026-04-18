@@ -11,6 +11,7 @@ import ProductivityPanel from '@/components/analysis/ProductivityPanel'
 import CompanyStandardsPanel from '@/components/analysis/CompanyStandardsPanel'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
 import EmptyState from '@/components/common/EmptyState'
+import { Skeleton, SkeletonKpiGrid, SkeletonTable } from '@/components/common/Skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -299,9 +300,14 @@ export default function Stage1Page({ projectId, project }: Props) {
         )}
 
         {calculating && (
-          <div className="flex flex-col items-center justify-center h-full">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-sm text-gray-500">WBS 자동 생성 및 CPM 계산 중...</p>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              WBS 자동 생성 및 CPM 계산 중...
+            </div>
+            <SkeletonKpiGrid count={3} />
+            <Skeleton className="h-6 w-1/4" />
+            <SkeletonTable rows={8} cols={6} />
           </div>
         )}
 

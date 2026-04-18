@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import DailyReportForm, { DailyReportData, EMPTY_DATA } from '@/components/construction/DailyReportForm'
+import { Skeleton, SkeletonKpiGrid, SkeletonTable } from '@/components/common/Skeleton'
 
 export default function EditDailyReportPage({
   params,
@@ -36,8 +37,12 @@ export default function EditDailyReportPage({
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="p-6 space-y-4 max-w-6xl">
+        <Skeleton className="h-8 w-1/3" />
+        <Skeleton className="h-4 w-1/2" />
+        <SkeletonKpiGrid count={4} />
+        <Skeleton className="h-5 w-1/4 mt-4" />
+        <SkeletonTable rows={6} cols={5} />
       </div>
     )
   }
