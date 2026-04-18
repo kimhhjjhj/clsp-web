@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import Link from 'next/link'
-import type { LucideIcon } from 'lucide-react'
+import { createElement, isValidElement, type ComponentType } from 'react'
 
 export interface EmptyStateAction {
   label: string
@@ -18,11 +18,20 @@ export interface EmptyStateAction {
 }
 
 interface Props {
-  icon: LucideIcon | React.ReactNode
+  icon: ComponentType<{ size?: number; className?: string }> | React.ReactNode
   title: string
   description?: string
   actions?: EmptyStateAction[]
-  compact?: boolean         // 작은 사이즈 (패널 내부)
+  compact?: boolean
+}
+
+function renderIcon(icon: Props['icon'], size: number): React.ReactNode {
+  if (!icon) return null
+  if (isValidElement(icon)) return icon
+  if (typeof icon === 'function' || (typeof icon === 'object' && icon !== null && '$$typeof' in (icon as object))) {
+    return createElement(icon as ComponentType<{ size?: number }>, { size })
+  }
+  return icon as React.ReactNode
 }
 
 export default function EmptyState({ icon: IconOrElement, title, description, actions, compact }: Props) {
@@ -31,12 +40,7 @@ export default function EmptyState({ icon: IconOrElement, title, description, ac
     ? 'w-12 h-12 bg-gray-100 text-gray-400'
     : 'w-16 h-16 bg-blue-50 text-blue-400'
   const iconSize = compact ? 22 : 28
-  const icon = typeof IconOrElement === 'function'
-    ? (() => {
-        const Comp = IconOrElement as LucideIcon
-        return <Comp size={iconSize} />
-      })()
-    : (IconOrElement as React.ReactNode)
+  const icon = renderIcon(IconOrElement, iconSize)
 
   return (
     <div className={`flex flex-col items-center justify-center text-center px-6 ${pad}`}>
