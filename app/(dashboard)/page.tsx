@@ -318,7 +318,7 @@ function KpiCard({
   loading, icon: Icon, iconBg, iconColor, label, value, unit, sub, href, accent,
 }: {
   loading: boolean
-  icon: React.ComponentType<{ size?: number; className?: string }>
+  icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
   iconBg: string
   iconColor: string
   label: string
@@ -329,23 +329,23 @@ function KpiCard({
   accent?: string   // hex color — 좌측 상단 컬러 띠 (상태 강조용)
 }) {
   const inner = (
-    <div className={`card-elevated relative p-4 overflow-hidden ${href ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}>
+    <div className={`card-elevated relative p-5 overflow-hidden ${href ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}>
       {accent && <div className="absolute top-0 left-0 right-0 h-1" style={{ background: accent }} />}
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
-        <div className={`w-7 h-7 rounded-md flex items-center justify-center ${iconBg}`}>
-          <Icon size={13} className={iconColor} />
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconBg} ring-1 ring-inset ring-black/5`}>
+          <Icon size={16} className={iconColor} strokeWidth={2.25} />
         </div>
       </div>
       {loading ? (
-        <Skeleton className="h-8 w-1/2" />
+        <Skeleton className="h-9 w-1/2" />
       ) : (
-        <p className="text-2xl font-bold text-gray-900">
+        <p className="text-3xl font-bold text-slate-900 tracking-tight leading-none">
           {value}
-          {unit && <span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>}
+          {unit && <span className="text-base font-medium text-slate-400 ml-1.5">{unit}</span>}
         </p>
       )}
-      {sub && <p className="text-[10px] text-gray-400 mt-1 line-clamp-1">{sub}</p>}
+      {sub && <p className="text-[11px] text-slate-500 mt-2 line-clamp-1">{sub}</p>}
     </div>
   )
   return href ? <Link href={href} className="no-underline">{inner}</Link> : inner
