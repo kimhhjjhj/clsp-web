@@ -260,11 +260,26 @@ function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id
   const startDate = p.startDate ? new Date(p.startDate).toLocaleDateString('ko-KR') : null
   const status = getProjectStatus(p)
   const info = STATUS_META[status]
+  const isCompleted = status === 'completed'
 
   return (
-    <div className="group bg-white rounded-xl border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden flex flex-col">
+    <div
+      className={`group relative bg-white rounded-xl border transition-all overflow-hidden flex flex-col ${
+        isCompleted
+          ? 'border-gray-200 hover:border-slate-300 hover:shadow-md opacity-90 hover:opacity-100'
+          : 'border-gray-200 hover:shadow-lg hover:-translate-y-0.5'
+      }`}
+    >
       {/* 상단 컬러 띠 — 상태 시각화 */}
       <div className="h-1 w-full" style={{ background: info.color }} />
+
+      {/* 진행중: 우상단 pulse 도트 */}
+      {status === 'active' && (
+        <span className="absolute top-3 right-3 flex h-2 w-2 z-10">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        </span>
+      )}
 
       <Link href={`/projects/${p.id}`} className="block p-4 flex-1 no-underline">
         <div className="flex items-start justify-between mb-3 gap-2">
