@@ -1,129 +1,85 @@
 'use client'
 
+// ═══════════════════════════════════════════════════════════
+// 생산성 DB — 공종별 실전 벤치마크
+// - '인일' 같은 엔지니어링 단위 대신 '평균 며칠', '하루 몇 명'
+//   같은 현장 친화적 표현
+// - 검색 + 정렬 + 카드 그리드
+// - 공종 클릭 시 상세 패널 (협력사, 프로젝트)
+// ═══════════════════════════════════════════════════════════
+
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
-  TrendingUp, Search, X, CheckCircle2, Clock, Filter, Download,
-  BarChart3, Database, Building2, ExternalLink,
+  Database, Search, X, SortAsc, Users, Calendar, Building2,
+  Download, ExternalLink, ChevronRight, TrendingUp, CheckCircle2, Clock, Inbox,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
-import { SkeletonTable } from '@/components/common/Skeleton'
+import { Skeleton } from '@/components/common/Skeleton'
 
-interface Standard {
-  id: string
+interface TradeInsight {
   trade: string
-  unit: string
-  value: number
-  sampleCount: number
-  lastUpdated: string
+  totalManDays: number
+  activeDays: number          // 이 공종이 실제 수행된 날 수 (전사 합산)
+  companies: number           // 참여한 협력사 수
+  projectCount: number        // 이 공종이 등장한 프로젝트 수
+  avgDaily: number            // 하루 평균 투입 인원
+  avgDaysPerProject: number   // 프로젝트당 평균 수행 일수 (activeDays / projectCount)
 }
 
-interface Candidate {
-  trade: string
-  unit: string
-  avgValue: number
-  proposalCount: number
-  totalSamples: number
-  projectCount: number
+interface ApiResponse {
+  overall: {
+    projectCount: number
+    totalReports: number
+    totalManDays: number
+    uniqueTrades: number
+    uniqueCompanies: number
+  }
+  topTrades: TradeInsight[]
 }
 
-type UnitFilter = 'all' | 'man/day' | 'mandays/ton' | 'mandays/m3'
-type StatusFilter = 'all' | 'approved' | 'pending'
-
-const UNIT_LABEL: Record<string, string> = {
-  'man/day': '일평균 투입(명/일)',
-  'mandays/ton': '생산성(인일/톤)',
-  'mandays/m3': '생산성(인일/m³)',
-}
+type SortKey = 'frequency' | 'duration' | 'intensity' | 'name'
 
 export default function StandardsPage() {
-  const [standards, setStandards] = useState<Standard[]>([])
-  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [data, setData] = useState<ApiResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [unitFilter, setUnitFilter] = useState<UnitFilter>('all')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [sortKey, setSortKey] = useState<SortKey>('frequency')
+  const [selected, setSelected] = useState<TradeInsight | null>(null)
 
   useEffect(() => {
-    fetch('/api/company-standards?includeProposals=1')
+    fetch('/api/analytics')
       .then(r => r.json())
-      .then(data => {
-        setStandards(data.standards ?? [])
-        setCandidates(data.candidates ?? [])
-        setLoading(false)
-      })
+      .then(d => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
-  // 승인 + 대기 통합 테이블
-  const rows = useMemo(() => {
-    const m = new Map<string, {
-      trade: string
-      unit: string
-      approvedValue?: number
-      approvedSample?: number
-      approvedAt?: string
-      candidateValue?: number
-      candidateSamples?: number
-      candidateProjects?: number
-      status: 'approved' | 'pending'
-    }>()
-    for (const s of standards) {
-      m.set(`${s.trade}|${s.unit}`, {
-        trade: s.trade, unit: s.unit,
-        approvedValue: s.value,
-        approvedSample: s.sampleCount,
-        approvedAt: s.lastUpdated,
-        status: 'approved',
-      })
-    }
-    for (const c of candidates) {
-      const key = `${c.trade}|${c.unit}`
-      const cur = m.get(key) ?? { trade: c.trade, unit: c.unit, status: 'pending' as const }
-      cur.candidateValue = c.avgValue
-      cur.candidateSamples = c.totalSamples
-      cur.candidateProjects = c.projectCount
-      if (cur.approvedValue === undefined) cur.status = 'pending'
-      m.set(key, cur)
-    }
-    return Array.from(m.values())
-  }, [standards, candidates])
+  const trades = data?.topTrades ?? []
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return rows.filter(r => {
-      if (unitFilter !== 'all' && r.unit !== unitFilter) return false
-      if (statusFilter !== 'all' && r.status !== statusFilter) return false
-      if (q && !r.trade.toLowerCase().includes(q)) return false
-      return true
-    }).sort((a, b) => {
-      // 승인 먼저, 그 안에서 공종명순
-      if (a.status !== b.status) return a.status === 'approved' ? -1 : 1
-      return a.trade.localeCompare(b.trade, 'ko')
+    const rows = q
+      ? trades.filter(t => t.trade.toLowerCase().includes(q))
+      : trades
+    return [...rows].sort((a, b) => {
+      if (sortKey === 'name') return a.trade.localeCompare(b.trade, 'ko')
+      if (sortKey === 'duration') return b.avgDaysPerProject - a.avgDaysPerProject
+      if (sortKey === 'intensity') return b.avgDaily - a.avgDaily
+      return b.totalManDays - a.totalManDays // frequency = 총 누적 규모
     })
-  }, [rows, query, unitFilter, statusFilter])
-
-  const stats = {
-    approved: standards.length,
-    pending: candidates.filter(c => !standards.some(s => s.trade === c.trade && s.unit === c.unit)).length,
-    totalSamples: candidates.reduce((s, c) => s + c.totalSamples, 0),
-    projects: Math.max(0, ...candidates.map(c => c.projectCount)),
-  }
+  }, [trades, query, sortKey])
 
   function downloadCsv() {
-    const header = '공종,단위,승인값,승인샘플,제안평균,총샘플,관여프로젝트수,상태'
-    const rows = filtered.map(r => [
-      r.trade, r.unit,
-      r.approvedValue ?? '', r.approvedSample ?? '',
-      r.candidateValue ?? '', r.candidateSamples ?? '',
-      r.candidateProjects ?? '', r.status,
+    const header = '공종명,평균기간(일/프로젝트),하루평균투입(명),참여프로젝트수,협력사수,총기록일'
+    const lines = filtered.map(t => [
+      t.trade, t.avgDaysPerProject, t.avgDaily, t.projectCount, t.companies, t.activeDays,
     ].join(','))
-    const csv = '\ufeff' + [header, ...rows].join('\n')
+    const csv = '\ufeff' + [header, ...lines].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `company-standards-${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = `productivity-db-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -133,7 +89,7 @@ export default function StandardsPage() {
       <PageHeader
         icon={Database}
         title="생산성 DB"
-        subtitle="과거 프로젝트 실적에서 축적된 공종별 평균 투입·생산성 표준"
+        subtitle="공종별 실전 벤치마크 — 우리 회사 현장 데이터에서 뽑은 평균 기간·투입 규모"
         accent="blue"
         actions={
           <>
@@ -141,11 +97,11 @@ export default function StandardsPage() {
               onClick={downloadCsv}
               className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-white/15 bg-white/5 text-sm font-semibold text-slate-200 hover:bg-white/10"
             >
-              <Download size={14} /> CSV 내보내기
+              <Download size={14} /> CSV
             </button>
             <Link
               href="/admin/productivity"
-              className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800"
+              className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-white text-slate-900 text-sm font-semibold hover:bg-slate-100"
             >
               <ExternalLink size={13} /> <span className="hidden sm:inline">관리자 승인</span><span className="sm:hidden">승인</span>
             </Link>
@@ -154,23 +110,47 @@ export default function StandardsPage() {
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-5">
-        {/* 요약 카드 */}
+        {/* KPI */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Stat label="승인 표준" value={stats.approved} unit="종" icon={<CheckCircle2 size={14} className="text-emerald-600" />} bg="bg-emerald-50" />
-          <Stat label="승인 대기" value={stats.pending} unit="종" icon={<Clock size={14} className="text-amber-600" />} bg="bg-amber-50" />
-          <Stat label="누적 활동일" value={stats.totalSamples.toLocaleString()} unit="일" icon={<BarChart3 size={14} className="text-blue-600" />} bg="bg-blue-50" />
-          <Stat label="기여 프로젝트" value={stats.projects} unit="개" icon={<Building2 size={14} className="text-purple-600" />} bg="bg-purple-50" />
+          <Stat
+            label="축적된 공종"
+            value={data?.overall.uniqueTrades ?? 0}
+            unit="종"
+            icon={<TrendingUp size={16} className="text-blue-600" />}
+            bg="bg-blue-50"
+          />
+          <Stat
+            label="참여 프로젝트"
+            value={data?.overall.projectCount ?? 0}
+            unit="개"
+            icon={<Building2 size={16} className="text-emerald-600" />}
+            bg="bg-emerald-50"
+          />
+          <Stat
+            label="현장 기록일"
+            value={(data?.overall.totalReports ?? 0).toLocaleString()}
+            unit="일"
+            icon={<Calendar size={16} className="text-orange-600" />}
+            bg="bg-orange-50"
+          />
+          <Stat
+            label="거래 협력사"
+            value={data?.overall.uniqueCompanies ?? 0}
+            unit="개"
+            icon={<Users size={16} className="text-violet-600" />}
+            bg="bg-violet-50"
+          />
         </div>
 
-        {/* 검색·필터 */}
+        {/* 검색·정렬 */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="relative flex-1 min-w-[220px] max-w-md">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="공종명 검색 (예: 철근, 형틀, 내장)"
-              className="w-full pl-9 pr-8 h-9 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              placeholder="공종명 검색 (예: 철근, 형틀, 창호)"
+              className="w-full pl-9 pr-8 h-10 bg-white border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
             {query && (
               <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
@@ -178,126 +158,212 @@ export default function StandardsPage() {
               </button>
             )}
           </div>
-
-          <div className="inline-flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5">
-            {(['all', 'approved', 'pending'] as const).map(s => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`h-7 px-3 rounded text-xs font-semibold transition-colors ${
-                  statusFilter === s ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >{s === 'all' ? '전체' : s === 'approved' ? '승인' : '대기'}</button>
-            ))}
-          </div>
-
-          <div className="inline-flex items-center gap-1.5 text-xs text-gray-500">
-            <Filter size={12} className="text-gray-400" />
+          <div className="inline-flex items-center gap-1 text-xs text-gray-500 ml-auto">
+            <SortAsc size={12} className="text-gray-400" />
             <select
-              value={unitFilter}
-              onChange={e => setUnitFilter(e.target.value as UnitFilter)}
+              value={sortKey}
+              onChange={e => setSortKey(e.target.value as SortKey)}
               className="h-9 px-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
             >
-              <option value="all">모든 단위</option>
-              <option value="man/day">일평균 투입 (명/일)</option>
-              <option value="mandays/ton">생산성 (인일/톤)</option>
-              <option value="mandays/m3">생산성 (인일/m³)</option>
+              <option value="frequency">많이 수행된 순</option>
+              <option value="duration">평균 기간 긴 순</option>
+              <option value="intensity">투입 많은 순</option>
+              <option value="name">이름순</option>
             </select>
           </div>
-
-          <span className="ml-auto text-xs text-gray-500 hidden sm:block">
-            {filtered.length}종 표시
-          </span>
+          <span className="text-xs text-gray-500 hidden sm:block">{filtered.length}종</span>
         </div>
 
-        {/* 테이블 */}
-        {loading ? (
-          <SkeletonTable rows={10} cols={6} />
-        ) : filtered.length === 0 ? (
-          <div className="card-elevated">
-            <EmptyState
-              icon={Database}
-              title={rows.length === 0 ? '아직 축적된 생산성 데이터가 없습니다' : '조건에 맞는 결과가 없습니다'}
-              description={rows.length === 0 ? '프로젝트에 일보를 쌓고 제안→승인 과정을 거치면 자동으로 여기에 축적됩니다.' : '검색어나 필터를 변경해보세요.'}
-              actions={rows.length === 0 ? [
-                { label: '일보 임포트', href: '/import', variant: 'primary' },
-              ] : [
-                { label: '초기화', onClick: () => { setQuery(''); setUnitFilter('all'); setStatusFilter('all') }, variant: 'secondary' },
-              ]}
-            />
+        {/* 공종 카드 그리드 + 상세 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[0, 1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-32" />)}
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="card-elevated">
+                <EmptyState
+                  icon={Inbox}
+                  title={trades.length === 0 ? '아직 축적된 공종 데이터가 없습니다' : '검색 결과가 없습니다'}
+                  description={trades.length === 0
+                    ? '프로젝트에 일보를 쌓으면 자동으로 공종별 벤치마크가 생성됩니다.'
+                    : `"${query}"에 해당하는 공종이 없습니다. 다른 키워드로 검색해보세요.`}
+                  actions={trades.length === 0 ? [
+                    { label: '엑셀 일보 임포트', href: '/import', variant: 'primary' },
+                  ] : [
+                    { label: '검색 초기화', onClick: () => setQuery(''), variant: 'secondary' },
+                  ]}
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filtered.map(t => (
+                  <TradeCard
+                    key={t.trade}
+                    trade={t}
+                    selected={selected?.trade === t.trade}
+                    onClick={() => setSelected(selected?.trade === t.trade ? null : t)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="card-elevated overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                    <th className="text-left px-4 py-2.5">상태</th>
-                    <th className="text-left px-4 py-2.5">공종</th>
-                    <th className="text-left px-4 py-2.5">단위</th>
-                    <th className="text-right px-4 py-2.5">승인 표준</th>
-                    <th className="text-right px-4 py-2.5">제안 평균</th>
-                    <th className="text-right px-4 py-2.5 hidden sm:table-cell">샘플</th>
-                    <th className="text-right px-4 py-2.5 hidden lg:table-cell">프로젝트</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filtered.map(r => (
-                    <tr key={`${r.trade}|${r.unit}`} className="hover:bg-gray-50">
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        {r.status === 'approved' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
-                            <CheckCircle2 size={10} /> 승인
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-700">
-                            <Clock size={10} /> 대기
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 font-semibold text-gray-900">{r.trade}</td>
-                      <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{UNIT_LABEL[r.unit] ?? r.unit}</td>
-                      <td className="px-4 py-2.5 text-right font-mono">
-                        {r.approvedValue !== undefined ? (
-                          <span className="font-bold text-emerald-700">{r.approvedValue}</span>
-                        ) : (
-                          <span className="text-gray-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-mono">
-                        {r.candidateValue !== undefined ? (
-                          <span className={r.status === 'approved' ? 'text-gray-400' : 'text-amber-700 font-semibold'}>
-                            {r.candidateValue}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-xs text-gray-500 hidden sm:table-cell">
-                        {(r.candidateSamples ?? r.approvedSample ?? 0).toLocaleString()}일
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-xs text-gray-500 hidden lg:table-cell">
-                        {r.candidateProjects ?? (r.approvedValue !== undefined ? 1 : 0)}개
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
-        {/* 하단 설명 */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900">
-          <p className="font-semibold mb-1">생산성 DB는 어떻게 만들어지나요?</p>
-          <ol className="list-decimal list-inside space-y-0.5 text-blue-800">
-            <li>프로젝트에 일보를 쌓음 (공종·회사·투입 인원·자재)</li>
-            <li>4단계 분석에서 &apos;회사 표준으로 제안&apos; 버튼 → 제안(pending) 생성</li>
-            <li>관리자가 검토·승인 → 가중평균으로 회사 표준(approved)에 누적</li>
-            <li>신규 프로젝트 1단계 CPM에서 이 DB를 참고로 사용</li>
-          </ol>
+          {/* 우측 상세 패널 */}
+          <div className="lg:col-span-1">
+            {selected ? (
+              <TradeDetail trade={selected} onClose={() => setSelected(null)} />
+            ) : (
+              <div className="card-elevated p-5 text-center text-sm text-gray-500 sticky top-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-violet-50 border border-blue-100/50 flex items-center justify-center mx-auto mb-3">
+                  <Database size={20} className="text-blue-500" />
+                </div>
+                <p className="font-semibold text-gray-700">공종을 선택하세요</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  카드를 클릭하면 해당 공종의<br />협력사·프로젝트 이력이 여기에 표시됩니다
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 설명 */}
+        <div className="card-elevated p-4 text-xs text-gray-600 leading-relaxed">
+          <p className="font-semibold text-gray-900 mb-1">💡 이 데이터는 어떻게 만들어지나요?</p>
+          <p>
+            모든 프로젝트의 <strong>공사 일보(투입 인원)</strong>에서 공종·협력사·투입 규모를 자동 집계합니다.
+            프로젝트가 늘어날수록 더 정확한 벤치마크가 됩니다.
+            신규 프로젝트의 CPM 산정 시 <strong>회사 표준</strong>으로 참조되며,
+            관리자 승인을 거쳐 <Link href="/admin/productivity" className="text-blue-600 hover:underline">승인된 표준</Link>은 고정값으로 사용됩니다.
+          </p>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ────────────────────────────────────────────────
+// 공종 카드 — 평균 기간·투입 규모 한눈에
+// ────────────────────────────────────────────────
+function TradeCard({
+  trade: t, selected, onClick,
+}: { trade: TradeInsight; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`card-elevated text-left p-4 transition-all ${selected ? 'ring-2 ring-blue-500' : 'hover:-translate-y-0.5'}`}
+    >
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 flex-1">{t.trade}</h3>
+        <span className="text-[10px] font-semibold text-gray-400 flex-shrink-0">
+          {t.projectCount}개 현장
+        </span>
+      </div>
+
+      {/* 핵심 지표 2개 */}
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="bg-blue-50/60 rounded-lg px-2.5 py-2">
+          <p className="text-[10px] text-blue-700 font-semibold mb-0.5">평균 기간</p>
+          <p className="text-lg font-bold text-blue-900 font-mono leading-none">
+            {t.avgDaysPerProject}
+            <span className="text-xs font-normal text-blue-500 ml-0.5">일</span>
+          </p>
+        </div>
+        <div className="bg-emerald-50/60 rounded-lg px-2.5 py-2">
+          <p className="text-[10px] text-emerald-700 font-semibold mb-0.5">하루 평균</p>
+          <p className="text-lg font-bold text-emerald-900 font-mono leading-none">
+            {t.avgDaily}
+            <span className="text-xs font-normal text-emerald-500 ml-0.5">명</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-gray-100">
+        <span className="flex items-center gap-1">
+          <Users size={10} /> {t.companies}개 협력사
+        </span>
+        <span className="flex items-center gap-1 text-gray-400">
+          <Calendar size={10} /> 누적 {t.activeDays}일
+        </span>
+      </div>
+    </button>
+  )
+}
+
+// ────────────────────────────────────────────────
+// 공종 상세 패널
+// ────────────────────────────────────────────────
+function TradeDetail({ trade: t, onClose }: { trade: TradeInsight; onClose: () => void }) {
+  return (
+    <div className="card-elevated p-5 sticky top-4">
+      <div className="flex items-start justify-between gap-2 mb-4">
+        <h3 className="font-bold text-gray-900 text-base leading-tight flex-1">{t.trade}</h3>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-700 p-1 -mt-1 -mr-1"
+          aria-label="닫기"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* 핵심 지표 */}
+      <div className="space-y-3 mb-5">
+        <BigMetric label="프로젝트당 평균 기간" value={t.avgDaysPerProject} unit="일" color="text-blue-700" />
+        <BigMetric label="하루 평균 투입 인원" value={t.avgDaily} unit="명" color="text-emerald-700" />
+      </div>
+
+      {/* 세부 카운트 */}
+      <dl className="grid grid-cols-2 gap-3 text-xs border-t border-gray-100 pt-4">
+        <div>
+          <dt className="text-gray-500 text-[10px] uppercase tracking-wider mb-0.5">참여 프로젝트</dt>
+          <dd className="font-bold text-gray-900 font-mono">{t.projectCount}개</dd>
+        </div>
+        <div>
+          <dt className="text-gray-500 text-[10px] uppercase tracking-wider mb-0.5">거래 협력사</dt>
+          <dd className="font-bold text-gray-900 font-mono">{t.companies}개</dd>
+        </div>
+        <div>
+          <dt className="text-gray-500 text-[10px] uppercase tracking-wider mb-0.5">전사 누적 기록</dt>
+          <dd className="font-bold text-gray-900 font-mono">{t.activeDays}일</dd>
+        </div>
+        <div>
+          <dt className="text-gray-500 text-[10px] uppercase tracking-wider mb-0.5">누적 투입</dt>
+          <dd className="font-bold text-gray-900 font-mono">{t.totalManDays.toLocaleString()}<span className="text-[9px] text-gray-400 ml-0.5">인일</span></dd>
+        </div>
+      </dl>
+
+      <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col gap-2">
+        <Link
+          href={`/analytics`}
+          className="flex items-center justify-between text-xs text-blue-600 hover:bg-blue-50 rounded-md px-2 py-1.5 transition-colors no-underline"
+        >
+          <span>전사 분석에서 보기</span>
+          <ChevronRight size={12} />
+        </Link>
+        <Link
+          href={`/companies?q=${encodeURIComponent(t.trade)}`}
+          className="flex items-center justify-between text-xs text-blue-600 hover:bg-blue-50 rounded-md px-2 py-1.5 transition-colors no-underline"
+        >
+          <span>이 공종 담당 협력사 찾기</span>
+          <ChevronRight size={12} />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function BigMetric({
+  label, value, unit, color,
+}: { label: string; value: number; unit: string; color: string }) {
+  return (
+    <div className="flex items-end justify-between gap-2 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className={`text-xl font-bold font-mono ${color}`}>
+        {value}
+        <span className="text-xs font-normal text-gray-400 ml-1">{unit}</span>
+      </span>
     </div>
   )
 }
@@ -306,13 +372,16 @@ function Stat({
   label, value, unit, icon, bg,
 }: { label: string; value: number | string; unit: string; icon: React.ReactNode; bg: string }) {
   return (
-    <div className="card-elevated p-4">
-      <div className="flex items-center justify-between mb-1.5">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
-        <div className={`w-7 h-7 rounded-md ${bg} flex items-center justify-center`}>{icon}</div>
+    <div className="card-elevated relative p-5 overflow-hidden">
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${bg} ring-1 ring-inset ring-black/5`}>
+          {icon}
+        </div>
       </div>
-      <p className="text-2xl font-bold text-gray-900">
-        {value}<span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>
+      <p className="text-3xl font-bold text-slate-900 tracking-tight leading-none">
+        {value}
+        <span className="text-base font-medium text-slate-400 ml-1.5">{unit}</span>
       </p>
     </div>
   )

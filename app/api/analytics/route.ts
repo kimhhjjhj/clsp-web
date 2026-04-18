@@ -22,7 +22,7 @@ export async function GET(_req: NextRequest) {
   ])
 
   // 공종별 집계
-  const tradeMap = new Map<string, { total: number; days: Set<string>; companies: Set<string> }>()
+  const tradeMap = new Map<string, { total: number; days: Set<string>; companies: Set<string>; projects: Set<string> }>()
   // 월별 집계
   const monthMap = new Map<string, { total: number; days: Set<string> }>()
   // 요일별
@@ -56,10 +56,11 @@ export async function GET(_req: NextRequest) {
       const companyKey = normalizeCompany(m.company)
       if (companyKey) companySet.add(companyKey)
       if (tradeKey) {
-        const cur = tradeMap.get(tradeKey) ?? { total: 0, days: new Set<string>(), companies: new Set<string>() }
+        const cur = tradeMap.get(tradeKey) ?? { total: 0, days: new Set<string>(), companies: new Set<string>(), projects: new Set<string>() }
         cur.total += m.today
         cur.days.add(date)
         if (companyKey) cur.companies.add(companyKey)
+        cur.projects.add(r.projectId)
         tradeMap.set(tradeKey, cur)
       }
     }
@@ -105,17 +106,19 @@ export async function GET(_req: NextRequest) {
     for (const x of eq) if (x.today > 0) equipmentMap.set(x.name, (equipmentMap.get(x.name) ?? 0) + x.today)
   }
 
-  // 공종 상위 20
+  // 공종 상위 50 (생산성 DB 페이지용으로 확장)
   const topTrades = Array.from(tradeMap.entries())
     .map(([trade, v]) => ({
       trade,
       totalManDays: Math.round(v.total * 10) / 10,
       activeDays: v.days.size,
       companies: v.companies.size,
+      projectCount: v.projects.size,
       avgDaily: v.days.size > 0 ? Math.round((v.total / v.days.size) * 10) / 10 : 0,
+      avgDaysPerProject: v.projects.size > 0 ? Math.round(v.days.size / v.projects.size) : 0,
     }))
     .sort((a, b) => b.totalManDays - a.totalManDays)
-    .slice(0, 20)
+    .slice(0, 50)
 
   const monthlyTrend = Array.from(monthMap.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
