@@ -338,28 +338,61 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
           </div>
 
           {/* 우측 요약 */}
-          <div className="xl:col-span-4">
+          <div className="xl:col-span-4 space-y-4">
+            {/* 핵심 지표 3종 */}
+            <div className="grid grid-cols-3 gap-2">
+              <MetricTile
+                label="총 공기"
+                value={totalDuration > 0 ? totalDuration : '—'}
+                unit={totalDuration > 0 ? '일' : ''}
+                accent="#2563eb"
+              />
+              <MetricTile
+                label="연면적"
+                value={project.bldgArea ? project.bldgArea.toLocaleString() : '—'}
+                unit={project.bldgArea ? '㎡' : ''}
+                accent="#ea580c"
+              />
+              <MetricTile
+                label="지상 층수"
+                value={project.ground ?? '—'}
+                unit="층"
+                accent="#16a34a"
+              />
+            </div>
+
+            {/* 상세 정보 */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900">프로젝트 개요</h3>
-                <p className="text-[10px] text-gray-400 mt-0.5">Project Metrics</p>
+              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">프로젝트 개요</h3>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Project Metrics</p>
+                </div>
+                <Link
+                  href={`/projects/${id}/edit`}
+                  className="text-[10px] text-gray-400 hover:text-blue-600 font-semibold no-underline"
+                >
+                  수정 →
+                </Link>
               </div>
               <dl className="divide-y divide-gray-100">
                 <DetailRow label="발주처" value={project.client} />
                 <DetailRow label="시공사" value={project.contractor} />
                 <DetailRow label="공사 위치" value={project.location} />
                 <DetailRow label="대지면적" value={project.siteArea ? `${project.siteArea.toLocaleString()} ㎡` : undefined} />
-                <DetailRow label="연면적" value={project.bldgArea ? `${project.bldgArea.toLocaleString()} ㎡` : undefined} />
-                <DetailRow label="층수" value={project.ground !== undefined ? `지상 ${project.ground}층${project.basement ? ` / 지하 ${project.basement}층` : ''}` : undefined} />
+                <DetailRow
+                  label="층수"
+                  value={project.ground !== undefined ? `지상 ${project.ground}층${project.basement ? ` / 지하 ${project.basement}층` : ''}` : undefined}
+                />
                 <DetailRow label="착공일" value={project.startDate} />
                 <DetailRow label="준공 예정일" value={finishDate ?? undefined} emphasized={!!finishDate} />
               </dl>
-              <div className="p-4 border-t border-gray-100 bg-gray-50">
+              <div className="p-3 border-t border-gray-100 bg-gradient-to-br from-gray-50 to-white">
                 <button
                   onClick={() => router.push(`/projects/${id}/stage/4`)}
-                  className="w-full h-9 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 transition-colors"
+                  className="w-full h-9 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5"
                 >
-                  분석 & 준공 리포트 →
+                  <TrendingUp size={12} /> 분석 & 준공 리포트
                 </button>
               </div>
             </div>
@@ -418,6 +451,21 @@ function DetailRow({ label, value, emphasized }: { label: string; value?: string
       <dd className={`font-semibold text-right ${emphasized ? 'text-blue-700' : value ? 'text-gray-900' : 'text-gray-300'}`}>
         {value || '—'}
       </dd>
+    </div>
+  )
+}
+
+function MetricTile({
+  label, value, unit, accent,
+}: { label: string; value: string | number; unit?: string; accent: string }) {
+  return (
+    <div className="relative bg-white rounded-xl border border-gray-200 p-3 overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: accent }} />
+      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+      <p className="text-lg font-bold text-gray-900 mt-1 leading-none">
+        {value}
+        {unit && <span className="text-xs font-normal text-gray-400 ml-0.5">{unit}</span>}
+      </p>
     </div>
   )
 }
