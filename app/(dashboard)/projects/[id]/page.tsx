@@ -11,6 +11,7 @@ import PageHeader from '@/components/common/PageHeader'
 import { Skeleton } from '@/components/common/Skeleton'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 import { IndustrySpecificSummary, type IndustrySpecific } from '@/components/common/IndustrySpecificFields'
+import CpAlertBanner from '@/components/common/CpAlertBanner'
 
 interface Project {
   id: string
@@ -220,6 +221,9 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-5">
+        {/* CP 공종 조기 경보 (alert 있을 때만 렌더) */}
+        <CpAlertBanner projectId={id} />
+
         {/* 상태 배너 */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl overflow-hidden">
           <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-3">
