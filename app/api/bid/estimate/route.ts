@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as Partial<ProjectInput> & {
     monthlyFinCost?: number      // 월 금융·관리비 (만원)
     delayScenarios?: number[]    // 몇 주 지연 시나리오 (기본 [2, 4, 8])
+    startDate?: string           // 착공 예정일 (있으면 월별 인력 집계 활성)
   }
 
   const input: ProjectInput = {
@@ -57,8 +58,8 @@ export async function POST(req: NextRequest) {
     stdLookup.push({ trade, unit, value: v.sum / v.count, approved: false, sampleCount: v.count })
   }
 
-  // 자원 계획
-  const resourcePlan = buildResourcePlan(cpmSummary.tasks, stdLookup)
+  // 자원 계획 — startDate 있으면 월별 인력 집계 활성
+  const resourcePlan = buildResourcePlan(cpmSummary.tasks, stdLookup, body.startDate)
 
   // 개략 원가 추정 (매우 거친 추정 - 노임 기반)
   // 공종별 일평균 인원 × 일단가(평균 27만원/일 가정)

@@ -1,14 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ClipboardCheck, Building2, Ruler, Layers, Play, Save, TrendingUp,
   Calendar, Users, DollarSign, AlertTriangle, Loader2, ArrowRight,
+  BarChart3, ChevronRight,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
+import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/components/wbs/WBSTable'
+import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
+import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
+import CompanyStandardsPanel from '@/components/analysis/CompanyStandardsPanel'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import type { CPMResult } from '@/lib/types'
 
 interface BidInput {
   name: string
@@ -24,11 +33,17 @@ interface BidInput {
   bldgPerim: string
   wtBottom: string
   waBottom: string
+  startDate: string
   monthlyFinCost: string
 }
 
 interface EstimateResult {
-  cpm: { totalDuration: number; taskCount: number; criticalPathCount: number }
+  cpm: {
+    totalDuration: number
+    taskCount: number
+    criticalPathCount: number
+    tasks: CPMResult[]
+  }
   resourcePlan: {
     totalDuration: number
     peak: { day: number; count: number }
@@ -41,13 +56,37 @@ interface EstimateResult {
   delayScenarios: { weeks: number; additionalCostKRW: number }[]
 }
 
+type TopTab = 'cost' | 'schedule'
+type SubTab = 'wbs' | 'summary' | 'critical' | 'gantt' | 'resource' | 'standards'
+
 const INITIAL: BidInput = {
   name: '', type: '공동주택',
   ground: '20', basement: '2', lowrise: '0', hasTransfer: false,
   bldgArea: '30000', buildingArea: '1500', siteArea: '6000',
   sitePerim: '300', bldgPerim: '220',
   wtBottom: '3', waBottom: '6',
+  startDate: '',
   monthlyFinCost: '5000',
+}
+
+const CATEGORY_COLORS_HEX: Record<string, string> = {
+  '공사준비': '#64748b',
+  '토목공사': '#ca8a04',
+  '골조공사': '#2563eb',
+  '마감공사': '#059669',
+  '설비공사': '#0891b2',
+  '전기공사': '#7c3aed',
+  '외부공사': '#16a34a',
+  '부대공사': '#dc2626',
+}
+
+function groupBy<T>(arr: T[], key: (item: T) => string): Record<string, T[]> {
+  return arr.reduce((acc, item) => {
+    const k = key(item)
+    if (!acc[k]) acc[k] = []
+    acc[k].push(item)
+    return acc
+  }, {} as Record<string, T[]>)
 }
 
 export default function BidPage() {
@@ -58,11 +97,36 @@ export default function BidPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  // 결과 뷰 탭
+  const [topTab, setTopTab] = useState<TopTab>('cost')
+  const [subTab, setSubTab] = useState<SubTab>('wbs')
+  const [ganttView, setGanttView] = useState<GanttViewMode>('week')
+  const [standards, setStandards] = useState<CompanyStandardSummary[]>([])
+  const wbsTableRef = useRef<WBSTableHandle>(null)
+
   function set<K extends keyof BidInput>(key: K, v: string) {
     setInput(p => ({ ...p, [key]: v }))
   }
 
-  async function estimate() {
+  // 회사 실적 표준 로드 — WBS 컬럼의 평균 투입 인원 표시용
+  useEffect(() => {
+    fetch('/api/company-standards?includeProposals=1')
+      .then(r => r.json())
+      .then(data => {
+        const summaries: CompanyStandardSummary[] = []
+        for (const s of data.standards ?? []) {
+          summaries.push({ trade: s.trade, unit: s.unit, value: s.value, approved: true, sampleCount: s.sampleCount })
+        }
+        for (const c of data.candidates ?? []) {
+          if (summaries.some(x => x.trade === c.trade && x.unit === c.unit)) continue
+          summaries.push({ trade: c.trade, unit: c.unit, value: c.avgValue, approved: false, sampleCount: c.totalSamples })
+        }
+        setStandards(summaries)
+      })
+      .catch(() => {})
+  }, [])
+
+  const estimate = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch('/api/bid/estimate', {
@@ -81,6 +145,7 @@ export default function BidPage() {
           bldgPerim: Number(input.bldgPerim) || undefined,
           wtBottom: Number(input.wtBottom) || undefined,
           waBottom: Number(input.waBottom) || undefined,
+          startDate: input.startDate || undefined,
           monthlyFinCost: Number(input.monthlyFinCost) || 0,
         }),
       })
@@ -91,7 +156,7 @@ export default function BidPage() {
     } catch (e: any) {
       toast.error('계산 실패', e.message)
     } finally { setLoading(false) }
-  }
+  }, [input, toast])
 
   async function saveAsProject() {
     if (!result) return
@@ -115,6 +180,7 @@ export default function BidPage() {
           bldgPerim: Number(input.bldgPerim) || null,
           wtBottom: Number(input.wtBottom) || null,
           waBottom: Number(input.waBottom) || null,
+          startDate: input.startDate || null,
         }),
       })
       const data = await res.json()
@@ -132,12 +198,45 @@ export default function BidPage() {
     return n.toLocaleString()
   }
 
+  const byCategory = useMemo(() => {
+    if (!result?.cpm.tasks) return null
+    return groupBy(result.cpm.tasks, t => t.category)
+  }, [result])
+
+  const fmtProductivity = useCallback((task: CPMResult): string => {
+    if (task.productivity) return `생산성 ${task.productivity} ${task.unit ?? ''}/일`
+    if (task.stdDays) return `${task.stdDays}일/${task.unit ?? '층'}`
+    return ''
+  }, [])
+
+  const completionDate = useCallback((): string | null => {
+    if (!input.startDate || !result) return null
+    const d = new Date(input.startDate)
+    if (Number.isNaN(d.getTime())) return null
+    d.setDate(d.getDate() + result.cpm.totalDuration)
+    return d.toLocaleDateString('ko-KR')
+  }, [input.startDate, result])
+
+  const criticalPathNames = useMemo(() => {
+    if (!result?.cpm.tasks) return []
+    return result.cpm.tasks.filter(t => t.isCritical).map(t => t.name)
+  }, [result])
+
+  const SUB_TABS: { id: SubTab; label: string }[] = [
+    { id: 'wbs',       label: 'WBS 공정표' },
+    { id: 'summary',   label: 'CPM 결과' },
+    { id: 'critical',  label: '크리티컬 패스' },
+    { id: 'gantt',     label: '공정표(Gantt)' },
+    { id: 'resource',  label: '자원 계획' },
+    { id: 'standards', label: '회사 실적 표준' },
+  ]
+
   return (
     <div className="flex flex-col h-full">
       <PageHeader
         icon={ClipboardCheck}
         title="사업 초기 검토"
-        subtitle="기본 정보만으로 개략공기·인력·공사비 산정 · 저장 없이 반복 시뮬 → 확정 시 프로젝트 생성"
+        subtitle="기본 정보만으로 개략 공기·공사비 산정 · 저장 없이 반복 시뮬 → 확정 시 프로젝트 생성"
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
@@ -154,17 +253,23 @@ export default function BidPage() {
                   className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500" />
               </Field>
 
-              <Field label="유형">
-                <select value={input.type} onChange={e => set('type', e.target.value)}
-                  className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm">
-                  <option>공동주택</option>
-                  <option>오피스텔</option>
-                  <option>업무시설</option>
-                  <option>데이터센터</option>
-                  <option>스튜디오</option>
-                  <option>기타</option>
-                </select>
-              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="유형">
+                  <select value={input.type} onChange={e => set('type', e.target.value)}
+                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm">
+                    <option>공동주택</option>
+                    <option>오피스텔</option>
+                    <option>업무시설</option>
+                    <option>데이터센터</option>
+                    <option>스튜디오</option>
+                    <option>기타</option>
+                  </select>
+                </Field>
+                <Field label="착공 예정일 (선택)" hint="공기 환산에 사용">
+                  <input type="date" value={input.startDate} onChange={e => set('startDate', e.target.value)}
+                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm" />
+                </Field>
+              </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <Field label="지상 층수" icon={<Layers size={11} />}>
@@ -273,11 +378,11 @@ export default function BidPage() {
                   limit={5}
                 />
 
-                {/* 핵심 KPI */}
+                {/* 최상단 4KPI — 탭 공통 요약 */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   <Kpi icon={<Calendar size={14} className="text-blue-600" />} bg="bg-blue-50"
                     label="총 공기" value={`${result.cpm.totalDuration}`} unit="일"
-                    sub={`약 ${Math.round(result.cpm.totalDuration / 30)}개월`} />
+                    sub={completionDate() ? `준공 ${completionDate()}` : `약 ${Math.round(result.cpm.totalDuration / 30)}개월`} />
                   <Kpi icon={<Users size={14} className="text-orange-600" />} bg="bg-orange-50"
                     label="피크 투입" value={`${result.resourcePlan.peak.count}`} unit="명"
                     sub={`${result.resourcePlan.peak.day + 1}일차`} />
@@ -289,70 +394,332 @@ export default function BidPage() {
                     sub={`노무비 ${Math.round(result.estimate.laborCostKRW / 100000000).toLocaleString()}억 포함`} />
                 </div>
 
-                {/* 월별 자원 */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                  <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
-                    <Users size={14} /> 월별 필요 인력
-                  </h3>
-                  {result.resourcePlan.monthlyTotals.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">시작일이 없어 월별 집계 생략 — 저장 후 시작일 입력 시 표시</p>
-                  ) : (
-                    <ul className="space-y-1.5 max-h-64 overflow-auto">
-                      {result.resourcePlan.monthlyTotals.map(m => {
-                        const max = Math.max(...result.resourcePlan.monthlyTotals.map(x => x.total), 1)
-                        const ratio = (m.total / max) * 100
-                        return (
-                          <li key={m.month} className="text-xs">
-                            <div className="flex items-center justify-between mb-0.5">
-                              <span className="font-mono text-gray-700">{m.month}</span>
-                              <span className="text-gray-500"><strong className="text-gray-900">{m.total.toLocaleString()}</strong> 인일 · {m.activeDays}일</span>
-                            </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${ratio}%` }} />
-                            </div>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </div>
-
-                {/* 지연 시나리오 */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                  <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
-                    <AlertTriangle size={14} className="text-amber-500" /> 지연 민감도 (추가 원가)
-                  </h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {result.delayScenarios.map(s => (
-                      <div key={s.weeks} className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-center">
-                        <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">+{s.weeks}주 지연 시</p>
-                        <p className="text-lg font-bold text-amber-900 mt-1 font-mono">+{fmtKRW(s.additionalCostKRW)}</p>
-                      </div>
-                    ))}
+                {/* 최상단 대탭: 공사비 / 공기 */}
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="flex border-b border-gray-200">
+                    <TopTabBtn
+                      icon={<DollarSign size={14} />}
+                      label="공사비"
+                      active={topTab === 'cost'}
+                      onClick={() => setTopTab('cost')}
+                    />
+                    <TopTabBtn
+                      icon={<BarChart3 size={14} />}
+                      label="공기"
+                      active={topTab === 'schedule'}
+                      onClick={() => setTopTab('schedule')}
+                    />
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-2">※ 월 금융·관리비 × 지연 기간 기준 · 손해 최소 추정</p>
-                </div>
 
-                {/* CP 공종 */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                  <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
-                    <ArrowRight size={14} className="text-orange-500" /> Critical Path
-                  </h3>
-                  <p className="text-xs text-gray-600 mb-2">
-                    전체 {result.cpm.taskCount}개 공종 중 <strong className="text-orange-600">{result.cpm.criticalPathCount}개</strong>가 Critical Path. 이 공종들 지연 시 전체 공기 연장.
-                  </p>
-                  {result.resourcePlan.uncoveredTasks.length > 0 && (
-                    <div className="mt-3 text-[11px] text-amber-700 bg-amber-50 rounded p-2">
-                      <strong>회사 실적 없는 공종:</strong> {result.resourcePlan.uncoveredTasks.join(', ')}
-                      <br />
-                      <span className="text-amber-600">인원 추정에서 제외됨. 일보 임포트로 데이터 확보 권장.</span>
+                  {topTab === 'cost' && (
+                    <div className="p-5 space-y-5">
+                      {/* 월별 자원 */}
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
+                          <Users size={14} /> 월별 필요 인력
+                        </h3>
+                        {result.resourcePlan.monthlyTotals.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic">
+                            착공 예정일이 없어 월별 집계 생략 — 좌측 폼에 날짜 입력 후 재계산
+                          </p>
+                        ) : (
+                          <ul className="space-y-1.5 max-h-64 overflow-auto">
+                            {result.resourcePlan.monthlyTotals.map(m => {
+                              const max = Math.max(...result.resourcePlan.monthlyTotals.map(x => x.total), 1)
+                              const ratio = (m.total / max) * 100
+                              return (
+                                <li key={m.month} className="text-xs">
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <span className="font-mono text-gray-700">{m.month}</span>
+                                    <span className="text-gray-500"><strong className="text-gray-900">{m.total.toLocaleString()}</strong> 인일 · {m.activeDays}일</span>
+                                  </div>
+                                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${ratio}%` }} />
+                                  </div>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
+                      </div>
+
+                      {/* 지연 시나리오 */}
+                      <div className="border-t border-gray-100 pt-5">
+                        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
+                          <AlertTriangle size={14} className="text-amber-500" /> 지연 민감도 (추가 원가)
+                        </h3>
+                        <div className="grid grid-cols-3 gap-3">
+                          {result.delayScenarios.map(s => (
+                            <div key={s.weeks} className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-center">
+                              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">+{s.weeks}주 지연 시</p>
+                              <p className="text-lg font-bold text-amber-900 mt-1 font-mono">+{fmtKRW(s.additionalCostKRW)}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-2">※ 월 금융·관리비 × 지연 기간 기준 · 손해 최소 추정</p>
+                      </div>
+
+                      {/* CP 요약 */}
+                      <div className="border-t border-gray-100 pt-5">
+                        <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
+                          <ArrowRight size={14} className="text-orange-500" /> Critical Path 요약
+                        </h3>
+                        <p className="text-xs text-gray-600 mb-2">
+                          전체 {result.cpm.taskCount}개 공종 중 <strong className="text-orange-600">{result.cpm.criticalPathCount}개</strong>가 Critical Path. 지연 시 공기 연장 직결.
+                          <button onClick={() => { setTopTab('schedule'); setSubTab('critical') }} className="ml-2 text-[11px] text-blue-600 hover:underline">상세 →</button>
+                        </p>
+                        {result.resourcePlan.uncoveredTasks.length > 0 && (
+                          <div className="mt-3 text-[11px] text-amber-700 bg-amber-50 rounded p-2">
+                            <strong>회사 실적 없는 공종:</strong> {result.resourcePlan.uncoveredTasks.join(', ')}
+                            <br />
+                            <span className="text-amber-600">인원 추정에서 제외됨. 일보 임포트로 데이터 확보 권장.</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 설명 */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900">
+                        <strong>개략 원가 계산 방법</strong>: 회사 실적 기반 평균 투입 인원 × 공기 × 일단가(27만원) + 자재·경비(노무비의 1.4배 가정).
+                        실제 견적은 공종별 단가표와 자재 견적을 적용해야 하며, 본 수치는 <strong>사업성 판단용 ±15% 개략</strong>입니다.
+                      </div>
+                    </div>
+                  )}
+
+                  {topTab === 'schedule' && (
+                    <div>
+                      {/* 공기 서브탭 */}
+                      <div className="flex items-center gap-1 px-4 pt-3 border-b border-gray-200 bg-gray-50 overflow-x-auto">
+                        {SUB_TABS.map(t => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => setSubTab(t.id)}
+                            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
+                              subTab === t.id
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-800'
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* WBS 공정표 */}
+                      {subTab === 'wbs' && byCategory && (
+                        <div className="p-4">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle className="text-sm flex items-center justify-between">
+                                <span>WBS 공정 목록 <span className="text-xs font-normal text-gray-400">({result.cpm.tasks.length}개 공종)</span></span>
+                                <div className="flex gap-2 text-xs">
+                                  <button onClick={() => wbsTableRef.current?.expandAll()} className="text-gray-400 hover:text-gray-700">전체 펼치기</button>
+                                  <span className="text-gray-300">|</span>
+                                  <button onClick={() => wbsTableRef.current?.collapseAll()} className="text-gray-400 hover:text-gray-700">전체 접기</button>
+                                </div>
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              <WBSTable
+                                ref={wbsTableRef}
+                                byCategory={byCategory}
+                                fmtProductivity={fmtProductivity}
+                                categoryColors={Object.fromEntries(
+                                  Object.keys(byCategory).map(cat => [cat, CATEGORY_COLORS_HEX[cat] ?? '#94a3b8'])
+                                )}
+                                standards={standards}
+                              />
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
+
+                      {/* CPM 결과 요약 */}
+                      {subTab === 'summary' && (
+                        <div className="p-4 space-y-4">
+                          <div className="grid grid-cols-3 gap-4">
+                            <Card className="border-blue-200 bg-blue-50">
+                              <CardContent className="pt-6">
+                                <p className="text-xs text-gray-500 mb-1">총 공사 기간</p>
+                                <p className="text-3xl font-bold text-blue-700">
+                                  {result.cpm.totalDuration}
+                                  <span className="text-sm font-normal text-gray-400 ml-1">일</span>
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {completionDate() ? `준공 예정 ${completionDate()}` : `약 ${Math.round(result.cpm.totalDuration / 30)}개월`}
+                                </p>
+                              </CardContent>
+                            </Card>
+                            <Card>
+                              <CardContent className="pt-6">
+                                <p className="text-xs text-gray-500 mb-1">총 공종 수</p>
+                                <p className="text-3xl font-bold">
+                                  {result.cpm.taskCount}
+                                  <span className="text-sm font-normal text-gray-400 ml-1">개</span>
+                                </p>
+                              </CardContent>
+                            </Card>
+                            <Card>
+                              <CardContent className="pt-6">
+                                <p className="text-xs text-gray-500 mb-1">크리티컬 패스</p>
+                                <p className="text-3xl font-bold text-orange-500">
+                                  {result.cpm.criticalPathCount}
+                                  <span className="text-sm font-normal text-gray-400 ml-1">개 공종</span>
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </div>
+                          {byCategory && (
+                            <Card>
+                              <CardHeader><CardTitle className="text-sm">공종별 현황</CardTitle></CardHeader>
+                              <CardContent>
+                                <div className="space-y-2">
+                                  {Object.entries(byCategory).map(([cat, tasks]) => {
+                                    const critCount = tasks.filter(t => t.isCritical).length
+                                    const maxDur = Math.max(...tasks.map(t => t.EF))
+                                    const colorHex = CATEGORY_COLORS_HEX[cat] ?? '#94a3b8'
+                                    return (
+                                      <div key={cat} className="flex items-center gap-3">
+                                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: colorHex }} />
+                                        <span className="text-sm w-24 flex-shrink-0">{cat}</span>
+                                        <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                                          <div className="h-1.5 rounded-full" style={{
+                                            width: `${(maxDur / result.cpm.totalDuration) * 100}%`,
+                                            background: colorHex,
+                                          }} />
+                                        </div>
+                                        <span className="text-xs text-gray-400 w-14 text-right">{tasks.length}개</span>
+                                        {critCount > 0 && (
+                                          <Badge className="bg-orange-500 text-white border-0 text-[10px] px-1.5 py-0">CP {critCount}</Badge>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 크리티컬 패스 */}
+                      {subTab === 'critical' && (
+                        <div className="p-4">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle className="text-sm flex items-center gap-2">
+                                <AlertTriangle size={15} className="text-orange-500" />
+                                크리티컬 패스 (Critical Path)
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <p className="text-sm text-gray-500">
+                                여유시간(Total Float)이 0일인 공종. 하나라도 지연 시 전체 공기가 늘어납니다.
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {criticalPathNames.map((name, i) => (
+                                  <div key={i} className="flex items-center gap-1.5">
+                                    {i > 0 && <ChevronRight size={12} className="text-gray-400" />}
+                                    <Badge className="bg-orange-500 text-white border-0 text-xs">{name}</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>공종명</TableHead>
+                                    <TableHead className="text-right w-12 text-xs">단위</TableHead>
+                                    <TableHead className="text-right">기간(일)</TableHead>
+                                    <TableHead className="text-right text-xs">ES</TableHead>
+                                    <TableHead className="text-right text-xs">EF</TableHead>
+                                    <TableHead className="text-right text-xs">TF</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {result.cpm.tasks.filter(t => t.isCritical).map(task => (
+                                    <TableRow key={task.taskId} className="bg-orange-50">
+                                      <TableCell>
+                                        <div className="font-medium text-orange-600 text-sm">{task.name}</div>
+                                        {task.wbsCode && <div className="text-[10px] text-gray-400 font-mono">{task.wbsCode}</div>}
+                                      </TableCell>
+                                      <TableCell className="text-right text-xs text-gray-400">{task.unit ?? '—'}</TableCell>
+                                      <TableCell className="text-right font-mono font-medium">{task.duration}</TableCell>
+                                      <TableCell className="text-right font-mono text-xs text-gray-400">{task.ES}</TableCell>
+                                      <TableCell className="text-right font-mono text-xs text-gray-400">{task.EF}</TableCell>
+                                      <TableCell className="text-right font-mono font-bold text-orange-500">0</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
+
+                      {/* Gantt */}
+                      {subTab === 'gantt' && (
+                        <div className="flex flex-col">
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
+                            <div className="flex items-center gap-4 text-xs text-gray-400">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 rounded-sm bg-blue-700 inline-block" />일반 공종
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 rounded-sm bg-orange-500 inline-block" />
+                                <span className="text-orange-500 font-medium">크리티컬 패스</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                              {(['day', 'week', 'month'] as GanttViewMode[]).map(v => (
+                                <button key={v} onClick={() => setGanttView(v)} className={`px-3 py-1 rounded text-xs font-medium transition-colors ${ganttView === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                                  {v === 'day' ? 'Day' : v === 'week' ? 'Week' : 'Month'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="p-4" style={{ height: 520 }}>
+                            <GanttChart
+                              tasks={result.cpm.tasks}
+                              totalDuration={result.cpm.totalDuration}
+                              startDate={input.startDate || undefined}
+                              viewMode={ganttView}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 자원 계획 */}
+                      {subTab === 'resource' && (
+                        <div className="p-4">
+                          <ResourcePlanPanel
+                            cpmTasks={result.cpm.tasks}
+                            startDate={input.startDate || undefined}
+                            standards={standards}
+                          />
+                        </div>
+                      )}
+
+                      {/* 회사 실적 표준 */}
+                      {subTab === 'standards' && (
+                        <div className="p-4">
+                          <CompanyStandardsPanel
+                            cpmTasks={result.cpm.tasks.map(t => ({
+                              taskId: t.taskId,
+                              name: t.name,
+                              category: t.category,
+                              duration: t.duration,
+                              isCritical: t.isCritical,
+                            }))}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900">
-                  <strong>개략 원가 계산 방법</strong>: 회사 실적 기반 평균 투입 인원 × 공기 × 일단가(27만원) + 자재·경비(노무비의 1.4배 가정).
-                  실제 견적은 공종별 단가표와 자재 견적을 적용해야 하며, 본 수치는 <strong>사업성 판단용 ±15% 개략</strong>입니다.
+                <div className="text-[11px] text-gray-400 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <strong className="text-gray-600">몬테카를로·생산성 조정</strong>은 프로젝트로 저장 후 사용 가능합니다.
+                  저장하면 이 계산 결과가 프로젝트 태스크로 고정되어 시뮬레이션·조정·비교가 가능해집니다.
                 </div>
               </>
             )}
@@ -389,5 +756,23 @@ function Kpi({
       </p>
       {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
     </div>
+  )
+}
+
+function TopTabBtn({
+  icon, label, active, onClick,
+}: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
+        active
+          ? 'border-blue-600 text-blue-700 bg-blue-50/40'
+          : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+      }`}
+    >
+      {icon} {label}
+    </button>
   )
 }
