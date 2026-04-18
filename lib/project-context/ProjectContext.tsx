@@ -21,6 +21,8 @@ export interface ProjectLite {
   lastCpmDuration?: number
   ground?: number
   basement?: number
+  startDate?: string | null
+  latestReportDate?: string | null
   _count?: { tasks?: number; dailyReports?: number }
 }
 

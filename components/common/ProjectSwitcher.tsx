@@ -9,6 +9,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { FolderKanban, ChevronDown, Search, Plus, X, Building2, ClipboardCheck, Eye, Check } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
+import { getProjectStatus, STATUS_META } from '@/lib/project-status'
 
 export default function ProjectSwitcher() {
   const router = useRouter()
@@ -78,21 +79,28 @@ export default function ProjectSwitcher() {
     }
   }
 
+  // 현재 프로젝트의 라이프사이클 상태 (진행중/준공/계획)
+  const currentStatusInfo = currentProject ? STATUS_META[getProjectStatus(currentProject)] : null
+
   // 사업 초기 검토 모드 버튼: 클릭해도 드롭다운 열림 (다른 프로젝트 전환 가능하게)
   const triggerLabel = isBidMode
-    ? { icon: <ClipboardCheck size={13} className="text-amber-500" />, text: '사업 초기 검토', sub: '저장 전 시뮬 중', color: 'text-amber-700 bg-amber-50 border-amber-200' }
+    ? { icon: <ClipboardCheck size={13} className="text-amber-500" />, text: '사업 초기 검토', sub: '저장 전 시뮬 중', color: 'text-amber-700 bg-amber-50 border-amber-200', statusInfo: null }
     : currentProject
     ? {
-        icon: <FolderKanban size={13} style={{ color: currentStage ? stageInfo[currentStage]?.color : '#2563eb' }} />,
+        icon: <FolderKanban size={13} style={{ color: currentStatusInfo?.color ?? '#2563eb' }} />,
         text: currentProject.name,
-        sub: currentStage ? `${currentStage}·${stageInfo[currentStage]?.label}` : '프로젝트 선택됨',
+        sub: currentStage
+          ? `${currentStatusInfo?.label ?? ''} · ${currentStage}단계 ${stageInfo[currentStage]?.label}`
+          : currentStatusInfo?.label ?? '프로젝트 선택됨',
         color: 'text-gray-900 bg-white border-gray-200 hover:border-gray-300',
+        statusInfo: currentStatusInfo,
       }
     : {
         icon: <FolderKanban size={13} className="text-gray-400" />,
         text: '프로젝트 선택',
         sub: '전사 뷰',
         color: 'text-gray-500 bg-gray-50 border-gray-200 hover:border-gray-300',
+        statusInfo: null,
       }
 
   return (
@@ -200,10 +208,15 @@ export default function ProjectSwitcher() {
 function ProjectRow({
   project: p, selected, onClick,
 }: {
-  project: { id: string; name: string; type?: string; lastCpmDuration?: number; ground?: number; _count?: { tasks?: number; dailyReports?: number } }
+  project: {
+    id: string; name: string; type?: string; lastCpmDuration?: number; ground?: number
+    latestReportDate?: string | null
+    _count?: { tasks?: number; dailyReports?: number }
+  }
   selected: boolean
   onClick: () => void
 }) {
+  const info = STATUS_META[getProjectStatus(p)]
   return (
     <button
       onClick={onClick}
@@ -211,11 +224,20 @@ function ProjectRow({
         selected ? 'bg-blue-50' : ''
       }`}
     >
-      <div className="w-8 h-8 rounded-md bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white flex-shrink-0">
+      <div
+        className="w-8 h-8 rounded-md flex items-center justify-center text-white flex-shrink-0 shadow-sm"
+        style={{ background: `linear-gradient(135deg, ${info.color}, ${info.color}dd)` }}
+      >
         <Building2 size={13} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{p.name}</p>
+        <div className="flex items-center gap-1.5">
+          <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1 py-0 rounded ${info.bg} ${info.text}`}>
+            <span className={`w-1 h-1 rounded-full ${info.dot}`} />
+            {info.label}
+          </span>
+          <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{p.name}</p>
+        </div>
         <p className="text-[10px] text-gray-500 truncate mt-0.5">
           {p.type ? `${p.type} · ` : ''}
           {p.ground !== undefined ? `${p.ground}층 · ` : ''}
