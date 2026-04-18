@@ -152,6 +152,11 @@ export async function GET(_req: NextRequest) {
 
   const projectSummary = projects.map(p => {
     const d = byProject.get(p.id)
+    // 평당 투입 인일 (연면적 기반 벤치마크)
+    const manDaysPerSqm = d && p.bldgArea && p.bldgArea > 0
+      ? Math.round((d.totalManDays / p.bldgArea) * 100) / 100
+      : null
+
     return {
       id: p.id,
       name: p.name,
@@ -166,6 +171,7 @@ export async function GET(_req: NextRequest) {
       totalManDays: d ? Math.round(d.totalManDays * 10) / 10 : 0,
       activeDays: d?.activeDays.size ?? 0,
       tradeCount: d?.trades.size ?? 0,
+      manDaysPerSqm,     // 연면적당 투입 인일 (있는 프로젝트만)
     }
   })
 

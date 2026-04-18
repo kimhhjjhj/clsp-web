@@ -222,10 +222,15 @@ export default function RisksLibraryPage() {
           <div className="card-elevated">
             <EmptyState
               icon={ShieldAlert}
-              title={items.length === 0 ? '등록된 R&O가 없습니다' : '조건에 맞는 결과가 없습니다'}
+              title={items.length === 0 ? '아직 축적된 R&O가 없습니다' : '조건에 맞는 결과가 없습니다'}
               description={items.length === 0
-                ? '프로젝트 2단계 프리콘에서 리스크·기회를 등록하면 여기 전사 라이브러리에 축적됩니다.'
+                ? '프로젝트 프리콘(2단계)에서 리스크·기회 카드를 등록하면 여기 전사 라이브러리에 자동으로 모입니다. 유형별 프로젝트의 반복되는 리스크 패턴·대응방안을 축적해 신규 착수 시 참조할 수 있습니다.'
                 : '검색어나 필터를 변경해보세요.'}
+              actions={items.length === 0 ? [
+                { label: '프로젝트 목록', href: '/projects', variant: 'primary' as const },
+              ] : [
+                { label: '조건 초기화', onClick: () => { setQuery(''); setCategoryFilter('all'); setProjectTypeFilter('all'); setTypeFilter('all') }, variant: 'secondary' as const },
+              ]}
             />
           </div>
         ) : (
