@@ -36,17 +36,30 @@ function renderIcon(icon: Props['icon'], size: number): React.ReactNode {
 
 export default function EmptyState({ icon: IconOrElement, title, description, actions, compact }: Props) {
   const pad = compact ? 'py-8' : 'py-16'
-  const iconWrap = compact
-    ? 'w-12 h-12 bg-gray-100 text-gray-400'
-    : 'w-16 h-16 bg-blue-50 text-blue-400'
   const iconSize = compact ? 22 : 28
   const icon = renderIcon(IconOrElement, iconSize)
 
   return (
     <div className={`flex flex-col items-center justify-center text-center px-6 ${pad}`}>
-      <div className={`flex items-center justify-center rounded-2xl mb-4 ${iconWrap}`}>
-        {icon}
+      {/* 아이콘 — 그라디언트 + 은은한 글로우 */}
+      <div className="relative mb-4">
+        {!compact && (
+          <div
+            className="absolute inset-0 blur-2xl opacity-30"
+            style={{ background: 'radial-gradient(circle, #60a5fa 0%, transparent 70%)' }}
+          />
+        )}
+        <div
+          className={`relative flex items-center justify-center rounded-2xl ${
+            compact
+              ? 'w-12 h-12 bg-gray-100 text-gray-400'
+              : 'w-16 h-16 bg-gradient-to-br from-blue-50 to-violet-50 text-blue-500 shadow-sm border border-blue-100/50'
+          }`}
+        >
+          {icon}
+        </div>
       </div>
+
       <h3 className={`font-bold text-gray-900 ${compact ? 'text-sm' : 'text-lg'}`}>{title}</h3>
       {description && (
         <p className={`text-gray-500 mt-1.5 max-w-md leading-relaxed ${compact ? 'text-xs' : 'text-sm'}`}>
@@ -58,14 +71,14 @@ export default function EmptyState({ icon: IconOrElement, title, description, ac
           {actions.map((a, i) => {
             const isPrimary = (a.variant ?? 'primary') === 'primary'
             const cls = isPrimary
-              ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+              ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
             const content = (
               <span className="inline-flex items-center gap-1.5">
                 {a.icon}{a.label}
               </span>
             )
-            const common = `${compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-lg font-semibold transition-colors ${cls}`
+            const common = `${compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-lg font-semibold transition-all ${cls}`
             return a.href ? (
               <Link key={i} href={a.href} className={common}>{content}</Link>
             ) : (

@@ -58,11 +58,16 @@ export default function Sidebar({ onClose }: Props) {
     <>
       {/* 로고 */}
       <div className="flex items-center justify-between px-5 h-14 border-b border-white/10 flex-shrink-0">
-        <Link href="/" onClick={onClose} className="flex items-baseline gap-1.5 no-underline">
-          <h1 className="text-base font-extrabold tracking-tight text-white leading-none">
-            Quick<span className="text-[#3b82f6]">Plan</span>
-          </h1>
-          <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-[0.1em]">CLSP</span>
+        <Link href="/" onClick={onClose} className="flex items-center gap-2 no-underline group">
+          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-[10px] font-black shadow-sm group-hover:shadow-md transition-shadow">
+            Q
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h1 className="text-base font-extrabold tracking-tight text-white leading-none">
+              Quick<span className="text-blue-400">Plan</span>
+            </h1>
+            <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-[0.1em]">CLSP</span>
+          </div>
         </Link>
         <button
           onClick={onClose}
