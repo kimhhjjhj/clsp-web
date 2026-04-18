@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Plus, Building2, LayoutGrid, TrendingUp, Upload,
   FolderKanban, FileText, ChevronRight, Activity,
-  BarChart3, ArrowRight, ClipboardCheck, CheckCircle2, AlertCircle, Clock,
+  BarChart3, ArrowRight, ClipboardCheck, CheckCircle2, AlertCircle, Clock, PenLine,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
@@ -75,6 +75,21 @@ export default function DashboardPage() {
       .slice(0, 4)
   }, [statusGroups])
 
+  // 오늘 할 일 — 진행중 프로젝트 중 오늘/어제 일보 미작성
+  const todayTasks = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    return statusGroups.active.filter(p => {
+      if (!p.latestReportDate) return true
+      const latest = new Date(p.latestReportDate)
+      latest.setHours(0, 0, 0, 0)
+      return latest < yesterday
+    })
+  }, [statusGroups])
+
   const recentProjects = [...projects]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4)
@@ -127,6 +142,49 @@ export default function DashboardPage() {
               href="/projects" />
           </div>
         </section>
+
+        {/* 오늘 할 일 — 진행중 프로젝트 중 이틀 이상 일보 없는 현장 */}
+        {todayTasks.length > 0 && (
+          <section>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 flex items-center gap-2 border-b border-blue-100">
+                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <PenLine size={14} className="text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-blue-900">오늘 할 일</h3>
+                  <p className="text-[10px] text-blue-700">진행중 현장 중 최근 일보가 2일 이상 밀린 건</p>
+                </div>
+                <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-600 text-white">{todayTasks.length}</span>
+              </div>
+              <ul className="divide-y divide-blue-100/50">
+                {todayTasks.slice(0, 5).map(p => (
+                  <li key={p.id}>
+                    <Link
+                      href={`/projects/${p.id}/daily-reports/new`}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-100/40 transition-colors no-underline group"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{p.name}</p>
+                        <p className="text-[11px] text-blue-700 mt-0.5">
+                          마지막 일보 {p.latestReportDate ? formatRelative(p.latestReportDate) : '없음'}
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-blue-600 font-semibold flex items-center gap-0.5 opacity-60 group-hover:opacity-100">
+                        일보 쓰기 <ChevronRight size={11} />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {todayTasks.length > 5 && (
+                <div className="px-4 py-2 border-t border-blue-100 text-[11px] text-blue-700 text-center">
+                  외 {todayTasks.length - 5}개 · 프로젝트 목록에서 전체 확인
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* 일시중단 경고 */}
         {statusGroups.paused.length > 0 && (
