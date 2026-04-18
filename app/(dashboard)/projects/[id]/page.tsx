@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/common/Skeleton'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 import { IndustrySpecificSummary, type IndustrySpecific } from '@/components/common/IndustrySpecificFields'
 import CpAlertBanner from '@/components/common/CpAlertBanner'
+import { getProjectStatus, STATUS_META, formatRelative } from '@/lib/project-status'
 
 interface Project {
   id: string
@@ -209,34 +210,63 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
         {/* CP 공종 조기 경보 (alert 있을 때만 렌더) */}
         <CpAlertBanner projectId={id} />
 
-        {/* 상태 배너 */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider text-white" style={{ background: phaseColor + 'cc' }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                {currentPhase}
+        {/* 상태 배너 — 라이프사이클 상태 + 현재 진행 단계 통합 */}
+        {(() => {
+          const lifecycle = getProjectStatus({
+            latestReportDate: status?.stage3.lastReportDate ?? null,
+            _count: { dailyReports: status?.stage3.dailyReportCount ?? 0 },
+          })
+          const lcInfo = STATUS_META[lifecycle]
+          return (
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl overflow-hidden">
+              <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* 라이프사이클 상태 (전체 프로젝트 상태) */}
+                  <div
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider text-white"
+                    style={{ background: lcInfo.color + 'cc' }}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full bg-white ${lifecycle === 'active' ? 'animate-pulse' : ''}`} />
+                    {lcInfo.label}
+                  </div>
+                  {/* 현재 작업 단계 (라이프사이클 내부) */}
+                  {lifecycle === 'active' && (
+                    <span className="text-[11px] text-slate-300">
+                      <span className="text-slate-500 mr-1">단계</span>
+                      <span className="font-semibold text-white">{currentPhase}</span>
+                    </span>
+                  )}
+                  {status?.stage3.lastReportDate && (
+                    <span className="text-[11px] text-slate-400">
+                      <span className="text-slate-500 mr-1">마지막 일보</span>
+                      <span className="font-semibold text-slate-200">{formatRelative(status.stage3.lastReportDate)}</span>
+                    </span>
+                  )}
+                  <span className="text-xs text-slate-400">·</span>
+                  <span className="text-xs text-slate-300">{project.type || '건축 공사'}</span>
+                  <IndustrySpecificSummary type={project.type} value={project.industrySpecific ?? undefined} />
+                </div>
+                <div className="flex items-center gap-5 text-xs text-slate-300">
+                  {project.startDate && (
+                    <span className="flex items-center gap-1.5">
+                      <Calendar size={12} className="text-slate-400" />
+                      착공 {project.startDate}
+                    </span>
+                  )}
+                  {finishDate && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-slate-500">→</span>
+                      준공 <span className="text-white font-semibold">{finishDate}</span>
+                      <span className={`font-bold font-mono ml-1 ${lifecycle === 'completed' ? 'text-slate-400' : 'text-emerald-400'}`}>
+                        {daysUntil(finishDate)}
+                      </span>
+                    </span>
+                  )}
+                </div>
               </div>
-              <span className="text-xs text-slate-300">{project.type || '건축 공사'}</span>
-              <IndustrySpecificSummary type={project.type} value={project.industrySpecific ?? undefined} />
             </div>
-            <div className="flex items-center gap-5 text-xs text-slate-300">
-              {project.startDate && (
-                <span className="flex items-center gap-1.5">
-                  <Calendar size={12} className="text-slate-400" />
-                  착공 {project.startDate}
-                </span>
-              )}
-              {finishDate && (
-                <span className="flex items-center gap-1.5">
-                  <span className="text-slate-500">→</span>
-                  준공 <span className="text-white font-semibold">{finishDate}</span>
-                  <span className="text-emerald-400 font-bold font-mono ml-1">{daysUntil(finishDate)}</span>
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+          )
+        })()}
 
         {/* 4단계 카드 (2x2) + 우측 요약 */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">

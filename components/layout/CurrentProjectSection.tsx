@@ -12,11 +12,12 @@ import { usePathname } from 'next/navigation'
 import {
   BarChart3, ShieldCheck, HardHat, TrendingUp, Settings, CheckCircle2, Circle, Clock,
 } from 'lucide-react'
+import { getProjectStatus, STATUS_META } from '@/lib/project-status'
 
 interface StageStatus {
   stage1: { hasCpm: boolean; totalDuration: number | null; taskCount: number }
   stage2: { riskCount: number; opportunityCount: number; hasBaseline: boolean; baselineTaskCount: number }
-  stage3: { latestRate: number | null; dailyReportCount: number }
+  stage3: { latestRate: number | null; dailyReportCount: number; lastReportDate?: string | null }
   stage4: { weeklyReportCount: number }
 }
 
@@ -94,11 +95,28 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
       <Link
         href={`/projects/${project.id}`}
         onClick={onNavigate}
-        className={`mx-2 mb-1 px-2 h-8 flex items-center gap-2 rounded-md text-xs font-bold no-underline transition-colors ${
+        className={`mx-2 mb-1 px-2 py-1.5 flex items-start gap-2 rounded-md no-underline transition-colors ${
           pathname === `/projects/${project.id}` ? 'bg-white/10 text-white' : 'text-slate-200 hover:bg-white/[0.06]'
         }`}
       >
-        <span className="flex-1 truncate">{project.name}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold truncate">{project.name}</p>
+          {(() => {
+            const lc = getProjectStatus({
+              latestReportDate: status?.stage3.lastReportDate ?? null,
+              _count: { dailyReports: status?.stage3.dailyReportCount ?? 0 },
+            })
+            const info = STATUS_META[lc]
+            return (
+              <span className="inline-flex items-center gap-1 mt-0.5">
+                <span className={`w-1 h-1 rounded-full ${info.dot}`} />
+                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">
+                  {info.label}
+                </span>
+              </span>
+            )
+          })()}
+        </div>
       </Link>
 
       {/* 4단계 */}
