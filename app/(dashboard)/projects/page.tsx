@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   FolderKanban, Plus, Upload, Search, X, Building2, MapPin, Calendar,
@@ -33,11 +34,18 @@ type SortKey = 'recent' | 'name' | 'startDate'
 type StatusFilter = 'all' | ProjectStatus
 
 export default function ProjectsPage() {
+  const searchParams = useSearchParams()
+  const initialStatus = (searchParams?.get('status') as StatusFilter) ?? 'all'
+
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    ['all', 'active', 'paused', 'planning', 'completed', 'archived'].includes(initialStatus)
+      ? initialStatus
+      : 'all'
+  )
   const [sortKey, setSortKey] = useState<SortKey>('recent')
   const toast = useToast()
 

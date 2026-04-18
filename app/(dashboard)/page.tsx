@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Plus, Building2, LayoutGrid, TrendingUp, Upload,
-  FolderKanban, FileText, Clock, ChevronRight, Activity, Users,
-  Calculator, BarChart3, ArrowRight,
+  FolderKanban, FileText, ChevronRight, Activity,
+  BarChart3, ArrowRight, ClipboardCheck, CheckCircle2, AlertCircle, Clock,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import { Skeleton, SkeletonList } from '@/components/common/Skeleton'
+import { getProjectStatus, STATUS_META, formatRelative, type ProjectStatus } from '@/lib/project-status'
 
 interface Project {
   id: string
@@ -22,6 +23,7 @@ interface Project {
   basement: number
   bldgArea?: number
   lastCpmDuration?: number
+  latestReportDate?: string | null
   createdAt: string
   _count: { tasks: number; dailyReports?: number }
 }
@@ -52,6 +54,26 @@ export default function DashboardPage() {
     avgArea: projects.length ? Math.round(projects.reduce((s, p) => s + (p.bldgArea ?? 0), 0) / projects.length) : 0,
   }
 
+  // 상태별 분류
+  const statusGroups = useMemo(() => {
+    const g: Record<ProjectStatus, Project[]> = {
+      active: [], paused: [], planning: [], completed: [], archived: [],
+    }
+    for (const p of projects) g[getProjectStatus(p)].push(p)
+    return g
+  }, [projects])
+
+  // 활발한 현장 — 진행중 + 일시중단 (최근 활동순)
+  const activeProjects = useMemo(() => {
+    return [...statusGroups.active, ...statusGroups.paused]
+      .sort((a, b) => {
+        const da = a.latestReportDate ? new Date(a.latestReportDate).getTime() : 0
+        const db = b.latestReportDate ? new Date(b.latestReportDate).getTime() : 0
+        return db - da
+      })
+      .slice(0, 4)
+  }, [statusGroups])
+
   const recentProjects = [...projects]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4)
@@ -81,24 +103,58 @@ export default function DashboardPage() {
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6">
-        {/* KPI 4종 */}
+        {/* KPI — 상태 중심 */}
         <section>
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">전사 현황</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <KpiCard loading={loading} icon={FolderKanban} iconBg="bg-blue-50" iconColor="text-blue-600"
-              label="프로젝트" value={kpi.projectCount} unit="개"
+            <KpiCard loading={loading} icon={Activity} iconBg="bg-emerald-50" iconColor="text-emerald-600"
+              label="진행중" value={statusGroups.active.length} unit="개"
+              sub={statusGroups.paused.length > 0 ? `일시중단 ${statusGroups.paused.length}개 포함 주의` : '모두 정상 가동'}
+              href="/projects?status=active"
+              accent="#16a34a" />
+            <KpiCard loading={loading} icon={ClipboardCheck} iconBg="bg-blue-50" iconColor="text-blue-600"
+              label="계획중" value={statusGroups.planning.length} unit="개"
+              sub="착공 전·검토 중"
+              href="/projects?status=planning" />
+            <KpiCard loading={loading} icon={CheckCircle2} iconBg="bg-slate-50" iconColor="text-slate-600"
+              label="준공 자산" value={statusGroups.completed.length} unit="개"
+              sub={`실적 ${kpi.totalReports.toLocaleString()}건 축적`}
+              href="/projects?status=completed" />
+            <KpiCard loading={loading} icon={FolderKanban} iconBg="bg-violet-50" iconColor="text-violet-600"
+              label="전사 합계" value={kpi.projectCount} unit="개"
+              sub={`공종 ${kpi.totalTasks} · 평균 ${kpi.avgArea ? kpi.avgArea.toLocaleString() + '㎡' : '—'}`}
               href="/projects" />
-            <KpiCard loading={loading} icon={FileText} iconBg="bg-emerald-50" iconColor="text-emerald-600"
-              label="누적 일보" value={kpi.totalReports} unit="건"
-              sub="현장 실적 데이터" />
-            <KpiCard loading={loading} icon={Activity} iconBg="bg-purple-50" iconColor="text-purple-600"
-              label="공종 데이터" value={kpi.totalTasks} unit="개"
-              sub="WBS 누적" />
-            <KpiCard loading={loading} icon={Building2} iconBg="bg-orange-50" iconColor="text-orange-600"
-              label="평균 연면적" value={kpi.avgArea || '—'} unit={kpi.avgArea ? 'm²' : ''}
-              sub="프로젝트 규모" />
           </div>
         </section>
+
+        {/* 일시중단 경고 */}
+        {statusGroups.paused.length > 0 && (
+          <section>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle size={16} className="text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-amber-900 mb-0.5">
+                  {statusGroups.paused.length}개 프로젝트가 일시중단 상태
+                </h3>
+                <p className="text-xs text-amber-800">
+                  최근 30~90일간 일보 입력이 없습니다. 실제 중단인지 확인 필요:
+                  {' '}
+                  {statusGroups.paused.slice(0, 3).map((p, i) => (
+                    <span key={p.id}>
+                      {i > 0 && ', '}
+                      <Link href={`/projects/${p.id}`} className="font-semibold text-amber-900 hover:underline">
+                        {p.name}
+                      </Link>
+                    </span>
+                  ))}
+                  {statusGroups.paused.length > 3 && ` 외 ${statusGroups.paused.length - 3}개`}
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* 4단계 라이프사이클 스테퍼 */}
         <section>
@@ -108,55 +164,73 @@ export default function DashboardPage() {
           <LifecycleStepper kpi={kpi} loading={loading} />
         </section>
 
-        {/* 최근 프로젝트 + 바로가기 */}
+        {/* 활발한 현장 + 바로가기 */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-gray-900">최근 프로젝트</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-gray-900">활발한 현장</h3>
+                <span className="text-[10px] text-gray-400">최근 일보 순</span>
+              </div>
               <Link href="/projects" className="text-xs text-blue-600 hover:underline no-underline flex items-center gap-0.5">
                 전체 보기 <ChevronRight size={11} />
               </Link>
             </div>
             {loading ? (
               <div className="p-3"><SkeletonList rows={4} /></div>
-            ) : recentProjects.length === 0 ? (
+            ) : activeProjects.length === 0 ? (
               <EmptyState
                 compact
-                icon={FolderKanban}
-                title="아직 프로젝트가 없습니다"
+                icon={Activity}
+                title={recentProjects.length === 0 ? "아직 프로젝트가 없습니다" : "현재 진행 중인 현장이 없습니다"}
+                description={recentProjects.length === 0
+                  ? "신규 프로젝트 또는 엑셀 임포트로 시작하세요"
+                  : "준공 또는 계획 단계 프로젝트만 있습니다"}
                 actions={[
-                  { label: '첫 프로젝트 만들기', href: '/projects/new', icon: <Plus size={12} />, variant: 'primary' },
+                  recentProjects.length === 0
+                    ? { label: '첫 프로젝트', href: '/projects/new', icon: <Plus size={12} />, variant: 'primary' as const }
+                    : { label: '전체 프로젝트', href: '/projects', icon: <FolderKanban size={12} />, variant: 'secondary' as const }
                 ]}
               />
             ) : (
               <ul className="divide-y divide-gray-100">
-                {recentProjects.map(p => (
-                  <li key={p.id}>
-                    <Link
-                      href={`/projects/${p.id}`}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors no-underline group"
-                    >
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white flex-shrink-0">
-                        <Building2 size={14} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-700">{p.name}</p>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">
-                          {[p.client, p.location, `${p.ground}층`].filter(Boolean).join(' · ')}
-                        </p>
-                      </div>
-                      <div className="text-right text-xs hidden sm:block">
-                        {p.lastCpmDuration && (
-                          <div className="text-blue-700 font-mono font-bold">{p.lastCpmDuration}일</div>
-                        )}
-                        <div className="text-gray-400">
-                          {p._count.tasks}공종 · {p._count.dailyReports ?? 0}일보
+                {activeProjects.map(p => {
+                  const info = STATUS_META[getProjectStatus(p)]
+                  return (
+                    <li key={p.id}>
+                      <Link
+                        href={`/projects/${p.id}`}
+                        className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors no-underline group"
+                      >
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white flex-shrink-0 shadow-sm"
+                          style={{ background: `linear-gradient(135deg, ${info.color}, ${info.color}dd)` }}>
+                          <Building2 size={14} />
                         </div>
-                      </div>
-                      <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-600 flex-shrink-0" />
-                    </Link>
-                  </li>
-                ))}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded ${info.bg} ${info.text}`}>
+                              <span className={`w-1 h-1 rounded-full ${info.dot}`} />
+                              {info.label}
+                            </span>
+                            <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-700">{p.name}</p>
+                          </div>
+                          <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                            {[p.client, p.location, `${p.ground}층`].filter(Boolean).join(' · ')}
+                          </p>
+                        </div>
+                        <div className="text-right text-[11px] hidden sm:block flex-shrink-0">
+                          <div className="flex items-center gap-1 text-emerald-700 font-medium">
+                            <Clock size={10} /> {formatRelative(p.latestReportDate)}
+                          </div>
+                          <div className="text-gray-400 mt-0.5 font-mono">
+                            {p._count.dailyReports ?? 0}일보
+                          </div>
+                        </div>
+                        <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-600 flex-shrink-0" />
+                      </Link>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>
@@ -184,7 +258,7 @@ export default function DashboardPage() {
 }
 
 function KpiCard({
-  loading, icon: Icon, iconBg, iconColor, label, value, unit, sub, href,
+  loading, icon: Icon, iconBg, iconColor, label, value, unit, sub, href, accent,
 }: {
   loading: boolean
   icon: React.ComponentType<{ size?: number; className?: string }>
@@ -195,9 +269,11 @@ function KpiCard({
   unit?: string
   sub?: string
   href?: string
+  accent?: string   // hex color — 좌측 상단 컬러 띠 (상태 강조용)
 }) {
   const inner = (
-    <div className={`bg-white rounded-xl border border-gray-200 p-4 transition-all ${href ? 'hover:border-blue-300 hover:shadow-sm cursor-pointer' : ''}`}>
+    <div className={`relative bg-white rounded-xl border border-gray-200 p-4 transition-all overflow-hidden ${href ? 'hover:border-blue-300 hover:shadow-md cursor-pointer hover:-translate-y-0.5' : ''}`}>
+      {accent && <div className="absolute top-0 left-0 right-0 h-1" style={{ background: accent }} />}
       <div className="flex items-center justify-between mb-2">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
         <div className={`w-7 h-7 rounded-md flex items-center justify-center ${iconBg}`}>
@@ -212,7 +288,7 @@ function KpiCard({
           {unit && <span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>}
         </p>
       )}
-      {sub && <p className="text-[10px] text-gray-400 mt-1">{sub}</p>}
+      {sub && <p className="text-[10px] text-gray-400 mt-1 line-clamp-1">{sub}</p>}
     </div>
   )
   return href ? <Link href={href} className="no-underline">{inner}</Link> : inner
@@ -229,7 +305,7 @@ function LifecycleStepper({ kpi, loading }: { kpi: KpiData; loading: boolean }) 
   const stages = [
     {
       n: 1, label: '사업 검토', color: '#2563eb', bg: 'bg-blue-50', hoverBg: 'hover:bg-blue-100',
-      icon: <Calculator size={14} className="text-blue-600" />,
+      icon: <ClipboardCheck size={14} className="text-blue-600" />,
       href: '/bid',
       kpi: { label: '개략 견적 도구', value: '시뮬', sub: '개요만으로 공기·원가 산출' },
       cta: '견적 열기',
