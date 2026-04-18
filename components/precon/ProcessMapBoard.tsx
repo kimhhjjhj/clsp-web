@@ -17,6 +17,7 @@ import { autoLayout } from '@/lib/process-map/auto-layout'
 import { exportToPng } from '@/lib/process-map/export-png'
 import { useAutoSaveDraft } from '@/lib/hooks/useAutoSaveDraft'
 import DraftRestoreBanner from '@/components/common/DraftRestoreBanner'
+import { useToast } from '@/components/common/Toast'
 import FlowCanvas from './FlowCanvas'
 import { AlertTriangle, Zap } from 'lucide-react'
 
@@ -48,8 +49,8 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
   const [editingCard, setEditingCard] = useState<ProcessMapCard | null>(null)
   const [linkingFrom, setLinkingFrom] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'pull' | 'timeline' | 'flow'>('pull')
+  const toast = useToast()
   const boardRef = useRef<HTMLDivElement>(null)
 
   // ── Undo/Redo 히스토리 (throttle 방식) ──────────────────
@@ -152,21 +153,18 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
       if (res.ok) {
         const data = await res.json()
         setDirty(false)
-        setNotice('저장됨')
         setServerVersion(data.updatedAt ?? new Date().toISOString())
         clearDraft()
-        setTimeout(() => setNotice(null), 1500)
+        toast.success('프로세스맵 저장됨', `${map.cards.length}개 카드 · ${map.lanes.length}개 레인`)
       } else {
-        setNotice('저장 실패 — 초안은 자동 보관됨')
-        setTimeout(() => setNotice(null), 3000)
+        toast.error('저장 실패', '초안은 자동 보관됩니다. 네트워크 확인 후 재시도하세요.')
       }
     } catch {
-      setNotice('네트워크 오류 — 초안은 자동 보관됨')
-      setTimeout(() => setNotice(null), 3000)
+      toast.error('네트워크 오류', '초안은 자동 보관됩니다.')
     } finally {
       setSaving(false)
     }
-  }, [projectId, map, clearDraft])
+  }, [projectId, map, clearDraft, toast])
 
   // ── 베이스라인 import ─────────────────────────────────
   async function importBaseline() {
@@ -178,8 +176,7 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
       if (res.ok) {
         const r = await fetch(`/api/projects/${projectId}/process-map`).then(r => r.json())
         setMap({ lanes: r.lanes ?? [], cards: r.cards ?? [], links: r.links ?? [] })
-        setNotice(`${data.imported}개 카드 가져옴`)
-        setTimeout(() => setNotice(null), 2500)
+        toast.success(`베이스라인 가져옴`, `${data.imported}개 카드 · ${data.laneCount}개 레인`)
       } else {
         alert(data.error ?? '가져오기 실패')
       }
@@ -358,8 +355,8 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
         <DraftRestoreBanner
           savedAt={draftEnvelope.savedAt}
           label="프로세스맵 변경"
-          onRestore={() => applyDraft(d => { setMapRaw(d); setDirty(true); setNotice('초안 복원됨'); setTimeout(() => setNotice(null), 2000) })}
-          onDiscard={() => { clearDraft(); setNotice('초안 폐기됨'); setTimeout(() => setNotice(null), 1500) }}
+          onRestore={() => applyDraft(d => { setMapRaw(d); setDirty(true); toast.info('초안 복원됨') })}
+          onDiscard={() => { clearDraft(); toast.info('초안 폐기됨') }}
         />
       )}
 
@@ -469,7 +466,6 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
               title="다시 실행 (Ctrl+Y)"
             ><Redo2 size={13} /></button>
           </div>
-          {notice && <span className="text-xs text-green-700">✓ {notice}</span>}
           {dirty && (
             <span className="text-xs text-orange-500" title={lastSavedAt ? `자동 초안 ${new Date(lastSavedAt).toLocaleTimeString('ko-KR')}` : '자동 저장 대기중'}>
               ● 미저장{lastSavedAt ? ' (자동보관됨)' : ''}

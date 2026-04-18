@@ -7,6 +7,7 @@ import {
   LayoutDashboard, FolderKanban, Plus, Bell, Settings,
   Search, LayoutGrid, BarChart3, FileText, ChevronRight,
 } from 'lucide-react'
+import { ToastProvider } from '@/components/common/Toast'
 
 const NAV_ITEMS = [
   { href: '/',         label: '대시보드',     icon: LayoutDashboard, desc: '전체 현황' },
@@ -24,6 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
 
   return (
+    <ToastProvider>
     <div className="flex h-full" style={{ background: '#fafafa' }}>
 
       {/* 사이드바 */}
@@ -130,5 +132,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </div>
+    </ToastProvider>
   )
 }

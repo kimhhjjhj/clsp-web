@@ -29,7 +29,10 @@
   - 완료 조건: 모든 stage·sub 페이지 상단에 `프로젝트 > 단계 > 탭` 표시
 - [ ] **모바일 반응형 (일보)** — 3단계 `DailyReportForm`과 목록을 폰에서 입력·조회 가능
   - 완료 조건: iPhone Safari에서 일보 신규 저장·사진 업로드·조회 전 흐름 성공
-- [ ] **토스트 알림** — 저장/삭제/에러 시 화면 우하단 토스트 (2초 자동 닫힘)
+- [x] **토스트 알림** — 저장/삭제/에러 시 화면 우하단 토스트 (2초 자동 닫힘)
+  - 구현: `components/common/Toast.tsx` (Portal 기반) + `useToast` 훅
+  - 적용: 대시보드 레이아웃 Provider + ProcessMapBoard + DailyReportForm (저장/에러/복원/폐기 등)
+  - 다른 패널들(RiskPanel, PhotoUpload 등)의 alert/confirm은 점진 마이그레이션 예정
   - 완료 조건: 일보 저장/프로세스맵 저장/권한 거부 모두 토스트 표시
 - [ ] **로딩 스켈레톤** — 빈 스피너 대신 레이아웃 그대로의 스켈레톤 (프로젝트 목록·상세·일보)
   - 완료 조건: 첫 로드 시 점프 없는 skeleton→content 전환

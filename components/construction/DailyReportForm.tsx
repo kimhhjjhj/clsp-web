@@ -10,6 +10,7 @@ import {
 import PhotoUpload, { type Photo } from './PhotoUpload'
 import { useAutoSaveDraft } from '@/lib/hooks/useAutoSaveDraft'
 import DraftRestoreBanner from '@/components/common/DraftRestoreBanner'
+import { useToast } from '@/components/common/Toast'
 
 export interface DailyReportData {
   id?: string
@@ -98,6 +99,7 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
   const [search, setSearch] = useState('')
   const [dirty, setDirty] = useState(false)
   const isEdit = !!reportId
+  const toast = useToast()
 
   // 자동 저장 초안 — 신규: projectId+date, 편집: projectId+reportId
   const draftKey = isEdit ? `dr-draft:${projectId}:${reportId}` : `dr-draft-new:${projectId}:${data.date}`
@@ -116,7 +118,7 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
     const list: any[] = res.ok ? await res.json() : []
     const latest = list.find(r => r.date < data.date) ?? list[0]
     if (!latest) {
-      alert('복제할 이전 일보가 없습니다.')
+      toast.warning('복제할 이전 일보가 없습니다')
       return
     }
     setData(prev => ({
@@ -145,7 +147,7 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
   }
 
   async function save() {
-    if (!data.date) return alert('날짜를 입력하세요.')
+    if (!data.date) { toast.warning('날짜를 입력하세요'); return }
     setSaving(true)
     const body = {
       date: data.date,
@@ -175,11 +177,12 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
     })
     setSaving(false)
     if (!res.ok) {
-      alert('저장 실패 — 초안은 자동 보관되어 있습니다. 네트워크 확인 후 재시도하세요.')
+      toast.error('일보 저장 실패', '초안은 자동 보관됩니다. 네트워크 확인 후 재시도하세요.')
       return
     }
     clearDraft()
     setDirty(false)
+    toast.success(isEdit ? '일보 수정됨' : '일보 작성됨', `${data.date} · 총 ${totalToday}명 투입`)
     router.push(`/projects/${projectId}/stage/3`)
   }
 
