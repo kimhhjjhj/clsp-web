@@ -11,6 +11,7 @@ import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 import AiCostEstimate from '@/components/bid/AiCostEstimate'
+import { assessCriticalPath, CP_LEVEL_COLORS } from '@/lib/engine/cp-assessment'
 import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/components/wbs/WBSTable'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
@@ -610,8 +611,35 @@ export default function BidPage() {
                         <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
                           <ArrowRight size={14} className="text-orange-500" /> Critical Path 요약
                         </h3>
+                        {(() => {
+                          const cp = assessCriticalPath(result.cpm.tasks, result.cpm.totalDuration)
+                          const color = CP_LEVEL_COLORS[cp.level]
+                          const pct = Math.round(cp.ratio * 100)
+                          return (
+                            <div className="mb-3">
+                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${color.bg} ${color.text}`}>
+                                  <span className={`w-1 h-1 rounded-full ${color.dot}`} />
+                                  CP 집중도 · {cp.label}
+                                </span>
+                                <span className="text-xs text-gray-600">
+                                  <strong className="font-mono" style={{ color: color.hex }}>{pct}%</strong>
+                                  <span className="text-gray-400 mx-1">·</span>
+                                  <span className="text-gray-500">{cp.cpDays}일 / {cp.totalDuration}일</span>
+                                </span>
+                              </div>
+                              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{ width: `${pct}%`, background: color.hex }}
+                                />
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-1.5">{cp.reason}</p>
+                            </div>
+                          )
+                        })()}
                         <p className="text-xs text-gray-600 mb-2">
-                          전체 {result.cpm.taskCount}개 공종 중 <strong className="text-orange-600">{result.cpm.criticalPathCount}개</strong>가 Critical Path. 지연 시 공기 연장 직결.
+                          전체 {result.cpm.taskCount}개 공종 중 <strong className="text-orange-600">{result.cpm.criticalPathCount}개</strong>가 Critical Path.
                           <button onClick={() => { setTopTab('schedule'); setSubTab('critical'); router.replace('/bid?tab=schedule', { scroll: false }) }} className="ml-2 text-[11px] text-blue-600 hover:underline">상세 →</button>
                         </p>
                         {result.resourcePlan.uncoveredTasks.length > 0 && (
