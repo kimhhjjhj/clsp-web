@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   ClipboardCheck, Building2, Ruler, Layers, Play, Save, TrendingUp,
   Calendar, Users, DollarSign, AlertTriangle, Loader2, ArrowRight,
-  BarChart3, ChevronRight, MapPin, Search, Drill, Check, X,
+  BarChart3, ChevronRight, Search, Drill, Check,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
@@ -312,9 +312,14 @@ export default function BidPage() {
               </div>
 
               <div className="divide-y divide-gray-100">
-                {/* ── 섹션 1: 현장 위치 · 지반 (맨 앞) ── */}
-                <Section color="#a16207" label="현장 위치 · 지반" icon={<MapPin size={12} />}>
-                  <Field label="공사 주소" hint="검색 후 지오코딩 → 좌표 획득">
+                {/* ── 섹션 1: 기본 정보 (프로젝트명 · 주소 · 착공일) ── */}
+                <Section color="#2563eb" label="기본 정보">
+                  <Field label="프로젝트명" hint="저장할 때 사용 · 생략 가능">
+                    <input value={input.name} onChange={e => set('name', e.target.value)} placeholder="예: 강남 ◯◯ 신축공사"
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                  </Field>
+
+                  <Field label="공사 주소" hint="검색 → 좌표 확보 → 지층 섹션에서 시추공 자동 로드">
                     <div className="flex gap-2">
                       <input
                         value={input.location}
@@ -346,46 +351,13 @@ export default function BidPage() {
                     </div>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={handleLoadBoreholes}
-                    disabled={!coords || loadingBH}
-                    className={`w-full h-10 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                      coords
-                        ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    } disabled:opacity-60`}
-                  >
-                    {loadingBH ? <Loader2 size={13} className="animate-spin" /> : <Drill size={13} />}
-                    {coords ? '근처 시추공 자동 로드 (500m)' : '주소 검색 먼저'}
-                  </button>
-
-                  {bhError && <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">{bhError}</p>}
-                  {boreholes.length > 0 && (
-                    <div className="text-[11px] text-amber-900 bg-amber-50 border border-amber-100 rounded px-2.5 py-2">
-                      <div className="flex items-center gap-1.5">
-                        <Check size={11} className="text-amber-600" />
-                        <strong>{boreholes.length}개 시추공 평균값 적용됨</strong>
-                      </div>
-                      <p className="text-[10px] text-amber-700 mt-0.5">아래 지반 입력란 자동 채움 · 수동으로 덮어쓸 수 있음</p>
-                    </div>
-                  )}
-
-                  {Number(input.basement) > 0 ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <Field label="풍화토 바닥" unit="m">
-                        <NumInput value={input.wtBottom} onChange={v => set('wtBottom', v)} step="0.1" />
-                      </Field>
-                      <Field label="풍화암 바닥" unit="m">
-                        <NumInput value={input.waBottom} onChange={v => set('waBottom', v)} step="0.1" />
-                      </Field>
-                    </div>
-                  ) : (
-                    <p className="text-[10px] text-gray-400">지하 층수가 1 이상일 때 풍화토/풍화암 깊이 입력칸이 표시됩니다.</p>
-                  )}
+                  <Field label="착공 예정일" hint="월별 인력 집계 활성 · 선택">
+                    <input type="date" value={input.startDate} onChange={e => set('startDate', e.target.value)}
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                  </Field>
                 </Section>
 
-                {/* ── 섹션 2: 건물 유형·규모 ── */}
+                {/* ── 섹션 2: 건물 유형 · 규모 ── */}
                 <Section color="#16a34a" label="건물 유형 · 규모" icon={<Layers size={12} />}>
                   <Field label="건물 유형" required>
                     <select value={input.type} onChange={e => set('type', e.target.value)}
@@ -398,6 +370,7 @@ export default function BidPage() {
                       <option>기타</option>
                     </select>
                   </Field>
+
                   <div className="grid grid-cols-3 gap-2">
                     <Field label="지상" unit="층" required>
                       <NumInput value={input.ground} onChange={v => set('ground', v)} />
@@ -420,39 +393,79 @@ export default function BidPage() {
                       className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-400" />
                     <span className="text-xs font-medium">전이층(Transfer Slab) 포함</span>
                   </label>
-                </Section>
 
-                {/* ── 섹션 3: 면적·둘레 ── */}
-                <Section color="#ea580c" label="면적 · 둘레" icon={<Ruler size={12} />}>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="건축면적" unit="㎡" required hint="1층 footprint">
-                      <NumInput value={input.buildingArea} onChange={v => set('buildingArea', v)} />
-                    </Field>
-                    <Field label="연면적" unit="㎡" required hint="전 층 합계">
-                      <NumInput value={input.bldgArea} onChange={v => set('bldgArea', v)} />
-                    </Field>
-                    <Field label="대지면적" unit="㎡">
-                      <NumInput value={input.siteArea} onChange={v => set('siteArea', v)} />
-                    </Field>
-                    <Field label="대지둘레" unit="m">
-                      <NumInput value={input.sitePerim} onChange={v => set('sitePerim', v)} />
-                    </Field>
-                    <Field label="건물둘레" unit="m" className="col-span-2">
-                      <NumInput value={input.bldgPerim} onChange={v => set('bldgPerim', v)} />
-                    </Field>
+                  {/* 면적 3칸 한 줄 */}
+                  <div className="pt-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      <Ruler size={11} /> 면적
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Field label="대지면적" unit="㎡">
+                        <NumInput value={input.siteArea} onChange={v => set('siteArea', v)} />
+                      </Field>
+                      <Field label="건축면적" unit="㎡" required>
+                        <NumInput value={input.buildingArea} onChange={v => set('buildingArea', v)} />
+                      </Field>
+                      <Field label="연면적" unit="㎡" required>
+                        <NumInput value={input.bldgArea} onChange={v => set('bldgArea', v)} />
+                      </Field>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">건축=1층 footprint · 연=전층 합</p>
+                  </div>
+
+                  {/* 둘레 2칸 한 줄 */}
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">둘레</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="대지둘레" unit="m">
+                        <NumInput value={input.sitePerim} onChange={v => set('sitePerim', v)} />
+                      </Field>
+                      <Field label="건물둘레" unit="m">
+                        <NumInput value={input.bldgPerim} onChange={v => set('bldgPerim', v)} />
+                      </Field>
+                    </div>
                   </div>
                 </Section>
 
-                {/* ── 섹션 4: 메타 (선택) ── */}
-                <Section color="#2563eb" label="메타 (선택)">
-                  <Field label="프로젝트명" hint="저장할 때 사용">
-                    <input value={input.name} onChange={e => set('name', e.target.value)} placeholder="예: 강남 ◯◯ 신축공사"
-                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-                  </Field>
-                  <Field label="착공 예정일" hint="월별 인력 집계 활성">
-                    <input type="date" value={input.startDate} onChange={e => set('startDate', e.target.value)}
-                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-                  </Field>
+                {/* ── 섹션 3: 지층 정보 ── */}
+                <Section color="#a16207" label="지층 정보" icon={<Drill size={12} />}>
+                  <button
+                    type="button"
+                    onClick={handleLoadBoreholes}
+                    disabled={!coords || loadingBH}
+                    className={`w-full h-10 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                      coords
+                        ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    } disabled:opacity-60`}
+                  >
+                    {loadingBH ? <Loader2 size={13} className="animate-spin" /> : <Drill size={13} />}
+                    {coords ? '근처 시추공 자동 로드 (500m)' : '주소 검색 후 활성화됩니다'}
+                  </button>
+
+                  {bhError && <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">{bhError}</p>}
+                  {boreholes.length > 0 && (
+                    <div className="text-[11px] text-amber-900 bg-amber-50 border border-amber-100 rounded px-2.5 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <Check size={11} className="text-amber-600" />
+                        <strong>{boreholes.length}개 시추공 평균값 적용됨</strong>
+                      </div>
+                      <p className="text-[10px] text-amber-700 mt-0.5">아래 입력란 자동 채움 · 수동으로 덮어쓸 수 있음</p>
+                    </div>
+                  )}
+
+                  {Number(input.basement) > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="풍화토 바닥" unit="m">
+                        <NumInput value={input.wtBottom} onChange={v => set('wtBottom', v)} step="0.1" />
+                      </Field>
+                      <Field label="풍화암 바닥" unit="m">
+                        <NumInput value={input.waBottom} onChange={v => set('waBottom', v)} step="0.1" />
+                      </Field>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-gray-400">지하 층수 1 이상일 때 풍화토·풍화암 입력칸이 표시됩니다.</p>
+                  )}
                 </Section>
               </div>
 
