@@ -274,7 +274,7 @@ function Kpi({
   icon, bg, label, value, unit,
 }: { icon: React.ReactNode; bg: string; label: string; value: number | string; unit: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
+    <div className="card-elevated p-5">
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
         <div className={`w-7 h-7 rounded-md ${bg} flex items-center justify-center`}>{icon}</div>
@@ -290,7 +290,7 @@ function Card({
   title, subtitle, icon, children,
 }: { title: string; subtitle?: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
+    <div className="card-elevated p-4 sm:p-5">
       <div className="flex items-center gap-2 mb-3">
         {icon}
         <div>

@@ -150,7 +150,7 @@ export default function AdminProductivityPage() {
             <Loader2 className="animate-spin text-emerald-600" />
           </div>
         ) : visible.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">
+          <div className="card-elevated p-8 text-center text-gray-400 text-sm">
             해당 상태의 제안이 없습니다.
           </div>
         ) : (
@@ -158,7 +158,7 @@ export default function AdminProductivityPage() {
             {visible.map(p => (
               <div
                 key={p.id}
-                className="bg-white border border-gray-200 rounded-xl p-4"
+                className="card-elevated p-4"
               >
                 <div className="flex items-start gap-4">
                   {/* 좌측 정보 */}

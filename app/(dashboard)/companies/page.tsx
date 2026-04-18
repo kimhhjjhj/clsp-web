@@ -130,7 +130,7 @@ export default function CompaniesPage() {
                 {[0, 1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16" />)}
               </div>
             ) : filtered.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200">
+              <div className="card-elevated">
                 <EmptyState
                   icon={Users2}
                   title={rows.length === 0 ? '집계된 협력사가 없습니다' : '조건에 맞는 협력사가 없습니다'}
@@ -138,7 +138,7 @@ export default function CompaniesPage() {
                 />
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+              <div className="card-elevated divide-y divide-gray-100">
                 {filtered.map(r => (
                   <button
                     key={r.company}
@@ -171,7 +171,7 @@ export default function CompaniesPage() {
           {/* 상세 */}
           <div>
             {selected ? (
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden sticky top-4">
+              <div className="card-elevated overflow-hidden sticky top-4">
                 <div className="p-4 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white font-bold">
@@ -251,7 +251,7 @@ function Stat({
   icon, bg, label, value, unit,
 }: { icon: React.ReactNode; bg: string; label: string; value: number | string; unit: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
+    <div className="card-elevated p-4">
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
         <div className={`w-7 h-7 rounded-md ${bg} flex items-center justify-center`}>{icon}</div>

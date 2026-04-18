@@ -141,7 +141,7 @@ export default function RisksLibraryPage() {
 
         {/* 카테고리 요약 */}
         {summary.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="card-elevated p-4">
             <h3 className="text-sm font-bold text-gray-900 mb-3">공종별 집계</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {summary.map(s => (
@@ -219,7 +219,7 @@ export default function RisksLibraryPage() {
         {loading ? (
           <SkeletonList rows={6} />
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200">
+          <div className="card-elevated">
             <EmptyState
               icon={ShieldAlert}
               title={items.length === 0 ? '등록된 R&O가 없습니다' : '조건에 맞는 결과가 없습니다'}
@@ -229,7 +229,7 @@ export default function RisksLibraryPage() {
             />
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <div className="card-elevated divide-y divide-gray-100">
             {filtered.map(i => (
               <div key={i.id} className="p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between gap-3">
@@ -291,7 +291,7 @@ function Stat({
   icon, bg, label, value, unit,
 }: { icon: React.ReactNode; bg: string; label: string; value: number | string; unit: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
+    <div className="card-elevated p-4">
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
         <div className={`w-7 h-7 rounded-md ${bg} flex items-center justify-center`}>{icon}</div>

@@ -214,7 +214,7 @@ export default function StandardsPage() {
         {loading ? (
           <SkeletonTable rows={10} cols={6} />
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200">
+          <div className="card-elevated">
             <EmptyState
               icon={Database}
               title={rows.length === 0 ? '아직 축적된 생산성 데이터가 없습니다' : '조건에 맞는 결과가 없습니다'}
@@ -227,7 +227,7 @@ export default function StandardsPage() {
             />
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="card-elevated overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -306,7 +306,7 @@ function Stat({
   label, value, unit, icon, bg,
 }: { label: string; value: number | string; unit: string; icon: React.ReactNode; bg: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
+    <div className="card-elevated p-4">
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
         <div className={`w-7 h-7 rounded-md ${bg} flex items-center justify-center`}>{icon}</div>

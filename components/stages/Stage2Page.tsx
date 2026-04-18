@@ -209,7 +209,7 @@ export default function Stage2Page({ projectId }: Props) {
             <div>
               <RiskPanel projectId={projectId} onUpdate={loadRisks} />
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="card-elevated p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-700">확률-영향 히트맵</h3>
                 <div className="flex gap-3 text-xs text-gray-500">
