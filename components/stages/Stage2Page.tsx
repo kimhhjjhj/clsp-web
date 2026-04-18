@@ -161,7 +161,7 @@ export default function Stage2Page({ projectId }: Props) {
   const exposureIndex = riskItems.reduce((sum, r) => sum + (r.probability / 100) * (r.impactDays ?? 0), 0)
 
   return (
-    <div className="overflow-auto h-full bg-gray-50">
+    <div className="overflow-auto h-full">
       <div className="p-6 space-y-6 max-w-6xl mx-auto">
 
         {/* ── 시나리오 대시보드 (최상단) ─────────────────────── */}

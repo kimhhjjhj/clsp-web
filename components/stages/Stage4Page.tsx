@@ -20,7 +20,7 @@ export default function Stage4Page({ projectId, projectName }: Props) {
   const [tab, setTab] = useState<TabId>('analytics')
 
   return (
-    <div className="h-full overflow-auto" style={{ background: '#f8fafc' }}>
+    <div className="h-full overflow-auto">
       {/* 탭 헤더 — 반투명 + 구분선 강조 */}
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-slate-200 px-6 pt-1">
         <div className="flex gap-1">
