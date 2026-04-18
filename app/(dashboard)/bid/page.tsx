@@ -12,6 +12,7 @@ import { useToast } from '@/components/common/Toast'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 import AiCostEstimate from '@/components/bid/AiCostEstimate'
 import { assessCriticalPath, CP_LEVEL_COLORS } from '@/lib/engine/cp-assessment'
+import { computeBenchmark, BENCHMARK_COLORS, type BenchmarkResult, type BenchmarkSample } from '@/lib/engine/benchmark'
 import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/components/wbs/WBSTable'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
@@ -115,6 +116,48 @@ export default function BidPage() {
 
   // AI 공사비 추정 결과 (저장 시 함께 전송)
   const [aiEstimate, setAiEstimate] = useState<unknown | null>(null)
+
+  // 회사 과거 프로젝트 벤치마크 (CPM 결과 나오면 자동 로드)
+  const [benchmark, setBenchmark] = useState<BenchmarkResult | null>(null)
+
+  useEffect(() => {
+    if (!result) { setBenchmark(null); return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/projects')
+        if (!res.ok) return
+        const projects = await res.json() as Array<{
+          name: string; type: string | null; ground: number | null;
+          basement: number | null; lowrise: number | null; lastCpmDuration: number | null;
+        }>
+        const samples: BenchmarkSample[] = projects
+          .filter(p => p.lastCpmDuration && p.lastCpmDuration > 0)
+          .map(p => ({
+            name: p.name,
+            type: p.type,
+            ground: p.ground,
+            basement: p.basement,
+            lowrise: p.lowrise,
+            duration: p.lastCpmDuration!,
+          }))
+        const b = computeBenchmark(
+          {
+            type: input.type || null,
+            ground: Number(input.ground) || 0,
+            basement: Number(input.basement) || 0,
+            lowrise: Number(input.lowrise) || 0,
+            currentDuration: result.cpm.totalDuration,
+          },
+          samples,
+        )
+        if (!cancelled) setBenchmark(b)
+      } catch {
+        /* 네트워크 에러 무시 — 뱃지 숨김 */
+      }
+    })()
+    return () => { cancelled = true }
+  }, [result, input.type, input.ground, input.basement, input.lowrise])
 
   // 결과 뷰 탭
   const [topTab, setTopTab] = useState<TopTab>(initialTab)
@@ -650,6 +693,45 @@ export default function BidPage() {
                           </div>
                         )}
                       </div>
+
+                      {/* 회사 과거 프로젝트 벤치마크 비교 */}
+                      {benchmark && (
+                        <div className="border-t border-gray-100 pt-5">
+                          <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
+                            <BarChart3 size={14} className="text-orange-500" /> 회사 실적 벤치마크
+                          </h3>
+                          {(() => {
+                            const color = BENCHMARK_COLORS[benchmark.level]
+                            return (
+                              <div className={`rounded-lg border ${color.border} ${color.bg} p-3`}>
+                                <div className={`text-xs font-bold ${color.text} mb-1`}>
+                                  {benchmark.label}
+                                </div>
+                                <div className="text-[11px] text-gray-600 leading-relaxed">
+                                  {benchmark.detail}
+                                </div>
+                                {benchmark.samples.length > 0 && benchmark.level !== 'insufficient' && (
+                                  <details className="mt-2">
+                                    <summary className="text-[10px] text-gray-500 cursor-pointer hover:text-gray-700">
+                                      비교 표본 {benchmark.sampleCount}개 ▾
+                                    </summary>
+                                    <ul className="mt-1.5 space-y-0.5 text-[10px] text-gray-600 font-mono">
+                                      {benchmark.samples.map((s, i) => (
+                                        <li key={i} className="flex justify-between">
+                                          <span className="truncate max-w-[140px]">{s.name}</span>
+                                          <span className="text-gray-400">
+                                            {s.totalFloors}층 · {s.duration}일 · <strong>{s.daysPerFloor}일/층</strong>
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </details>
+                                )}
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
 
                       {/* 노무비 러프 참고 */}
                       <details className="border-t border-gray-100 pt-5">
