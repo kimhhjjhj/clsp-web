@@ -8,6 +8,7 @@ import {
   Search, LayoutGrid, BarChart3, FileText, ChevronRight,
 } from 'lucide-react'
 import { ToastProvider } from '@/components/common/Toast'
+import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
 
 const NAV_ITEMS = [
   { href: '/',         label: '대시보드',     icon: LayoutDashboard, desc: '전체 현황' },
@@ -21,11 +22,26 @@ const TOP_TABS = [
   { href: '/projects', label: '프로젝트', icon: FolderKanban },
 ]
 
+function TopBarSearch() {
+  const palette = useCommandPalette()
+  return (
+    <button
+      onClick={() => palette.open()}
+      className="hidden lg:flex items-center gap-2 h-8 px-3 rounded-full bg-gray-50 border border-gray-200/80 w-56 hover:border-gray-300 transition-colors cursor-pointer text-left"
+    >
+      <Search size={13} className="text-gray-400" />
+      <span className="text-xs text-gray-400 flex-1 truncate">검색 · 프로젝트 / 일보 / 공종...</span>
+      <span className="text-[10px] text-gray-300 font-mono border border-gray-200 rounded px-1 bg-white">⌘K</span>
+    </button>
+  )
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   return (
     <ToastProvider>
+    <CommandPaletteProvider>
     <div className="flex h-full" style={{ background: '#fafafa' }}>
 
       {/* 사이드바 */}
@@ -108,11 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
-            <div className="hidden lg:flex items-center gap-2 h-8 px-3 rounded-full bg-gray-50 border border-gray-200/80 w-48 hover:border-gray-300 transition-colors cursor-pointer">
-              <Search size={13} className="text-gray-400" />
-              <span className="text-xs text-gray-400">검색...</span>
-              <span className="ml-auto text-[10px] text-gray-300 font-mono border border-gray-200 rounded px-1">⌘K</span>
-            </div>
+            <TopBarSearch />
             <button className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors relative">
               <Bell size={15} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#2563eb] ring-2 ring-white" />
@@ -132,6 +144,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </div>
+    </CommandPaletteProvider>
     </ToastProvider>
   )
 }

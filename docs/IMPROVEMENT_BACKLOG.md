@@ -23,8 +23,10 @@
 
 ## Tier 1 — 사용성 임팩트 최대
 
-- [ ] **Command Palette (Cmd+K)** — 프로젝트/일보/공종/카드 통합 검색, 키보드로 점프
+- [x] **Command Palette (Cmd+K)** — 프로젝트/일보/공종/카드 통합 검색, 키보드로 점프
   - 완료 조건: Cmd+K 누르면 검색창, 상위 10개 결과 클릭 시 이동
+  - 구현: `components/common/CommandPalette.tsx` + `/api/search` (프로젝트/일보/태스크/제안 4종)
+  - Provider 대시보드 레이아웃에 주입, 상단바 Search 버튼 연결, 단축키 ⌘K/Ctrl+K/`/`
 - [ ] **글로벌 네비게이션 · 브레드크럼** — 프로젝트 선택 후 드릴다운 경로가 항상 보이게
   - 완료 조건: 모든 stage·sub 페이지 상단에 `프로젝트 > 단계 > 탭` 표시
 - [ ] **모바일 반응형 (일보)** — 3단계 `DailyReportForm`과 목록을 폰에서 입력·조회 가능
