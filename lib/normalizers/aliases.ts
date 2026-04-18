@@ -41,3 +41,34 @@ export function normalizeCompany(raw: string | null | undefined): string {
   const cleaned = cleanSpaces(String(raw))
   return COMPANY_ALIAS[cleaned] ?? COMPANY_ALIAS[raw as string] ?? cleaned
 }
+
+// ═══════════════════════════════════════════════════════════
+// 공종 대분류 매핑 — 키워드 기반
+// 활용: 생산성 DB · 전사 분석에서 필터/그룹핑
+// 분류 불가능한 경우 '기타'
+// ═══════════════════════════════════════════════════════════
+export type TradeCategory = '골조' | '토목' | '마감' | '설비' | '전기·통신' | '가설·관리' | '외부·조경' | '기타'
+
+export const TRADE_CATEGORIES: TradeCategory[] = [
+  '골조', '토목', '마감', '설비', '전기·통신', '가설·관리', '외부·조경', '기타'
+]
+
+// 순서 중요 — 앞에 매칭되면 결정 (더 구체적인 것부터)
+const CATEGORY_RULES: { key: TradeCategory; keywords: string[] }[] = [
+  { key: '전기·통신', keywords: ['전기', '통신', '소방', '약전', '정보통신'] },
+  { key: '설비',     keywords: ['설비', '배관', '위생', '공조', '냉난방', 'EHP', '기계', '소화', '급배수'] },
+  { key: '골조',     keywords: ['철근', '콘크리트', '타설', '형틀', '거푸집', '골조', '철콘', '지하층', '지상층', '기초', '전이층'] },
+  { key: '토목',     keywords: ['토공', '터파기', 'CIP', 'SGR', '흙막이', '캠빔', '차수', '복토', '되메우기', '잔토'] },
+  { key: '마감',     keywords: ['내장', '타일', '도장', '창호', '석재', '금속', '단열', '방수', '목공', '도배', '마감', '석공', '수장', '유리', '천장', '바닥', '페인트'] },
+  { key: '외부·조경', keywords: ['조경', '포장', '옥상', '부지정지', '외부', '외벽'] },
+  { key: '가설·관리', keywords: ['가설', '울타리', '철거', '부지', '관리', '직영', '공통', '사무실'] },
+]
+
+export function getTradeCategory(trade: string): TradeCategory {
+  if (!trade) return '기타'
+  const t = trade.trim()
+  for (const rule of CATEGORY_RULES) {
+    if (rule.keywords.some(kw => t.includes(kw))) return rule.key
+  }
+  return '기타'
+}

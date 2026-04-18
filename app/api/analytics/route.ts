@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { normalizeTrade, normalizeCompany } from '@/lib/normalizers/aliases'
+import { normalizeTrade, normalizeCompany, getTradeCategory } from '@/lib/normalizers/aliases'
 
 interface ManpowerEntry { trade: string; company?: string; today: number }
 interface MaterialEntry { name: string; today: number }
@@ -22,7 +22,7 @@ export async function GET(_req: NextRequest) {
   ])
 
   // 공종별 집계
-  const tradeMap = new Map<string, { total: number; days: Set<string>; companies: Set<string>; projects: Set<string> }>()
+  const tradeMap = new Map<string, { total: number; days: Set<string>; companies: Set<string>; projects: Set<string>; monthly: Map<string, number> }>()
   // 월별 집계
   const monthMap = new Map<string, { total: number; days: Set<string> }>()
   // 요일별
@@ -56,11 +56,13 @@ export async function GET(_req: NextRequest) {
       const companyKey = normalizeCompany(m.company)
       if (companyKey) companySet.add(companyKey)
       if (tradeKey) {
-        const cur = tradeMap.get(tradeKey) ?? { total: 0, days: new Set<string>(), companies: new Set<string>(), projects: new Set<string>() }
+        const cur = tradeMap.get(tradeKey) ?? { total: 0, days: new Set<string>(), companies: new Set<string>(), projects: new Set<string>(), monthly: new Map<string, number>() }
         cur.total += m.today
         cur.days.add(date)
         if (companyKey) cur.companies.add(companyKey)
         cur.projects.add(r.projectId)
+        const month = date.slice(0, 7)
+        cur.monthly.set(month, (cur.monthly.get(month) ?? 0) + m.today)
         tradeMap.set(tradeKey, cur)
       }
     }
@@ -110,12 +112,16 @@ export async function GET(_req: NextRequest) {
   const topTrades = Array.from(tradeMap.entries())
     .map(([trade, v]) => ({
       trade,
+      category: getTradeCategory(trade),
       totalManDays: Math.round(v.total * 10) / 10,
       activeDays: v.days.size,
       companies: v.companies.size,
       projectCount: v.projects.size,
       avgDaily: v.days.size > 0 ? Math.round((v.total / v.days.size) * 10) / 10 : 0,
       avgDaysPerProject: v.projects.size > 0 ? Math.round(v.days.size / v.projects.size) : 0,
+      monthlyTrend: Array.from(v.monthly.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([month, manDays]) => ({ month, manDays: Math.round(manDays * 10) / 10 })),
     }))
     .sort((a, b) => b.totalManDays - a.totalManDays)
     .slice(0, 50)

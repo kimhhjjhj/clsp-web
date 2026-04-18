@@ -18,14 +18,31 @@ import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
 
+interface MonthlyPoint { month: string; manDays: number }
 interface TradeInsight {
   trade: string
+  category: string
   totalManDays: number
-  activeDays: number          // 이 공종이 실제 수행된 날 수 (전사 합산)
-  companies: number           // 참여한 협력사 수
-  projectCount: number        // 이 공종이 등장한 프로젝트 수
-  avgDaily: number            // 하루 평균 투입 인원
-  avgDaysPerProject: number   // 프로젝트당 평균 수행 일수 (activeDays / projectCount)
+  activeDays: number
+  companies: number
+  projectCount: number
+  avgDaily: number
+  avgDaysPerProject: number
+  monthlyTrend?: MonthlyPoint[]
+}
+
+const CATEGORIES = ['전체', '골조', '토목', '마감', '설비', '전기·통신', '가설·관리', '외부·조경', '기타'] as const
+type CategoryFilter = typeof CATEGORIES[number]
+
+const CATEGORY_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
+  '골조':      { bg: 'bg-blue-50',    text: 'text-blue-700',    dot: 'bg-blue-500' },
+  '토목':      { bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-500' },
+  '마감':      { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  '설비':      { bg: 'bg-cyan-50',    text: 'text-cyan-700',    dot: 'bg-cyan-500' },
+  '전기·통신':  { bg: 'bg-violet-50',  text: 'text-violet-700',  dot: 'bg-violet-500' },
+  '가설·관리':  { bg: 'bg-slate-100',  text: 'text-slate-700',   dot: 'bg-slate-500' },
+  '외부·조경':  { bg: 'bg-lime-50',    text: 'text-lime-700',    dot: 'bg-lime-500' },
+  '기타':      { bg: 'bg-gray-100',   text: 'text-gray-600',    dot: 'bg-gray-400' },
 }
 
 interface ApiResponse {
@@ -46,6 +63,7 @@ export default function StandardsPage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('frequency')
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('전체')
   const [selected, setSelected] = useState<TradeInsight | null>(null)
 
   useEffect(() => {
@@ -57,18 +75,28 @@ export default function StandardsPage() {
 
   const trades = data?.topTrades ?? []
 
+  // 카테고리별 개수 (필터 버튼에 표시)
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { '전체': trades.length }
+    for (const c of CATEGORIES) if (c !== '전체') counts[c] = 0
+    for (const t of trades) counts[t.category] = (counts[t.category] ?? 0) + 1
+    return counts
+  }, [trades])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const rows = q
-      ? trades.filter(t => t.trade.toLowerCase().includes(q))
-      : trades
-    return [...rows].sort((a, b) => {
+    const rows = trades.filter(t => {
+      if (categoryFilter !== '전체' && t.category !== categoryFilter) return false
+      if (q && !t.trade.toLowerCase().includes(q)) return false
+      return true
+    })
+    return rows.sort((a, b) => {
       if (sortKey === 'name') return a.trade.localeCompare(b.trade, 'ko')
       if (sortKey === 'duration') return b.avgDaysPerProject - a.avgDaysPerProject
       if (sortKey === 'intensity') return b.avgDaily - a.avgDaily
-      return b.totalManDays - a.totalManDays // frequency = 총 누적 규모
+      return b.totalManDays - a.totalManDays
     })
-  }, [trades, query, sortKey])
+  }, [trades, query, sortKey, categoryFilter])
 
   function downloadCsv() {
     const header = '공종명,평균기간(일/프로젝트),하루평균투입(명),참여프로젝트수,협력사수,총기록일'
@@ -140,6 +168,32 @@ export default function StandardsPage() {
             icon={<Users size={16} className="text-violet-600" />}
             bg="bg-violet-50"
           />
+        </div>
+
+        {/* 카테고리 필터 탭 */}
+        <div className="flex items-center gap-1 overflow-x-auto -mx-1 px-1">
+          {CATEGORIES.map(c => {
+            const active = categoryFilter === c
+            const color = c === '전체' ? null : CATEGORY_COLORS[c]
+            const count = categoryCounts[c] ?? 0
+            return (
+              <button
+                key={c}
+                onClick={() => setCategoryFilter(c)}
+                className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  active
+                    ? 'bg-gray-900 text-white shadow-sm'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                {color && <span className={`w-1.5 h-1.5 rounded-full ${color.dot}`} />}
+                {c}
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                  active ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
+                }`}>{count}</span>
+              </button>
+            )
+          })}
         </div>
 
         {/* 검색·정렬 */}
@@ -249,17 +303,22 @@ export default function StandardsPage() {
 function TradeCard({
   trade: t, selected, onClick,
 }: { trade: TradeInsight; selected: boolean; onClick: () => void }) {
+  const color = CATEGORY_COLORS[t.category] ?? CATEGORY_COLORS['기타']
   return (
     <button
       onClick={onClick}
       className={`card-elevated text-left p-4 transition-all ${selected ? 'ring-2 ring-blue-500' : 'hover:-translate-y-0.5'}`}
     >
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 flex-1">{t.trade}</h3>
-        <span className="text-[10px] font-semibold text-gray-400 flex-shrink-0">
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded ${color.bg} ${color.text}`}>
+          <span className={`w-1 h-1 rounded-full ${color.dot}`} />
+          {t.category}
+        </span>
+        <span className="text-[10px] font-semibold text-gray-400 ml-auto">
           {t.projectCount}개 현장
         </span>
       </div>
+      <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 mb-3">{t.trade}</h3>
 
       {/* 핵심 지표 2개 */}
       <div className="grid grid-cols-2 gap-2 mb-2">
@@ -334,6 +393,16 @@ function TradeDetail({ trade: t, onClose }: { trade: TradeInsight; onClose: () =
         </div>
       </dl>
 
+      {/* 월별 트렌드 (데이터 2개월 이상일 때만) */}
+      {t.monthlyTrend && t.monthlyTrend.length >= 2 && (
+        <div className="mt-5 pt-4 border-t border-gray-100">
+          <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+            월별 투입 추이
+          </h4>
+          <MonthlyTrendBars trend={t.monthlyTrend} />
+        </div>
+      )}
+
       <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col gap-2">
         <Link
           href={`/analytics`}
@@ -349,6 +418,35 @@ function TradeDetail({ trade: t, onClose }: { trade: TradeInsight; onClose: () =
           <span>이 공종 담당 협력사 찾기</span>
           <ChevronRight size={12} />
         </Link>
+      </div>
+    </div>
+  )
+}
+
+// 월별 막대 그래프 — 짧은 sparkline 스타일
+function MonthlyTrendBars({ trend }: { trend: MonthlyPoint[] }) {
+  const max = Math.max(...trend.map(p => p.manDays), 1)
+  // 최대 24개월만 표시 (너무 길면 좁아짐)
+  const visible = trend.length > 24 ? trend.slice(-24) : trend
+  return (
+    <div>
+      <div className="flex items-end gap-[2px] h-16 bg-gray-50/50 rounded px-1.5 py-1">
+        {visible.map(p => {
+          const h = Math.max(4, (p.manDays / max) * 100)
+          return (
+            <div
+              key={p.month}
+              className="flex-1 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-sm min-w-[3px]"
+              style={{ height: `${h}%` }}
+              title={`${p.month} · ${p.manDays.toLocaleString()} 인일`}
+            />
+          )
+        })}
+      </div>
+      <div className="flex items-center justify-between mt-1.5 text-[9px] text-gray-400 font-mono">
+        <span>{visible[0]?.month}</span>
+        <span>{visible.length}개월 · 최대 {Math.round(max).toLocaleString()} 인일</span>
+        <span>{visible[visible.length - 1]?.month}</span>
       </div>
     </div>
   )
