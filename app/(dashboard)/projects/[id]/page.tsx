@@ -5,26 +5,54 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   BarChart3, ShieldCheck, TrendingUp, Pencil, CheckCircle2, ArrowRight, HardHat,
-  ChevronLeft,
+  MapPin, Layers, Ruler, Calendar, AlertTriangle, Activity, Building2,
 } from 'lucide-react'
+import PageHeader from '@/components/common/PageHeader'
+import { Skeleton } from '@/components/common/Skeleton'
 
 interface Project {
   id: string
   name: string
   client?: string
+  contractor?: string
   location?: string
   type?: string
   ground?: number
   basement?: number
   bldgArea?: number
+  siteArea?: number
   startDate?: string
 }
 
 interface StageStatus {
-  stage1: { hasCpm: boolean; totalDuration: number | null }
-  stage2: { riskCount: number; hasBaseline: boolean }
-  stage3: { latestRate: number | null; lastReportDate: string | null }
+  stage1: { hasCpm: boolean; totalDuration: number | null; taskCount: number }
+  stage2: { riskCount: number; opportunityCount: number; hasBaseline: boolean; baselineTaskCount: number }
+  stage3: { latestRate: number | null; plannedRate: number | null; lastReportDate: string | null; dailyReportCount: number; latestWeek: string | null }
   stage4: { weeklyReportCount: number }
+}
+
+interface StageCardRow {
+  label: string
+  value: string
+  highlight?: boolean
+  danger?: boolean
+  muted?: boolean
+}
+
+function addDays(iso: string | undefined, days: number | null | undefined): string | null {
+  if (!iso || days == null) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  d.setDate(d.getDate() + Math.round(days))
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+}
+
+function daysUntil(dateStr: string): string {
+  const target = new Date(dateStr.replace(/\./g, '-'))
+  const now = new Date()
+  const diff = Math.ceil((target.getTime() - now.getTime()) / 86400000)
+  if (diff < 0) return `D+${Math.abs(diff)}`
+  return `D-${diff}`
 }
 
 export default function StageHubPage({ params }: { params: Promise<{ id: string }> }) {
@@ -49,187 +77,335 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
   }, [id])
 
   if (loading) return (
-    <div className="flex items-center justify-center h-full">
-      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    <div className="flex flex-col h-full">
+      <PageHeader icon={Building2} title="프로젝트…" subtitle="불러오는 중" />
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-4 w-1/2" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-44" />)}
+        </div>
+      </div>
     </div>
   )
   if (!project) return (
-    <div className="flex items-center justify-center h-full text-gray-400">
+    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
       프로젝트를 찾을 수 없습니다.
     </div>
   )
 
   const stage1Done = status?.stage1.hasCpm ?? false
   const stage2Done = (status?.stage2.riskCount ?? 0) > 0 || (status?.stage2.hasBaseline ?? false)
-  const stage3Done = status?.stage3.latestRate !== null
+  const stage3Done = status?.stage3.latestRate !== null && status?.stage3.latestRate !== undefined
   const stage4Done = (status?.stage4.weeklyReportCount ?? 0) > 0
 
-  const cards = [
+  const latestRate = status?.stage3.latestRate ?? 0
+  const plannedRate = status?.stage3.plannedRate ?? 0
+  const variance = latestRate - plannedRate
+  const totalDuration = status?.stage1.totalDuration ?? 0
+  const finishDate = addDays(project.startDate, totalDuration)
+  const riskCount = status?.stage2.riskCount ?? 0
+  const opportunityCount = status?.stage2.opportunityCount ?? 0
+
+  const cards: {
+    stageId: number
+    phaseLabel: string
+    color: string
+    bg: string
+    icon: React.ReactNode
+    title: string
+    subtitle: string
+    rows: StageCardRow[]
+    progress: number
+    done: boolean
+  }[] = [
     {
       stageId: 1,
+      phaseLabel: 'PHASE 01',
       color: '#2563eb',
       bg: '#eff6ff',
-      borderColor: stage1Done ? '#2563eb' : '#e2e8f0',
-      icon: <BarChart3 size={28} color={stage1Done ? '#2563eb' : '#94a3b8'} />,
-      title: '1단계 · 개략공기 검토',
-      badge: stage1Done
-        ? `총공기 ${Math.round(status?.stage1.totalDuration ?? 0)}일 · CPM 완료`
-        : '미시작',
-      badgeColor: stage1Done ? '#2563eb' : '#94a3b8',
-      badgeBg: stage1Done ? '#dbeafe' : '#f1f5f9',
-      desc: 'WBS 자동생성, CPM, 간트차트, 몬테카를로 시뮬레이션',
+      icon: <BarChart3 size={22} color={stage1Done ? '#2563eb' : '#94a3b8'} />,
+      title: '1단계 · 개략공기',
+      subtitle: 'WBS · CPM · 자원 계획',
+      rows: [
+        { label: '진행 상태', value: stage1Done ? 'CPM 완료' : '미시작', highlight: stage1Done },
+        { label: '총공기', value: totalDuration > 0 ? `${Math.round(totalDuration)}일` : '—' },
+      ],
+      progress: stage1Done ? 100 : 0,
       done: stage1Done,
     },
     {
       stageId: 2,
+      phaseLabel: 'PHASE 02',
       color: '#16a34a',
       bg: '#f0fdf4',
-      borderColor: stage2Done ? '#16a34a' : '#e2e8f0',
-      icon: <ShieldCheck size={28} color={stage2Done ? '#16a34a' : '#94a3b8'} />,
-      title: '2단계 · 프리콘 (Pre-Construction)',
-      badge: status
-        ? `R&O ${status.stage2.riskCount}건 · 베이스라인 ${status.stage2.hasBaseline ? '저장됨' : '미등록'}`
-        : '미시작',
-      badgeColor: stage2Done ? '#16a34a' : '#94a3b8',
-      badgeBg: stage2Done ? '#dcfce7' : '#f1f5f9',
-      desc: '리스크&기회 관리, 공기단축 시나리오, MSP 베이스라인',
+      icon: <ShieldCheck size={22} color={stage2Done ? '#16a34a' : '#94a3b8'} />,
+      title: '2단계 · 프리콘',
+      subtitle: '리스크 · 시나리오 · 프로세스맵',
+      rows: [
+        { label: '리스크 / 기회', value: `R&O ${riskCount}건`, highlight: riskCount > 0 },
+        {
+          label: '베이스라인',
+          value: status?.stage2.hasBaseline ? '등록됨' : '미등록',
+          highlight: status?.stage2.hasBaseline,
+          danger: !status?.stage2.hasBaseline,
+        },
+      ],
+      progress: stage2Done ? (status?.stage2.hasBaseline && riskCount > 0 ? 100 : 50) : 0,
       done: stage2Done,
     },
     {
       stageId: 3,
+      phaseLabel: 'PHASE 03',
       color: '#ea580c',
       bg: '#fff7ed',
-      borderColor: stage3Done ? '#ea580c' : '#e2e8f0',
-      icon: <HardHat size={28} color={stage3Done ? '#ea580c' : '#94a3b8'} />,
+      icon: <HardHat size={22} color={stage3Done ? '#ea580c' : '#94a3b8'} />,
       title: '3단계 · 시공 관리',
-      badge: status?.stage3.latestRate !== null && status?.stage3.latestRate !== undefined
-        ? `최신 실적률 ${Math.round(status.stage3.latestRate)}% · 마지막 일보 ${status.stage3.lastReportDate ?? '없음'}`
-        : '데이터 없음',
-      badgeColor: stage3Done ? '#ea580c' : '#94a3b8',
-      badgeBg: stage3Done ? '#ffedd5' : '#f1f5f9',
-      desc: '주간 실적공정 입력, 일일 작업일보, S-Curve',
+      subtitle: '일보 · 엑셀 임포트 · 사진',
+      rows: [
+        {
+          label: '최근 업데이트',
+          value: status?.stage3.latestWeek ?? '데이터 없음',
+          highlight: !!status?.stage3.latestWeek,
+          muted: !status?.stage3.latestWeek,
+        },
+        { label: '작업일보', value: `${status?.stage3.dailyReportCount ?? 0}건` },
+      ],
+      progress: stage3Done ? Math.min(100, Math.round(latestRate)) : 0,
       done: stage3Done,
     },
     {
       stageId: 4,
+      phaseLabel: 'PHASE 04',
       color: '#7c3aed',
       bg: '#faf5ff',
-      borderColor: stage4Done ? '#7c3aed' : '#e2e8f0',
-      icon: <TrendingUp size={28} color={stage4Done ? '#7c3aed' : '#94a3b8'} />,
+      icon: <TrendingUp size={22} color={stage4Done ? '#7c3aed' : '#94a3b8'} />,
       title: '4단계 · 분석 & 준공',
-      badge: `주간보고서 ${status?.stage4.weeklyReportCount ?? 0}주차 데이터`,
-      badgeColor: stage4Done ? '#7c3aed' : '#94a3b8',
-      badgeBg: stage4Done ? '#ede9fe' : '#f1f5f9',
-      desc: '공정률 분석, 편차 히스토그램, 주간보고서 PDF',
+      subtitle: '공종·위치 분석 · Lessons Learned',
+      rows: [
+        { label: '주간 보고서', value: `${status?.stage4.weeklyReportCount ?? 0}주차` },
+        { label: '준공 예정', value: finishDate ?? '—', muted: !finishDate },
+      ],
+      progress: stage4Done ? Math.min(100, (status?.stage4.weeklyReportCount ?? 0) * 10) : 0,
       done: stage4Done,
     },
   ]
 
+  const projectSubtitle = [
+    project.client,
+    project.location,
+    project.ground !== undefined ? `지상 ${project.ground}층${project.basement ? ` · 지하 ${project.basement}층` : ''}` : null,
+    project.bldgArea ? `연면적 ${project.bldgArea.toLocaleString()}㎡` : null,
+  ].filter(Boolean).join(' · ')
+
+  const currentPhase = stage3Done ? '시공 진행 중' : stage2Done ? '프리콘 단계' : stage1Done ? '계획 수립' : '준비 중'
+  const phaseColor = stage3Done ? '#16a34a' : stage2Done ? '#ea580c' : stage1Done ? '#2563eb' : '#94a3b8'
+
   return (
-    <div className="min-h-full bg-gray-50">
-      {/* 상단 헤더 */}
-      <div style={{ background: '#0f172a' }} className="px-8 pt-5 pb-6">
-        <div className="mb-4">
+    <div className="flex flex-col h-full">
+      <PageHeader
+        icon={Building2}
+        title={project.name}
+        subtitle={projectSubtitle}
+        actions={
           <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+            href={`/projects/${id}/edit`}
+            className="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50"
           >
-            <ChevronLeft size={15} />
-            프로젝트 목록
+            <Pencil size={12} /> 수정
           </Link>
-        </div>
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-1">{project.name}</h1>
-            <div className="flex items-center gap-3 text-sm text-slate-400 flex-wrap">
-              {project.client && <span>{project.client}</span>}
-              {project.location && (
-                <>
-                  <span className="text-slate-600">·</span>
-                  <span>{project.location}</span>
-                </>
+        }
+      />
+
+      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-5">
+        {/* 상태 배너 */}
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider text-white" style={{ background: phaseColor + 'cc' }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                {currentPhase}
+              </div>
+              <span className="text-xs text-slate-300">{project.type || '건축 공사'}</span>
+            </div>
+            <div className="flex items-center gap-5 text-xs text-slate-300">
+              {project.startDate && (
+                <span className="flex items-center gap-1.5">
+                  <Calendar size={12} className="text-slate-400" />
+                  착공 {project.startDate}
+                </span>
               )}
-              {(project.ground !== undefined || project.basement !== undefined) && (
-                <>
-                  <span className="text-slate-600">·</span>
-                  <span>
-                    지상 {project.ground ?? 0}F / 지하 {project.basement ?? 0}F
-                  </span>
-                </>
-              )}
-              {project.bldgArea && (
-                <>
-                  <span className="text-slate-600">·</span>
-                  <span>연면적 {project.bldgArea.toLocaleString()}m²</span>
-                </>
+              {finishDate && (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-slate-500">→</span>
+                  준공 <span className="text-white font-semibold">{finishDate}</span>
+                  <span className="text-emerald-400 font-bold font-mono ml-1">{daysUntil(finishDate)}</span>
+                </span>
               )}
             </div>
           </div>
-          <Link
-            href={`/projects/${id}/edit`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-300 border border-slate-600 rounded-lg hover:border-slate-400 hover:text-white transition-colors"
-          >
-            <Pencil size={13} />
-            프로젝트 수정
-          </Link>
         </div>
-      </div>
 
-      {/* 단계 카드 그리드 */}
-      <div className="px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {cards.map((card) => (
-            <div
-              key={card.stageId}
-              className="relative bg-white rounded-2xl p-6 shadow-sm cursor-pointer group transition-all hover:shadow-md"
-              style={{
-                border: `2px solid ${card.borderColor}`,
-              }}
-              onClick={() => router.push(`/projects/${id}/stage/${card.stageId}`)}
-            >
-              {/* 완료 체크 아이콘 */}
-              {card.done && (
-                <div className="absolute top-4 right-4">
-                  <CheckCircle2 size={20} color={card.color} />
-                </div>
-              )}
-
-              {/* 아이콘 + 배지 */}
-              <div className="flex items-start gap-4 mb-4">
+        {/* 4단계 카드 (2x2) + 우측 요약 */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+          {/* 스테이지 카드 */}
+          <div className="xl:col-span-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {cards.map(card => (
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: card.bg }}
+                  key={card.stageId}
+                  className="relative bg-white rounded-xl border border-gray-200 p-5 cursor-pointer group transition-all hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5"
+                  style={{ borderLeftColor: card.color, borderLeftWidth: 4 }}
+                  onClick={() => router.push(`/projects/${id}/stage/${card.stageId}`)}
                 >
-                  {card.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className="text-xs font-medium px-2 py-0.5 rounded-full"
-                      style={{ color: card.badgeColor, background: card.badgeBg }}
-                    >
-                      {card.badge}
-                    </span>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: card.bg }}>
+                      {card.icon}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {card.done && <CheckCircle2 size={14} color={card.color} />}
+                      <span
+                        className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded"
+                        style={{ color: card.color, background: card.bg }}
+                      >
+                        {card.phaseLabel}
+                      </span>
+                    </div>
                   </div>
+
+                  <h2 className="text-[15px] font-bold text-gray-900 leading-tight">{card.title}</h2>
+                  <p className="text-xs text-gray-400 mb-4 mt-0.5">{card.subtitle}</p>
+
+                  <div className="space-y-2 mb-4">
+                    {card.rows.map((row, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500">{row.label}</span>
+                        <span
+                          className="font-semibold"
+                          style={{
+                            color: row.danger ? '#dc2626'
+                              : row.muted ? '#94a3b8'
+                              : row.highlight ? card.color
+                              : '#0f172a',
+                          }}
+                        >
+                          {row.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${card.progress}%`, background: card.color }}
+                    />
+                  </div>
+
+                  <ArrowRight
+                    size={14}
+                    className="absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ color: card.color }}
+                  />
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 우측 요약 */}
+          <div className="xl:col-span-4">
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900">프로젝트 개요</h3>
+                <p className="text-[10px] text-gray-400 mt-0.5">Project Metrics</p>
               </div>
-
-              {/* 제목 + 설명 */}
-              <h2 className="text-base font-bold text-gray-900 mb-1.5">{card.title}</h2>
-              <p className="text-sm text-gray-500 mb-4 leading-relaxed">{card.desc}</p>
-
-              {/* 시작하기 버튼 */}
-              <div
-                className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors group-hover:gap-2.5"
-                style={{ color: card.color }}
-              >
-                시작하기
-                <ArrowRight size={14} />
+              <dl className="divide-y divide-gray-100">
+                <DetailRow label="발주처" value={project.client} />
+                <DetailRow label="시공사" value={project.contractor} />
+                <DetailRow label="공사 위치" value={project.location} />
+                <DetailRow label="대지면적" value={project.siteArea ? `${project.siteArea.toLocaleString()} ㎡` : undefined} />
+                <DetailRow label="연면적" value={project.bldgArea ? `${project.bldgArea.toLocaleString()} ㎡` : undefined} />
+                <DetailRow label="층수" value={project.ground !== undefined ? `지상 ${project.ground}층${project.basement ? ` / 지하 ${project.basement}층` : ''}` : undefined} />
+                <DetailRow label="착공일" value={project.startDate} />
+                <DetailRow label="준공 예정일" value={finishDate ?? undefined} emphasized={!!finishDate} />
+              </dl>
+              <div className="p-4 border-t border-gray-100 bg-gray-50">
+                <button
+                  onClick={() => router.push(`/projects/${id}/stage/4`)}
+                  className="w-full h-9 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 transition-colors"
+                >
+                  분석 & 준공 리포트 →
+                </button>
               </div>
             </div>
-          ))}
+          </div>
+        </div>
+
+        {/* 하단 3개 KPI */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SummaryCard
+            icon={<Activity size={16} color="#2563eb" />}
+            iconBg="bg-blue-50"
+            label="공정 진행률 (계획 대비)"
+            value={stage3Done ? `${latestRate.toFixed(1)}%` : '—'}
+            extra={stage3Done ? (
+              <span className={`text-xs font-semibold ${variance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                ({variance >= 0 ? '+' : ''}{variance.toFixed(1)}%)
+              </span>
+            ) : null}
+            footer={stage3Done ? `계획 ${plannedRate.toFixed(1)}% / 실적 ${latestRate.toFixed(1)}%` : '3단계에서 주간 실적 입력'}
+          />
+          <SummaryCard
+            icon={<Calendar size={16} color="#7c3aed" />}
+            iconBg="bg-purple-50"
+            label="준공까지 남은 기간"
+            value={finishDate ? daysUntil(finishDate) : '—'}
+            footer={finishDate ? `준공 예정일 ${finishDate}` : '1단계 CPM 실행 후 계산'}
+          />
+          <SummaryCard
+            icon={<AlertTriangle size={16} color="#ea580c" />}
+            iconBg="bg-orange-50"
+            label="리스크 & 기회"
+            value={`${riskCount + opportunityCount}건`}
+            footer={`리스크 ${riskCount}건 · 기회 ${opportunityCount}건`}
+          />
         </div>
       </div>
+    </div>
+  )
+}
+
+function DetailRow({ label, value, emphasized }: { label: string; value?: string; emphasized?: boolean }) {
+  return (
+    <div className="flex items-center justify-between px-5 py-2.5 text-sm">
+      <dt className="text-gray-500 text-xs">{label}</dt>
+      <dd className={`font-semibold text-right ${emphasized ? 'text-blue-700' : value ? 'text-gray-900' : 'text-gray-300'}`}>
+        {value || '—'}
+      </dd>
+    </div>
+  )
+}
+
+function SummaryCard({
+  icon, iconBg, label, value, extra, footer,
+}: {
+  icon: React.ReactNode
+  iconBg: string
+  label: string
+  value: string
+  extra?: React.ReactNode
+  footer: string
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`w-7 h-7 rounded-md ${iconBg} flex items-center justify-center`}>{icon}</div>
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className="text-2xl font-bold text-gray-900">{value}</span>
+        {extra}
+      </div>
+      <div className="text-[11px] text-gray-400 mt-1">{footer}</div>
     </div>
   )
 }
