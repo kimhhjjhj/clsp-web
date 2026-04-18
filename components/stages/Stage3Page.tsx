@@ -148,16 +148,16 @@ export default function Stage3Page({ projectId }: Props) {
 
   return (
     <div className="h-full overflow-auto p-4 sm:p-6 space-y-4">
-      {/* 상단 대시보드 카드 */}
-      <div className="bg-white border border-gray-200 rounded-xl px-6 py-4 shadow-sm">
+      {/* 상단 대시보드 카드 — 떠있는 엘리베이티드 스타일 */}
+      <div className="card-elevated px-6 py-5">
         <div className="flex items-center gap-8 flex-wrap">
           {/* 오늘 날짜 */}
           <div>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">오늘</p>
-            <p className="text-sm font-semibold text-gray-700">{today}</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-bold">오늘</p>
+            <p className="text-sm font-semibold text-gray-800 mt-0.5">{today}</p>
           </div>
 
-          <div className="h-10 w-px bg-gray-200" />
+          <div className="h-10 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent" />
 
           {/* 반원형 게이지 */}
           <div className="flex items-end gap-3">
@@ -174,27 +174,27 @@ export default function Stage3Page({ projectId }: Props) {
             </div>
           </div>
 
-          <div className="h-10 w-px bg-gray-200" />
+          <div className="h-10 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent" />
 
           {/* 투입인원 */}
           <div>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">투입인원</p>
-            <p className="text-xl font-bold text-gray-800">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-bold">투입인원</p>
+            <p className="text-xl font-bold text-gray-900 mt-0.5">
               {totalWorkers}
               <span className="text-sm font-normal text-gray-400 ml-1">명</span>
             </p>
             <p className="text-[10px] text-gray-400">최신 일보 기준</p>
           </div>
 
-          <div className="h-10 w-px bg-gray-200" />
+          <div className="h-10 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent" />
 
           {/* 지연 경보 */}
           <div>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">공정 편차</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-bold">공정 편차</p>
             {latestActualRate === 0 && latestPlannedRate === 0 ? (
-              <p className="text-sm text-gray-400">데이터 없음</p>
+              <p className="text-sm text-gray-400 mt-0.5">데이터 없음</p>
             ) : (
-              <p className={`text-lg font-bold ${
+              <p className={`text-lg font-bold mt-0.5 ${
                 latestActualRate >= latestPlannedRate ? 'text-green-600' : 'text-red-500'
               }`}>
                 {latestActualRate >= latestPlannedRate
@@ -207,10 +207,10 @@ export default function Stage3Page({ projectId }: Props) {
 
           {lastReportDate && (
             <>
-              <div className="h-10 w-px bg-gray-200" />
+              <div className="h-10 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent" />
               <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide">마지막 일보</p>
-                <p className="text-sm font-semibold text-gray-700">{lastReportDate}</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-bold">마지막 일보</p>
+                <p className="text-sm font-semibold text-gray-700 mt-0.5">{lastReportDate}</p>
               </div>
             </>
           )}
@@ -220,14 +220,14 @@ export default function Stage3Page({ projectId }: Props) {
       {/* 하단 2열 — 카드 분리 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* 좌: 주간실적 */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div className="card-elevated p-5">
           <WeeklyProgressPanel projectId={projectId} cpmResult={null} onSaved={loadData} />
         </div>
 
         {/* 우: 달력 미니뷰 + 일일작업일보 */}
         <div className="space-y-4">
           {/* 달력 미니뷰 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="card-elevated p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700">
                 {year}년 {month + 1}월 일보 현황

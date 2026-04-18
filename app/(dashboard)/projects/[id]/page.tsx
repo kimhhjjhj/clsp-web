@@ -279,7 +279,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
               {cards.map(card => (
                 <div
                   key={card.stageId}
-                  className="relative bg-white rounded-xl border border-gray-200 p-5 cursor-pointer group transition-all hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5"
+                  className="card-elevated relative p-5 cursor-pointer group hover:-translate-y-0.5"
                   style={{ borderLeftColor: card.color, borderLeftWidth: 4 }}
                   onClick={() => router.push(`/projects/${id}/stage/${card.stageId}`)}
                 >
@@ -362,7 +362,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
             </div>
 
             {/* 상세 정보 */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="card-elevated overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-gray-900">프로젝트 개요</h3>
