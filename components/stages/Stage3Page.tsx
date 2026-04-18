@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import WeeklyProgressPanel from '@/components/construction/WeeklyProgressPanel'
 import DailyReportPanel from '@/components/construction/DailyReportPanel'
 
@@ -114,18 +115,41 @@ export default function Stage3Page({ projectId }: Props) {
     ctx.fillText('실적률', cx, cy + 4)
   }, [latestActualRate, latestPlannedRate])
 
-  // 달력 미니뷰: 이번달
+  // 달력: 사용자 탐색용 월 상태
   const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth()
+  const [calendarDate, setCalendarDate] = useState<Date>(() => {
+    // 초기값: 데이터가 있는 가장 최근 월 (없으면 오늘)
+    return new Date()
+  })
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  // 일보 데이터 로드 완료 후 가장 최근 일보의 월로 자동 이동
+  useEffect(() => {
+    if (dailies.length > 0 && calendarDate.getTime() === now.getTime()) {
+      const latest = dailies.sort((a, b) => b.date.localeCompare(a.date))[0]
+      if (latest?.date) {
+        const [y, m] = latest.date.split('-')
+        setCalendarDate(new Date(Number(y), Number(m) - 1, 1))
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dailies.length])
+
+  const year = calendarDate.getFullYear()
+  const month = calendarDate.getMonth()
   const firstDay = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`
   const reportDates = new Set(dailies.map(d => d.date))
 
+  function shiftMonth(delta: number) {
+    setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1))
+  }
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* 상단 대시보드 바 */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+    <div className="h-full overflow-auto p-4 sm:p-6 space-y-4">
+      {/* 상단 대시보드 카드 */}
+      <div className="bg-white border border-gray-200 rounded-xl px-6 py-4 shadow-sm">
         <div className="flex items-center gap-8 flex-wrap">
           {/* 오늘 날짜 */}
           <div>
@@ -193,20 +217,48 @@ export default function Stage3Page({ projectId }: Props) {
         </div>
       </div>
 
-      {/* 하단 2열 */}
-      <div className="flex-1 overflow-hidden flex gap-0">
+      {/* 하단 2열 — 카드 분리 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* 좌: 주간실적 */}
-        <div className="w-1/2 overflow-auto border-r border-gray-200 bg-gray-50 p-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <WeeklyProgressPanel projectId={projectId} cpmResult={null} onSaved={loadData} />
         </div>
 
         {/* 우: 달력 미니뷰 + 일일작업일보 */}
-        <div className="w-1/2 overflow-auto bg-gray-50 p-4 space-y-4">
+        <div className="space-y-4">
           {/* 달력 미니뷰 */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
-              {year}년 {month + 1}월 일보 현황
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">
+                {year}년 {month + 1}월 일보 현황
+              </h3>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => shiftMonth(-1)}
+                  className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded"
+                  title="이전 달"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  onClick={() => {
+                    setCalendarDate(new Date())
+                    setSelectedDate(null)
+                  }}
+                  className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded"
+                  title="오늘"
+                >
+                  <CalendarDays size={13} />
+                </button>
+                <button
+                  onClick={() => shiftMonth(1)}
+                  className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded"
+                  title="다음 달"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
             <div className="grid grid-cols-7 gap-0.5 text-center">
               {['일','월','화','수','목','금','토'].map(d => (
                 <div key={d} className="text-[10px] text-gray-400 py-1">{d}</div>
@@ -218,27 +270,47 @@ export default function Stage3Page({ projectId }: Props) {
                 const day = i + 1
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
                 const hasReport = reportDates.has(dateStr)
-                const isToday = day === now.getDate()
+                const isToday =
+                  year === now.getFullYear() &&
+                  month === now.getMonth() &&
+                  day === now.getDate()
+                const isSelected = selectedDate === dateStr
                 return (
-                  <div
+                  <button
                     key={day}
-                    className={`relative py-1.5 text-xs rounded ${
-                      isToday ? 'bg-blue-50 font-bold text-blue-700' : 'text-gray-600'
+                    onClick={() => hasReport && setSelectedDate(dateStr)}
+                    disabled={!hasReport}
+                    className={`relative py-1.5 text-xs rounded transition-colors ${
+                      isSelected
+                        ? 'bg-blue-600 text-white font-bold'
+                        : hasReport
+                        ? 'text-gray-700 hover:bg-blue-50 cursor-pointer'
+                        : isToday
+                        ? 'bg-blue-50 font-bold text-blue-700'
+                        : 'text-gray-400 cursor-default'
                     }`}
                   >
                     {day}
-                    {hasReport && (
+                    {hasReport && !isSelected && (
                       <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-600 block" />
                     )}
-                  </div>
+                  </button>
                 )
               })}
             </div>
-            <p className="text-[10px] text-gray-400 mt-2">● 일보 작성된 날짜</p>
+            <p className="text-[10px] text-gray-400 mt-2">
+              파란 날짜 클릭 → 해당 일보 선택
+            </p>
           </div>
 
           {/* 작업일보 패널 */}
-          <DailyReportPanel projectId={projectId} onSaved={loadData} />
+          <DailyReportPanel
+            projectId={projectId}
+            onSaved={loadData}
+            filterMonth={monthKey}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+          />
         </div>
       </div>
     </div>
