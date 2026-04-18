@@ -107,7 +107,7 @@ export default function Sidebar({ onClose }: Props) {
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-black text-white tracking-tight leading-none">CLSP</h1>
             <p className="text-[9px] text-slate-400 uppercase tracking-[0.14em] font-semibold leading-tight mt-1.5">
-              Construction<br />Lifecycle Suite
+              Construction<br />Lifecycle Solution
             </p>
           </div>
         </Link>
@@ -168,7 +168,7 @@ export default function Sidebar({ onClose }: Props) {
         {/* 현재 프로젝트 섹션 — 토글 */}
         {currentProject && (
           <Section
-            label="현재 프로젝트"
+            label="진행 단계"
             open={projectOpen}
             onToggle={() => setProjectOpen()}
             accent="#3b82f6"
