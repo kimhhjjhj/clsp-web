@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { Skeleton } from '@/components/common/Skeleton'
+import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 
 interface Project {
   id: string
@@ -339,6 +340,17 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
             </div>
           </div>
         </div>
+
+        {/* 유사 프로젝트 벤치마크 */}
+        <BenchmarkPanel
+          query={{
+            type: project.type,
+            ground: project.ground,
+            basement: project.basement,
+            bldgArea: project.bldgArea,
+          }}
+          limit={5}
+        />
 
         {/* 하단 3개 KPI */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

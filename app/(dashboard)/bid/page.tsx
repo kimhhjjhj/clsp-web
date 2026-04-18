@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
+import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 
 interface BidInput {
   name: string
@@ -218,6 +219,17 @@ export default function BidPage() {
               </div>
             ) : (
               <>
+                {/* 유사 프로젝트 벤치마크 */}
+                <BenchmarkPanel
+                  query={{
+                    type: input.type,
+                    ground: Number(input.ground) || undefined,
+                    basement: Number(input.basement) || undefined,
+                    bldgArea: Number(input.bldgArea) || undefined,
+                  }}
+                  limit={5}
+                />
+
                 {/* 핵심 KPI */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   <Kpi icon={<Calendar size={14} className="text-blue-600" />} bg="bg-blue-50"
