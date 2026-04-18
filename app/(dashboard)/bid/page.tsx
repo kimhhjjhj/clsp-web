@@ -10,6 +10,7 @@ import {
 import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
+import AiCostEstimate from '@/components/bid/AiCostEstimate'
 import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/components/wbs/WBSTable'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
@@ -378,8 +379,8 @@ export default function BidPage() {
                   limit={5}
                 />
 
-                {/* 최상단 4KPI — 탭 공통 요약 */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* 최상단 3KPI — 탭 공통 요약 (공사비는 AI 추정이 맡음) */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                   <Kpi icon={<Calendar size={14} className="text-blue-600" />} bg="bg-blue-50"
                     label="총 공기" value={`${result.cpm.totalDuration}`} unit="일"
                     sub={completionDate() ? `준공 ${completionDate()}` : `약 ${Math.round(result.cpm.totalDuration / 30)}개월`} />
@@ -389,9 +390,6 @@ export default function BidPage() {
                   <Kpi icon={<TrendingUp size={14} className="text-purple-600" />} bg="bg-purple-50"
                     label="일평균 투입" value={`${result.resourcePlan.avgDaily}`} unit="명"
                     sub={`누적 ${result.resourcePlan.totalManDays.toLocaleString()}인일`} />
-                  <Kpi icon={<DollarSign size={14} className="text-emerald-600" />} bg="bg-emerald-50"
-                    label="개략 원가" value={fmtKRW(result.estimate.totalEstimateKRW)} unit="원"
-                    sub={`노무비 ${Math.round(result.estimate.laborCostKRW / 100000000).toLocaleString()}억 포함`} />
                 </div>
 
                 {/* 최상단 대탭: 공사비 / 공기 */}
@@ -413,8 +411,36 @@ export default function BidPage() {
 
                   {topTab === 'cost' && (
                     <div className="p-5 space-y-5">
-                      {/* 월별 자원 */}
-                      <div>
+                      {/* AI 개략 공사비 추정 — 물량 × 단가 방식 */}
+                      <AiCostEstimate
+                        type={input.type}
+                        ground={Number(input.ground) || undefined}
+                        basement={Number(input.basement) || undefined}
+                        bldgArea={Number(input.bldgArea) || undefined}
+                        buildingArea={Number(input.buildingArea) || undefined}
+                        siteArea={Number(input.siteArea) || undefined}
+                        totalDuration={result.cpm.totalDuration}
+                        tasks={result.cpm.tasks}
+                      />
+
+                      {/* 지연 시나리오 */}
+                      <div className="border-t border-gray-100 pt-5">
+                        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
+                          <AlertTriangle size={14} className="text-amber-500" /> 지연 민감도 (추가 금융·관리비)
+                        </h3>
+                        <div className="grid grid-cols-3 gap-3">
+                          {result.delayScenarios.map(s => (
+                            <div key={s.weeks} className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-center">
+                              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">+{s.weeks}주 지연 시</p>
+                              <p className="text-lg font-bold text-amber-900 mt-1 font-mono">+{fmtKRW(s.additionalCostKRW)}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-2">※ 월 금융·관리비 × 지연 기간 기준 · 손해 최소 추정</p>
+                      </div>
+
+                      {/* 월별 필요 인력 */}
+                      <div className="border-t border-gray-100 pt-5">
                         <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
                           <Users size={14} /> 월별 필요 인력
                         </h3>
@@ -443,22 +469,6 @@ export default function BidPage() {
                         )}
                       </div>
 
-                      {/* 지연 시나리오 */}
-                      <div className="border-t border-gray-100 pt-5">
-                        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
-                          <AlertTriangle size={14} className="text-amber-500" /> 지연 민감도 (추가 원가)
-                        </h3>
-                        <div className="grid grid-cols-3 gap-3">
-                          {result.delayScenarios.map(s => (
-                            <div key={s.weeks} className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-center">
-                              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">+{s.weeks}주 지연 시</p>
-                              <p className="text-lg font-bold text-amber-900 mt-1 font-mono">+{fmtKRW(s.additionalCostKRW)}</p>
-                            </div>
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-2">※ 월 금융·관리비 × 지연 기간 기준 · 손해 최소 추정</p>
-                      </div>
-
                       {/* CP 요약 */}
                       <div className="border-t border-gray-100 pt-5">
                         <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
@@ -477,11 +487,29 @@ export default function BidPage() {
                         )}
                       </div>
 
-                      {/* 설명 */}
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900">
-                        <strong>개략 원가 계산 방법</strong>: 회사 실적 기반 평균 투입 인원 × 공기 × 일단가(27만원) + 자재·경비(노무비의 1.4배 가정).
-                        실제 견적은 공종별 단가표와 자재 견적을 적용해야 하며, 본 수치는 <strong>사업성 판단용 ±15% 개략</strong>입니다.
-                      </div>
+                      {/* 노무비 러프 참고 */}
+                      <details className="border-t border-gray-100 pt-5">
+                        <summary className="text-xs font-semibold text-gray-500 cursor-pointer hover:text-gray-800">
+                          참고: 회사 실적 기반 노무비 러프 추정 (AI 없을 때 대체)
+                        </summary>
+                        <div className="mt-3 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">총 투입 인일</span>
+                            <span className="font-mono font-semibold text-gray-900">{result.resourcePlan.totalManDays.toLocaleString()} 인일</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">× 평균 일단가 27만원</span>
+                            <span className="font-mono font-semibold text-gray-900">{fmtKRW(result.estimate.laborCostKRW)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">× 2.4 (자재·경비 1.4 포함)</span>
+                            <span className="font-mono font-semibold text-gray-900">{fmtKRW(result.estimate.totalEstimateKRW)}</span>
+                          </div>
+                          <p className="text-[10px] text-gray-400 mt-2">
+                            ※ 이 방식은 일단가·자재비 비율이 고정이라 공종·유형별 차이를 반영 못 합니다. AI 추정 실패 시만 참고하세요.
+                          </p>
+                        </div>
+                      </details>
                     </div>
                   )}
 
