@@ -30,16 +30,18 @@ interface ProjectLite {
 }
 
 const STAGES: {
-  n: number
+  urlN: number      // URL stage/N (DB·링크 호환 유지)
+  displayN: number  // 사용자에게 보이는 순서 (1부터)
   label: string
   icon: typeof BarChart3
   color: string
   bg: string
 }[] = [
-  // 1단계(개략공기)는 '사업 초기 검토'(/bid)로 이전됨. 프로젝트 저장 후에는 2·3·4단계만 운영.
-  { n: 2, label: '프리콘',     icon: ShieldCheck, color: '#16a34a', bg: 'bg-emerald-500' },
-  { n: 3, label: '시공 관리',  icon: HardHat,    color: '#ea580c', bg: 'bg-orange-500' },
-  { n: 4, label: '분석·준공',  icon: TrendingUp, color: '#7c3aed', bg: 'bg-purple-500' },
+  // 개략공기는 '사업 초기 검토'(/bid)로 이전 → 저장 후 단계는 1~3으로 자연스럽게 표시
+  // URL은 기존 2/3/4 유지 (북마크 · 기존 링크 호환)
+  { urlN: 2, displayN: 1, label: '프리콘',     icon: ShieldCheck, color: '#16a34a', bg: 'bg-emerald-500' },
+  { urlN: 3, displayN: 2, label: '시공 관리',  icon: HardHat,    color: '#ea580c', bg: 'bg-orange-500' },
+  { urlN: 4, displayN: 3, label: '분석·준공',  icon: TrendingUp, color: '#7c3aed', bg: 'bg-purple-500' },
 ]
 
 function computeState(status: StageStatus | null, n: number): State {
@@ -119,16 +121,15 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
         </div>
       </Link>
 
-      {/* 4단계 */}
+      {/* 3단계 (표시 1~3, URL은 2~4) */}
       <div className="space-y-0.5">
         {STAGES.map(st => {
-          const s = computeState(status, st.n)
-          const isActive = activeStage === st.n
-          const Icon = st.icon
+          const s = computeState(status, st.urlN)
+          const isActive = activeStage === st.urlN
           return (
             <Link
-              key={st.n}
-              href={`/projects/${project.id}/stage/${st.n}`}
+              key={st.urlN}
+              href={`/projects/${project.id}/stage/${st.urlN}`}
               onClick={onNavigate}
               className={`group flex items-center gap-2 mx-2 px-2 h-9 rounded-lg text-[13px] transition-colors no-underline ${
                 isActive
@@ -143,7 +144,7 @@ export default function CurrentProjectSection({ project, onNavigate }: Props) {
                 }`}
                 style={!isActive ? { color: st.color } : undefined}
               >
-                {st.n}
+                {st.displayN}
               </span>
               <span className="flex-1 truncate">{st.label}</span>
               <StageBadge state={s} active={isActive} />

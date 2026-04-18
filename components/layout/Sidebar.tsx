@@ -9,10 +9,10 @@
 // ═══════════════════════════════════════════════════════════
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, BarChart3, Database, ShieldAlert, Users2,
-  Upload, ShieldCheck, Settings, X,
+  Upload, ShieldCheck, Settings, X, DollarSign,
 } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
 import CurrentProjectSection from './CurrentProjectSection'
@@ -22,7 +22,13 @@ interface NavItem { href: string; label: string; icon: typeof LayoutDashboard }
 const GLOBAL_ITEMS: NavItem[] = [
   { href: '/',         label: '대시보드',        icon: LayoutDashboard },
   { href: '/projects', label: '프로젝트',        icon: FolderKanban },
-  { href: '/bid',      label: '사업 초기 검토',  icon: ClipboardCheck },
+]
+
+// 사업 초기 검토는 서브 메뉴가 있어 별도로 렌더
+const BID_ITEM: NavItem = { href: '/bid', label: '사업 초기 검토', icon: ClipboardCheck }
+const BID_SUB: { tab: string; label: string; icon: typeof DollarSign }[] = [
+  { tab: 'cost',     label: '공사비',   icon: DollarSign },
+  { tab: 'schedule', label: '공기',     icon: BarChart3 },
 ]
 
 const ASSET_ITEMS: NavItem[] = [
@@ -43,6 +49,9 @@ interface Props {
 
 export default function Sidebar({ onClose }: Props) {
   const pathname = usePathname() ?? ''
+  const searchParams = useSearchParams()
+  const activeBidTab = searchParams?.get('tab') ?? 'cost'
+  const isBid = pathname.startsWith('/bid')
   const { currentProject } = useProjectContext()
 
   return (
@@ -74,6 +83,33 @@ export default function Sidebar({ onClose }: Props) {
               onNavigate={onClose}
             />
           ))}
+
+          {/* 사업 초기 검토 — 서브메뉴 포함 */}
+          <SidebarLink item={BID_ITEM} active={isBid} onNavigate={onClose} />
+          {isBid && (
+            <div className="ml-3 pl-3 border-l border-white/[0.08] space-y-0.5 mt-0.5 mb-1">
+              {BID_SUB.map(sub => {
+                const subActive = activeBidTab === sub.tab
+                const Icon = sub.icon
+                return (
+                  <Link
+                    key={sub.tab}
+                    href={`/bid?tab=${sub.tab}`}
+                    onClick={onClose}
+                    className={`flex items-center gap-2 px-2 h-8 rounded-md text-xs transition-colors no-underline ${
+                      subActive
+                        ? 'bg-white/[0.08] text-white font-semibold'
+                        : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <Icon size={12} className="flex-shrink-0" />
+                    <span className="flex-1 truncate">{sub.label}</span>
+                    {subActive && <span className="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0" />}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </NavGroup>
 
         {/* 현재 프로젝트 섹션 */}

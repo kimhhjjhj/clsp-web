@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ClipboardCheck, Building2, Ruler, Layers, Play, Save, TrendingUp,
   Calendar, Users, DollarSign, AlertTriangle, Loader2, ArrowRight,
@@ -104,6 +104,8 @@ function groupBy<T>(arr: T[], key: (item: T) => string): Record<string, T[]> {
 
 export default function BidPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialTab = (searchParams?.get('tab') as TopTab) === 'schedule' ? 'schedule' : 'cost'
   const toast = useToast()
   const [input, setInput] = useState<BidInput>(INITIAL)
   const [result, setResult] = useState<EstimateResult | null>(null)
@@ -111,7 +113,13 @@ export default function BidPage() {
   const [saving, setSaving] = useState(false)
 
   // 결과 뷰 탭
-  const [topTab, setTopTab] = useState<TopTab>('cost')
+  const [topTab, setTopTab] = useState<TopTab>(initialTab)
+
+  // URL 파라미터 변경 시 탭 동기화 (사이드바에서 공사비/공기 클릭했을 때)
+  useEffect(() => {
+    const t = searchParams?.get('tab')
+    if (t === 'schedule' || t === 'cost') setTopTab(t)
+  }, [searchParams])
   const [subTab, setSubTab] = useState<SubTab>('wbs')
   const [ganttView, setGanttView] = useState<GanttViewMode>('week')
   const [standards, setStandards] = useState<CompanyStandardSummary[]>([])
@@ -535,13 +543,13 @@ export default function BidPage() {
                       icon={<DollarSign size={14} />}
                       label="공사비"
                       active={topTab === 'cost'}
-                      onClick={() => setTopTab('cost')}
+                      onClick={() => { setTopTab('cost'); router.replace('/bid?tab=cost', { scroll: false }) }}
                     />
                     <TopTabBtn
                       icon={<BarChart3 size={14} />}
                       label="공기"
                       active={topTab === 'schedule'}
-                      onClick={() => setTopTab('schedule')}
+                      onClick={() => { setTopTab('schedule'); router.replace('/bid?tab=schedule', { scroll: false }) }}
                     />
                   </div>
 
@@ -596,7 +604,7 @@ export default function BidPage() {
                         </h3>
                         <p className="text-xs text-gray-600 mb-2">
                           전체 {result.cpm.taskCount}개 공종 중 <strong className="text-orange-600">{result.cpm.criticalPathCount}개</strong>가 Critical Path. 지연 시 공기 연장 직결.
-                          <button onClick={() => { setTopTab('schedule'); setSubTab('critical') }} className="ml-2 text-[11px] text-blue-600 hover:underline">상세 →</button>
+                          <button onClick={() => { setTopTab('schedule'); setSubTab('critical'); router.replace('/bid?tab=schedule', { scroll: false }) }} className="ml-2 text-[11px] text-blue-600 hover:underline">상세 →</button>
                         </p>
                         {result.resourcePlan.uncoveredTasks.length > 0 && (
                           <div className="mt-3 text-[11px] text-amber-700 bg-amber-50 rounded p-2">
