@@ -419,7 +419,7 @@ function BasicInfoStep({
 }) {
   return (
     <Section title="기본 정보" desc="날짜와 기상 조건. 이 값들은 상단 요약바에 실시간 반영됩니다.">
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Field label="작성일">
           <input
             type="date"

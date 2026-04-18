@@ -127,7 +127,7 @@ export default function BidPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* 좌측: 입력 폼 */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 sticky top-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 lg:sticky lg:top-4">
               <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
                 <Building2 size={14} /> 프로젝트 개요
               </h3>

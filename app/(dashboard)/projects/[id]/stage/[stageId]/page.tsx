@@ -9,6 +9,7 @@ import Stage3Page from '@/components/stages/Stage3Page'
 import Stage4Page from '@/components/stages/Stage4Page'
 import PageHeader from '@/components/common/PageHeader'
 import { Skeleton } from '@/components/common/Skeleton'
+import MobileNotice from '@/components/common/MobileNotice'
 
 interface Project {
   id: string
@@ -127,6 +128,21 @@ export default function StagePage({
         }
         tabs={stageNav}
       />
+
+      {/* 모바일 안내 — Stage1(CPM)·Stage2(프로세스맵)는 좌우 분할 뷰라 데스크톱 권장 */}
+      {stageId === '1' && (
+        <MobileNotice
+          feature="1단계는 WBS 테이블·간트·몬테카를로 등 좌우 분할 뷰가 많아 데스크톱 권장합니다."
+          hint="모바일에선 3·4단계(일보·분석) 위주로 사용하세요."
+          dismissKey="stage1"
+        />
+      )}
+      {stageId === '2' && (
+        <MobileNotice
+          feature="2단계 프로세스맵은 드래그·스윔레인 보드라 데스크톱 권장합니다."
+          dismissKey="stage2"
+        />
+      )}
 
       {/* 단계별 콘텐츠 */}
       <div className="flex-1 overflow-hidden">

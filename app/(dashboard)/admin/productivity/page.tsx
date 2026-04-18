@@ -7,6 +7,7 @@ import {
   AlertCircle, Archive, Inbox,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
+import MobileNotice from '@/components/common/MobileNotice'
 
 interface Proposal {
   id: string
@@ -88,9 +89,14 @@ export default function AdminProductivityPage() {
         subtitle="프로젝트 실적에서 추출된 자원계획(일평균 투입)과 생산성(인일/물량)을 검토 → 회사 표준 DB에 반영"
       />
 
+      <MobileNotice
+        feature="관리자 승인은 다수 제안을 비교 검토하는 화면이라 데스크톱 권장합니다."
+        dismissKey="admin-productivity"
+      />
+
       <div className="px-4 sm:px-6 py-6 max-w-7xl">
         {/* 회사 표준 요약 — 두 카테고리 구분 */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <StandardGroup
             title="자원 계획 (일평균 투입 인원)"
             subtitle="공종별 평균 투입 규모 · CPM 인원 계획에 사용"

@@ -196,7 +196,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             <CardTitle className="text-sm font-semibold">건물 규모</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="ground">지상 층수 <span className="text-destructive">*</span></Label>
                 <Input id="ground" type="number" min={1} value={form.ground} onChange={e => set('ground', e.target.value)} />

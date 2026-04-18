@@ -11,6 +11,7 @@ import {
 import type { PajuParseResult, SiteData } from '@/lib/excel-import/paju-parser'
 import type { SangbongParseResult } from '@/lib/excel-import/sangbong-parser'
 import PageHeader from '@/components/common/PageHeader'
+import MobileNotice from '@/components/common/MobileNotice'
 
 type Format = 'paju' | 'sangbong'
 interface Project { id: string; name: string }
@@ -157,6 +158,11 @@ export default function ImportPage() {
         icon={Upload}
         title="엑셀 일보 임포트"
         subtitle="파주/상봉 포맷을 자동 파싱 → DailyReport 대량 생성"
+      />
+
+      <MobileNotice
+        feature="엑셀 일괄 임포트는 파일 업로드·매핑 확인이 필요해 데스크톱 권장합니다."
+        dismissKey="import"
       />
 
       <div className="px-4 sm:px-6 py-6 max-w-5xl">
