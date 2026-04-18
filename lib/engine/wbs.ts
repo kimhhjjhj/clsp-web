@@ -79,12 +79,22 @@ export function computeQuantities(p: ProjectInput): Record<string, number> {
   const sitePerim = p.sitePerim ?? 0
   const bldgPerim = p.bldgPerim ?? 0
   const bldgArea  = p.bldgArea  ?? 0
+  const siteArea  = p.siteArea  ?? 0
   const basement  = p.basement  ?? 0
   const ground    = p.ground    ?? 0
   const lowrise   = p.lowrise   ?? 0
   const hasTr     = p.hasTransfer
   const wtBot     = p.wtBottom  ?? 0
   const waBot     = p.waBottom  ?? 0
+
+  // 건축면적 (1층 footprint) — 터파기·부지정지에 사용.
+  // 직접 입력 > 연면적÷총층수 추정 > 대지면적×0.5(건폐율 50%) > 0
+  const totalFloors = ground + basement
+  const estFromBldg = bldgArea > 0 && totalFloors > 0 ? bldgArea / totalFloors : 0
+  const estFromSite = siteArea > 0 ? siteArea * 0.5 : 0
+  const buildingArea = p.buildingArea && p.buildingArea > 0
+    ? p.buildingArea
+    : estFromBldg > 0 ? estFromBldg : estFromSite
 
   // 지하층 굴착 깊이 (층당 3.5m + 기초 1.0m)
   const totalExc = basement > 0 ? basement * 3.5 + 1.0 : 0
@@ -112,15 +122,15 @@ export function computeQuantities(p: ProjectInput): Record<string, number> {
     '가설울타리':       sitePerim,
     '가설사무실':       8,
     '가설 전기/용수':   1,
-    '부지정지':         bldgArea,
+    '부지정지':         buildingArea,                  // 건축면적 (1층 footprint)
     'CIP(철근망)':      cipRebarLen,
     'CIP(H-BEAM)':      cipHbeamLen,
     '장비조립':         1,
     '캠빔 설치':        cambeamLen,
     'SGR공사':          sgrLen,
-    '터파기(풍화토)':   bldgArea * wtDepth,
-    '터파기(풍화암)':   bldgArea * waDepth,
-    '터파기(연암)':     bldgArea * rkDepth,
+    '터파기(풍화토)':   buildingArea * wtDepth,        // 건축면적 × 풍화토 깊이
+    '터파기(풍화암)':   buildingArea * waDepth,
+    '터파기(연암)':     buildingArea * rkDepth,
     '기초':             1,
     '지하층':           basement,
     '지상층(저층부)':   lowrise,
@@ -147,12 +157,12 @@ export function generateWBS(p: ProjectInput): WBSTask[] {
     // 물량 결정
     let qty = qtys[row.name] ?? 0
 
-    // 단위가 '층'인데 물량이 없으면 ground 층수로 대체
-    if (qty <= 0 && row.unit === '층') qty = Math.max(1, p.ground)
-    // 전체/개소/전체 단위는 1
+    // 전체/개소 단위는 물량 미입력 시 1로 가정 (가설사무실·기초·마감 등)
     if (qty <= 0 && ['전체', '개소', '대', '주'].includes(row.unit)) qty = 1
 
-    if (qty <= 0) continue  // 물량 없으면 건너뜀
+    // '층' 단위는 물량이 정말 0이면 해당 공종 자체가 없는 것 → skip
+    // (저층부 0층 / 전이층 없음 / 지상 0층 케이스)
+    if (qty <= 0) continue
 
     const dur = calcDuration(row, qty)
     if (dur <= 0) continue  // 기간 0이면 건너뜀

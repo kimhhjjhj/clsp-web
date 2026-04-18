@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     bldgPerim: body.bldgPerim,
     siteArea: body.siteArea,
     bldgArea: body.bldgArea,
+    buildingArea: body.buildingArea,
     wtBottom: body.wtBottom,
     waBottom: body.waBottom,
     mode: body.mode ?? 'cp',

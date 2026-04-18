@@ -22,10 +22,11 @@ model Project {
   hasTransfer Boolean  @default(false)
   sitePerim   Float?
   bldgPerim   Float?
-  siteArea    Float?
-  bldgArea    Float?
-  wtBottom    Float?
-  waBottom    Float?
+  siteArea     Float?
+  bldgArea     Float?
+  buildingArea Float?   // 건축면적 (1층 footprint, 터파기·부지정지 기준)
+  wtBottom     Float?
+  waBottom     Float?
   lastCpmDuration        Int?
   industrySpecific       Json?                  // 유형별 특화 필드 (데이터센터: tier/racks/mwCapacity/cooling 등)
   processMap             Json?                  // { lanes: [], cards: [], links: [] }

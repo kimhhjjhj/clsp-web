@@ -30,10 +30,11 @@ export async function POST(req: NextRequest, { params }: Params) {
     hasTransfer: project.hasTransfer,
     sitePerim:   project.sitePerim  ?? undefined,
     bldgPerim:   project.bldgPerim  ?? undefined,
-    siteArea:    project.siteArea   ?? undefined,
-    bldgArea:    project.bldgArea   ?? undefined,
-    wtBottom:    project.wtBottom   ?? undefined,
-    waBottom:    project.waBottom   ?? undefined,
+    siteArea:     project.siteArea     ?? undefined,
+    bldgArea:     project.bldgArea     ?? undefined,
+    buildingArea: project.buildingArea ?? undefined,
+    wtBottom:     project.wtBottom     ?? undefined,
+    waBottom:     project.waBottom     ?? undefined,
     mode,
   }
 

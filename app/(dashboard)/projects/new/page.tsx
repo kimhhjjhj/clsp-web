@@ -23,7 +23,7 @@ interface FormData {
   location: string; type: string; startDate: string
   ground: string; basement: string; lowrise: string
   hasTransfer: boolean
-  siteArea: string; bldgArea: string; sitePerim: string; bldgPerim: string
+  siteArea: string; bldgArea: string; buildingArea: string; sitePerim: string; bldgPerim: string
   groundCond: string
   // 지반정보 step
   wtBottom: string; waBottom: string
@@ -51,7 +51,7 @@ const INITIAL: FormData = {
   name: '', client: '', contractor: '', location: '',
   type: '공동주택', startDate: '',
   ground: '', basement: '0', lowrise: '0', hasTransfer: false,
-  siteArea: '', bldgArea: '', sitePerim: '', bldgPerim: '',
+  siteArea: '', bldgArea: '', buildingArea: '', sitePerim: '', bldgPerim: '',
   groundCond: '보통',
   wtBottom: '', waBottom: '', excDepth: '',
   mode: 'cp',
@@ -296,6 +296,7 @@ export default function NewProjectPage() {
         hasTransfer: form.hasTransfer,
         siteArea: form.siteArea ? Number(form.siteArea) : undefined,
         bldgArea: form.bldgArea ? Number(form.bldgArea) : undefined,
+        buildingArea: form.buildingArea ? Number(form.buildingArea) : undefined,
         sitePerim: form.sitePerim ? Number(form.sitePerim) : undefined,
         bldgPerim: form.bldgPerim ? Number(form.bldgPerim) : undefined,
         wtBottom: form.wtBottom ? Number(form.wtBottom) : undefined,
@@ -740,7 +741,12 @@ export default function NewProjectPage() {
                         className="h-10 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] text-sm transition-colors" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="bldgArea" className="text-xs font-semibold text-gray-500">연면적 (m²)</Label>
+                      <Label htmlFor="buildingArea" className="text-xs font-semibold text-gray-500">건축면적 (m²) <span className="font-normal text-gray-400">· 1층 footprint</span></Label>
+                      <Input id="buildingArea" type="number" min={0} placeholder="터파기 기준" value={form.buildingArea} onChange={e => set('buildingArea', e.target.value)}
+                        className="h-10 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] text-sm transition-colors" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bldgArea" className="text-xs font-semibold text-gray-500">연면적 (m²) <span className="font-normal text-gray-400">· 전층 합</span></Label>
                       <Input id="bldgArea" type="number" min={0} placeholder="0.00" value={form.bldgArea} onChange={e => set('bldgArea', e.target.value)}
                         className="h-10 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] text-sm transition-colors" />
                     </div>

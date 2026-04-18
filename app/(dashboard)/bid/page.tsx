@@ -15,10 +15,15 @@ interface BidInput {
   type: string
   ground: string
   basement: string
+  lowrise: string
+  hasTransfer: boolean
   bldgArea: string
+  buildingArea: string
   siteArea: string
   sitePerim: string
   bldgPerim: string
+  wtBottom: string
+  waBottom: string
   monthlyFinCost: string
 }
 
@@ -38,8 +43,10 @@ interface EstimateResult {
 
 const INITIAL: BidInput = {
   name: '', type: '공동주택',
-  ground: '20', basement: '2', bldgArea: '30000', siteArea: '6000',
+  ground: '20', basement: '2', lowrise: '0', hasTransfer: false,
+  bldgArea: '30000', buildingArea: '1500', siteArea: '6000',
   sitePerim: '300', bldgPerim: '220',
+  wtBottom: '3', waBottom: '6',
   monthlyFinCost: '5000',
 }
 
@@ -65,10 +72,15 @@ export default function BidPage() {
           name: input.name || '임시 견적',
           ground: Number(input.ground) || 0,
           basement: Number(input.basement) || 0,
+          lowrise: Number(input.lowrise) || 0,
+          hasTransfer: input.hasTransfer,
           bldgArea: Number(input.bldgArea) || undefined,
+          buildingArea: Number(input.buildingArea) || undefined,
           siteArea: Number(input.siteArea) || undefined,
           sitePerim: Number(input.sitePerim) || undefined,
           bldgPerim: Number(input.bldgPerim) || undefined,
+          wtBottom: Number(input.wtBottom) || undefined,
+          waBottom: Number(input.waBottom) || undefined,
           monthlyFinCost: Number(input.monthlyFinCost) || 0,
         }),
       })
@@ -94,10 +106,15 @@ export default function BidPage() {
           type: input.type,
           ground: Number(input.ground) || 0,
           basement: Number(input.basement) || 0,
+          lowrise: Number(input.lowrise) || 0,
+          hasTransfer: input.hasTransfer,
           bldgArea: Number(input.bldgArea) || null,
+          buildingArea: Number(input.buildingArea) || null,
           siteArea: Number(input.siteArea) || null,
           sitePerim: Number(input.sitePerim) || null,
           bldgPerim: Number(input.bldgPerim) || null,
+          wtBottom: Number(input.wtBottom) || null,
+          waBottom: Number(input.waBottom) || null,
         }),
       })
       const data = await res.json()
@@ -149,7 +166,7 @@ export default function BidPage() {
                 </select>
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <Field label="지상 층수" icon={<Layers size={11} />}>
                   <input type="number" value={input.ground} onChange={e => set('ground', e.target.value)}
                     className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
@@ -158,26 +175,52 @@ export default function BidPage() {
                   <input type="number" value={input.basement} onChange={e => set('basement', e.target.value)}
                     className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
                 </Field>
+                <Field label="저층부 층수" hint="없으면 0">
+                  <input type="number" value={input.lowrise} onChange={e => set('lowrise', e.target.value)}
+                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
+                </Field>
               </div>
 
+              <label className="flex items-center gap-2 text-xs text-gray-600">
+                <input type="checkbox" checked={input.hasTransfer}
+                  onChange={e => setInput(p => ({ ...p, hasTransfer: e.target.checked }))}
+                  className="rounded border-gray-300" />
+                전이층(Transfer Slab) 있음
+              </label>
+
               <div className="grid grid-cols-2 gap-3">
-                <Field label="연면적 (㎡)" icon={<Ruler size={11} />}>
+                <Field label="건축면적 (㎡)" icon={<Ruler size={11} />} hint="1층 바닥면적. 터파기 기준">
+                  <input type="number" value={input.buildingArea} onChange={e => set('buildingArea', e.target.value)}
+                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
+                </Field>
+                <Field label="연면적 (㎡)" hint="전 층 바닥면적 합">
                   <input type="number" value={input.bldgArea} onChange={e => set('bldgArea', e.target.value)}
                     className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
                 </Field>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
                 <Field label="대지면적 (㎡)">
                   <input type="number" value={input.siteArea} onChange={e => set('siteArea', e.target.value)}
                     className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
                 </Field>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <Field label="대지둘레 (m)">
                   <input type="number" value={input.sitePerim} onChange={e => set('sitePerim', e.target.value)}
                     className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
                 </Field>
                 <Field label="건물둘레 (m)">
                   <input type="number" value={input.bldgPerim} onChange={e => set('bldgPerim', e.target.value)}
+                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="풍화토 바닥 (m)" hint="지표~풍화토 하단 깊이">
+                  <input type="number" value={input.wtBottom} onChange={e => set('wtBottom', e.target.value)}
+                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
+                </Field>
+                <Field label="풍화암 바닥 (m)" hint="지표~풍화암 하단 깊이">
+                  <input type="number" value={input.waBottom} onChange={e => set('waBottom', e.target.value)}
                     className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono" />
                 </Field>
               </div>

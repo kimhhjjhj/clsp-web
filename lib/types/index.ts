@@ -12,10 +12,11 @@ export interface ProjectInput {
   hasTransfer: boolean // 전이층 여부
   sitePerim?: number   // 대지 둘레 (m)
   bldgPerim?: number   // 건물 둘레 (m)
-  siteArea?: number    // 대지 면적 (m²)
-  bldgArea?: number    // 연면적 (m²)
-  wtBottom?: number    // 지하수위 깊이 (m)
-  waBottom?: number    // 흙막이 깊이 (m)
+  siteArea?: number      // 대지 면적 (m²)
+  bldgArea?: number      // 연면적 (m²) — 전 층 바닥면적 합
+  buildingArea?: number  // 건축면적 (m²) — 1층 footprint (터파기·부지정지 기준)
+  wtBottom?: number      // 풍화토 바닥 깊이 (m)
+  waBottom?: number      // 풍화암 바닥 깊이 (m)
   mode?: 'cp' | 'full' // WBS 생성 모드: 개략(CP) / 상세(Full)
 }
 

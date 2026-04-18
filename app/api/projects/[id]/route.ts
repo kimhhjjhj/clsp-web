@@ -33,6 +33,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       bldgPerim: body.bldgPerim,
       siteArea: body.siteArea,
       bldgArea: body.bldgArea,
+      buildingArea: body.buildingArea,
       wtBottom: body.wtBottom,
       waBottom: body.waBottom,
       industrySpecific: body.industrySpecific !== undefined ? body.industrySpecific : undefined,

@@ -37,6 +37,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     bldgPerim: project.bldgPerim ?? undefined,
     siteArea: project.siteArea ?? undefined,
     bldgArea: project.bldgArea ?? undefined,
+    buildingArea: project.buildingArea ?? undefined,
     wtBottom: project.wtBottom ?? undefined,
     waBottom: project.waBottom ?? undefined,
     mode,

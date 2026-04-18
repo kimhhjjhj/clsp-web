@@ -27,6 +27,7 @@ interface FormData {
   hasTransfer: boolean
   siteArea: string
   bldgArea: string
+  buildingArea: string
   sitePerim: string
   bldgPerim: string
   wtBottom: string
@@ -59,6 +60,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           hasTransfer: p.hasTransfer ?? false,
           siteArea: p.siteArea != null ? String(p.siteArea) : '',
           bldgArea: p.bldgArea != null ? String(p.bldgArea) : '',
+          buildingArea: p.buildingArea != null ? String(p.buildingArea) : '',
           sitePerim: p.sitePerim != null ? String(p.sitePerim) : '',
           bldgPerim: p.bldgPerim != null ? String(p.bldgPerim) : '',
           wtBottom: p.wtBottom != null ? String(p.wtBottom) : '',
@@ -99,6 +101,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         hasTransfer: form.hasTransfer,
         siteArea: form.siteArea ? Number(form.siteArea) : null,
         bldgArea: form.bldgArea ? Number(form.bldgArea) : null,
+        buildingArea: form.buildingArea ? Number(form.buildingArea) : null,
         sitePerim: form.sitePerim ? Number(form.sitePerim) : null,
         bldgPerim: form.bldgPerim ? Number(form.bldgPerim) : null,
         wtBottom: form.wtBottom ? Number(form.wtBottom) : null,
@@ -250,7 +253,11 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 <Input id="siteArea" type="number" min={0} value={form.siteArea} onChange={e => set('siteArea', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="bldgArea">연면적 (m²)</Label>
+                <Label htmlFor="buildingArea">건축면적 (m²) <span className="text-xs text-muted-foreground font-normal">1층 footprint</span></Label>
+                <Input id="buildingArea" type="number" min={0} value={form.buildingArea} onChange={e => set('buildingArea', e.target.value)} placeholder="미입력 시 연면적÷층수 추정" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="bldgArea">연면적 (m²) <span className="text-xs text-muted-foreground font-normal">전 층 합계</span></Label>
                 <Input id="bldgArea" type="number" min={0} value={form.bldgArea} onChange={e => set('bldgArea', e.target.value)} />
               </div>
               <div className="space-y-1.5">
@@ -289,11 +296,11 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="wtBottom">지하수위 깊이 (m)</Label>
+                  <Label htmlFor="wtBottom">풍화토 바닥 (m) <span className="text-xs text-muted-foreground font-normal">지표~풍화토 하단</span></Label>
                   <Input id="wtBottom" type="number" min={0} step={0.1} value={form.wtBottom} onChange={e => set('wtBottom', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="waBottom">흙막이 깊이 (m)</Label>
+                  <Label htmlFor="waBottom">풍화암 바닥 (m) <span className="text-xs text-muted-foreground font-normal">지표~풍화암 하단</span></Label>
                   <Input id="waBottom" type="number" min={0} step={0.1} value={form.waBottom} onChange={e => set('waBottom', e.target.value)} />
                 </div>
               </div>
