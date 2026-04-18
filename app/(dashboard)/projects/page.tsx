@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
-  FolderKanban, Plus, Upload, Search, X, Building2, MapPin, Calendar, Users,
-  ChevronRight, Layers, Trash2,
+  FolderKanban, Plus, Upload, Search, X, Building2, MapPin, Calendar,
+  ChevronRight, Layers, Trash2, SortAsc, Clock, CheckCircle2,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import { SkeletonCard } from '@/components/common/Skeleton'
 import { useToast } from '@/components/common/Toast'
+import { getProjectStatus, STATUS_META, formatRelative, type ProjectStatus } from '@/lib/project-status'
 
 interface Project {
   id: string
@@ -23,15 +24,21 @@ interface Project {
   basement: number
   bldgArea?: number
   lastCpmDuration?: number
+  latestReportDate?: string | null
   createdAt: string
   _count: { tasks: number; dailyReports?: number }
 }
+
+type SortKey = 'recent' | 'name' | 'startDate'
+type StatusFilter = 'all' | ProjectStatus
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [sortKey, setSortKey] = useState<SortKey>('recent')
   const toast = useToast()
 
   useEffect(() => {
@@ -58,10 +65,20 @@ export default function ProjectsPage() {
     return Array.from(set)
   }, [projects])
 
+  // 상태별 개수
+  const statusCounts = useMemo(() => {
+    const counts: Record<ProjectStatus | 'all', number> = {
+      all: projects.length, active: 0, paused: 0, planning: 0, completed: 0, archived: 0,
+    }
+    for (const p of projects) counts[getProjectStatus(p)]++
+    return counts
+  }, [projects])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return projects.filter(p => {
+    const rows = projects.filter(p => {
       if (typeFilter !== 'all' && p.type !== typeFilter) return false
+      if (statusFilter !== 'all' && getProjectStatus(p) !== statusFilter) return false
       if (!q) return true
       return (
         p.name.toLowerCase().includes(q) ||
@@ -69,14 +86,35 @@ export default function ProjectsPage() {
         (p.location?.toLowerCase().includes(q) ?? false)
       )
     })
-  }, [projects, query, typeFilter])
+    // 정렬
+    return rows.sort((a, b) => {
+      if (sortKey === 'name') return a.name.localeCompare(b.name, 'ko')
+      if (sortKey === 'startDate') {
+        const da = a.startDate ? new Date(a.startDate).getTime() : 0
+        const db = b.startDate ? new Date(b.startDate).getTime() : 0
+        return db - da
+      }
+      // 최근 활동 (latestReportDate desc, null은 뒤)
+      const da = a.latestReportDate ? new Date(a.latestReportDate).getTime() : 0
+      const db = b.latestReportDate ? new Date(b.latestReportDate).getTime() : 0
+      return db - da
+    })
+  }, [projects, query, typeFilter, statusFilter, sortKey])
+
+  const STATUS_TABS: { key: StatusFilter; label: string; dot?: string }[] = [
+    { key: 'all',        label: '전체' },
+    { key: 'active',     label: '진행중',   dot: STATUS_META.active.dot },
+    { key: 'paused',     label: '일시중단', dot: STATUS_META.paused.dot },
+    { key: 'planning',   label: '계획중',   dot: STATUS_META.planning.dot },
+    { key: 'completed',  label: '준공',     dot: STATUS_META.completed.dot },
+  ]
 
   return (
     <div className="flex flex-col h-full">
       <PageHeader
         icon={FolderKanban}
         title="프로젝트"
-        subtitle={`${projects.length}개 프로젝트 · 통합 공정 관리`}
+        subtitle={`${projects.length}개 프로젝트 · 진행 ${statusCounts.active} · 준공 ${statusCounts.completed}`}
         actions={
           <>
             <Link
@@ -95,16 +133,41 @@ export default function ProjectsPage() {
         }
       />
 
-      <div className="flex-1 overflow-auto p-4 sm:p-6">
-        {/* 검색·필터 */}
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-4">
+        {/* 상태 탭 */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin -mx-1 px-1">
+          {STATUS_TABS.map(t => {
+            const active = statusFilter === t.key
+            const count = statusCounts[t.key]
+            return (
+              <button
+                key={t.key}
+                onClick={() => setStatusFilter(t.key)}
+                className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  active
+                    ? 'bg-gray-900 text-white shadow-sm'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                {t.dot && <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />}
+                {t.label}
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                  active ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
+                }`}>{count}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* 검색 + 유형 필터 + 정렬 */}
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="프로젝트명·발주처·위치로 검색"
-              className="w-full pl-9 pr-8 h-9 bg-white border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full pl-9 pr-8 h-9 bg-white border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
             {query && (
               <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
@@ -112,28 +175,39 @@ export default function ProjectsPage() {
               </button>
             )}
           </div>
+
           {types.length > 0 && (
-            <div className="flex items-center gap-1 flex-wrap">
+            <div className="inline-flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5">
               <button
                 onClick={() => setTypeFilter('all')}
-                className={`h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${
-                  typeFilter === 'all' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                className={`h-7 px-2.5 rounded text-[11px] font-semibold transition-colors ${
+                  typeFilter === 'all' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
                 }`}
-              >전체</button>
+              >전체 유형</button>
               {types.map(t => (
                 <button
                   key={t}
                   onClick={() => setTypeFilter(t)}
-                  className={`h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${
-                    typeFilter === t ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  className={`h-7 px-2.5 rounded text-[11px] font-semibold transition-colors ${
+                    typeFilter === t ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >{t}</button>
               ))}
             </div>
           )}
-          <span className="ml-auto text-xs text-gray-500 hidden sm:block">
-            {filtered.length !== projects.length && `${filtered.length}개 필터됨`}
-          </span>
+
+          <div className="inline-flex items-center gap-1 text-xs text-gray-500 ml-auto">
+            <SortAsc size={12} className="text-gray-400" />
+            <select
+              value={sortKey}
+              onChange={e => setSortKey(e.target.value as SortKey)}
+              className="h-8 px-2 bg-white border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-500"
+            >
+              <option value="recent">최근 활동순</option>
+              <option value="startDate">착공일 최신순</option>
+              <option value="name">이름순</option>
+            </select>
+          </div>
         </div>
 
         {/* 콘텐츠 */}
@@ -158,9 +232,9 @@ export default function ProjectsPage() {
             <EmptyState
               icon={Search}
               title="검색 결과가 없습니다"
-              description={`"${query}"에 해당하는 프로젝트가 없습니다. 다른 키워드로 검색하거나 필터를 해제해보세요.`}
+              description="조건을 변경하거나 필터를 해제해보세요."
               actions={[
-                { label: '검색 초기화', onClick: () => { setQuery(''); setTypeFilter('all') }, variant: 'secondary' },
+                { label: '조건 초기화', onClick: () => { setQuery(''); setTypeFilter('all'); setStatusFilter('all') }, variant: 'secondary' },
               ]}
             />
           </div>
@@ -176,26 +250,43 @@ export default function ProjectsPage() {
 
 function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id: string, name: string) => void }) {
   const startDate = p.startDate ? new Date(p.startDate).toLocaleDateString('ko-KR') : null
+  const status = getProjectStatus(p)
+  const info = STATUS_META[status]
+
   return (
-    <div className="group bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all overflow-hidden flex flex-col">
+    <div className="group bg-white rounded-xl border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden flex flex-col">
+      {/* 상단 컬러 띠 — 상태 시각화 */}
+      <div className="h-1 w-full" style={{ background: info.color }} />
+
       <Link href={`/projects/${p.id}`} className="block p-4 flex-1 no-underline">
-        <div className="flex items-start justify-between mb-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white shadow-sm flex-shrink-0">
-            <Building2 size={16} />
+        <div className="flex items-start justify-between mb-3 gap-2">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm flex-shrink-0"
+              style={{ background: `linear-gradient(135deg, ${info.color}, ${info.color}dd)` }}>
+              <Building2 size={16} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${info.bg} ${info.text} border ${info.border}`}>
+                  <span className={`w-1 h-1 rounded-full ${info.dot}`} />
+                  {info.label}
+                </span>
+                {p.type && (
+                  <span className="text-[10px] font-medium text-gray-500">{p.type}</span>
+                )}
+              </div>
+              <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 group-hover:text-blue-700 transition-colors">
+                {p.name}
+              </h3>
+            </div>
           </div>
-          {p.type && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-              {p.type}
-            </span>
-          )}
         </div>
-        <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 mb-1 group-hover:text-blue-700">
-          {p.name}
-        </h3>
+
         {p.client && (
-          <p className="text-xs text-gray-500 mb-3">{p.client}</p>
+          <p className="text-[11px] text-gray-500 mb-2.5 -mt-1">{p.client}</p>
         )}
-        <div className="space-y-1.5 text-xs text-gray-600">
+
+        <div className="space-y-1 text-xs text-gray-600">
           {p.location && (
             <div className="flex items-center gap-1.5">
               <MapPin size={11} className="text-gray-400 flex-shrink-0" />
@@ -210,18 +301,33 @@ function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id
           )}
           <div className="flex items-center gap-1.5">
             <Layers size={11} className="text-gray-400 flex-shrink-0" />
-            <span>지상 {p.ground}층{p.basement > 0 ? ` · 지하 ${p.basement}층` : ''}{p.bldgArea ? ` · ${p.bldgArea.toLocaleString()}m²` : ''}</span>
+            <span>지상 {p.ground}층{p.basement > 0 ? ` · 지하 ${p.basement}층` : ''}{p.bldgArea ? ` · ${p.bldgArea.toLocaleString()} ㎡` : ''}</span>
           </div>
+          {p.latestReportDate && (
+            <div className="flex items-center gap-1.5">
+              {status === 'active' ? (
+                <Clock size={11} className="text-emerald-500 flex-shrink-0" />
+              ) : status === 'completed' ? (
+                <CheckCircle2 size={11} className="text-slate-400 flex-shrink-0" />
+              ) : (
+                <Clock size={11} className="text-gray-400 flex-shrink-0" />
+              )}
+              <span className={status === 'active' ? 'text-emerald-700 font-medium' : 'text-gray-500'}>
+                마지막 일보 {formatRelative(p.latestReportDate)}
+              </span>
+            </div>
+          )}
         </div>
       </Link>
-      <div className="border-t border-gray-100 bg-gray-50 px-4 py-2 flex items-center justify-between">
+
+      <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3 text-[10px] text-gray-500">
-          <span><strong className="text-gray-700">{p._count.tasks}</strong> 공종</span>
-          {typeof p._count.dailyReports === 'number' && (
-            <span><strong className="text-gray-700">{p._count.dailyReports}</strong> 일보</span>
+          <span><strong className="text-gray-700 font-mono">{p._count.tasks}</strong> 공종</span>
+          {typeof p._count.dailyReports === 'number' && p._count.dailyReports > 0 && (
+            <span><strong className="text-gray-700 font-mono">{p._count.dailyReports}</strong> 일보</span>
           )}
           {p.lastCpmDuration && (
-            <span><strong className="text-blue-700">{p.lastCpmDuration}</strong>일</span>
+            <span><strong className="text-blue-700 font-mono">{p.lastCpmDuration}</strong>일</span>
           )}
         </div>
         <div className="flex items-center gap-1">

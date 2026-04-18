@@ -4,9 +4,21 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   const projects = await prisma.project.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { _count: { select: { tasks: true, dailyReports: true } } },
+    include: {
+      _count: { select: { tasks: true, dailyReports: true } },
+      dailyReports: {
+        select: { date: true },
+        orderBy: { date: 'desc' },
+        take: 1,
+      },
+    },
   })
-  return NextResponse.json(projects)
+  // dailyReports → latestReportDate 로 축약
+  const shaped = projects.map(({ dailyReports, ...rest }) => ({
+    ...rest,
+    latestReportDate: dailyReports[0]?.date ?? null,
+  }))
+  return NextResponse.json(shaped)
 }
 
 export async function POST(req: NextRequest) {
