@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, Plus, Bell, Settings,
   Search, LayoutGrid, BarChart3, FileText, ChevronRight, Menu, X,
-  Upload, ShieldCheck, Database, Users2,
+  Upload, ShieldCheck, Database, Users2, Calculator,
 } from 'lucide-react'
 import { ToastProvider } from '@/components/common/Toast'
 import { CommandPaletteProvider, useCommandPalette } from '@/components/common/CommandPalette'
@@ -16,6 +16,7 @@ import Breadcrumb from '@/components/common/Breadcrumb'
 const NAV_ITEMS = [
   { href: '/',                    label: '대시보드',   icon: LayoutDashboard, desc: '전체 현황' },
   { href: '/projects',            label: '프로젝트',   icon: FolderKanban,    desc: '공정 관리' },
+  { href: '/bid',                 label: '입찰·견적',  icon: Calculator,      desc: '개략 견적 시뮬' },
   { href: '/analytics',           label: '분석',      icon: BarChart3,       desc: '전사 현황 분석' },
   { href: '/standards',           label: '생산성 DB', icon: Database,        desc: '공종별 표준' },
   { href: '/companies',           label: '협력사',    icon: Users2,          desc: '거래 이력' },
