@@ -83,17 +83,36 @@ export function SummaryStrip({ children }: { children: ReactNode }) {
   )
 }
 
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return '15, 23, 42'
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  if ([r, g, b].some(n => Number.isNaN(n))) return '15, 23, 42'
+  return `${r}, ${g}, ${b}`
+}
+
 export function SummaryStat({
   label, value, sub, accent,
 }: { label: string; value: ReactNode; sub?: ReactNode; accent?: string }) {
+  const rgb = accent ? hexToRgb(accent) : '15, 23, 42'
   return (
     <div
-      className="flex-shrink-0 min-w-[128px] sm:min-w-[148px] px-3.5 py-2.5 border border-[rgba(15,23,42,0.06)] bg-white rounded-[10px] relative"
-      style={accent ? { boxShadow: `inset 3px 0 0 ${accent}, 0 1px 2px rgba(15,23,42,0.03)` } : { boxShadow: '0 1px 2px rgba(15,23,42,0.03)' }}
+      className="relative flex-shrink-0 min-w-[128px] sm:min-w-[148px] px-3.5 py-2.5 rounded-[10px] bg-white overflow-hidden"
+      style={{
+        border: `1px solid rgba(${rgb}, 0.18)`,
+        boxShadow: `0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px -10px rgba(${rgb}, 0.22)`,
+      }}
     >
-      <div className="u-stat-label">{label}</div>
-      <div className="text-[18px] font-semibold text-slate-900 leading-none mt-2 tracking-[-0.02em] tabular-nums">{value}</div>
-      {sub && <div className="text-[11px] text-slate-500 mt-1.5 truncate">{sub}</div>}
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-10 pointer-events-none"
+        style={{ background: `linear-gradient(180deg, rgba(${rgb}, 0.06) 0%, transparent 100%)` }}
+      />
+      <div className="relative u-stat-label">{label}</div>
+      <div className="relative text-[18px] font-semibold text-slate-900 leading-none mt-2 tracking-[-0.02em] tabular-nums">{value}</div>
+      {sub && <div className="relative text-[11px] text-slate-500 mt-1.5 truncate">{sub}</div>}
     </div>
   )
 }
