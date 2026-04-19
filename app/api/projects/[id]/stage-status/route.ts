@@ -9,33 +9,35 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const [
     project,
     taskCount,
-    riskCount,
+    riskAgg,
+    opportunityCount,
     baselineCount,
     latestWeekly,
+    weeklyAvg,
     latestDaily,
+    dailyReportCount,
     weeklyDistinct,
   ] = await Promise.all([
-    // stage1: Project의 lastCpmDuration
     prisma.project.findUnique({ where: { id }, select: { lastCpmDuration: true } }),
-    // stage1: Task 테이블에 해당 projectId 데이터 있는지
     prisma.task.count({ where: { projectId: id } }),
-    // stage2: RiskOpportunity count
-    prisma.riskOpportunity.count({ where: { projectId: id } }),
-    // stage2: BaselineTask count
+    prisma.riskOpportunity.count({ where: { projectId: id, type: 'risk' } }),
+    prisma.riskOpportunity.count({ where: { projectId: id, type: 'opportunity' } }),
     prisma.baselineTask.count({ where: { projectId: id } }),
-    // stage3: 최신 WeeklyProgress actualRate (평균)
+    prisma.weeklyProgress.findFirst({
+      where: { projectId: id },
+      orderBy: [{ year: 'desc' }, { weekNo: 'desc' }],
+      select: { year: true, weekNo: true },
+    }),
     prisma.weeklyProgress.aggregate({
       where: { projectId: id },
-      _avg: { actualRate: true },
-      _max: { year: true, weekNo: true },
+      _avg: { actualRate: true, plannedRate: true },
     }),
-    // stage3: DailyReport 최신 date
     prisma.dailyReport.findFirst({
       where: { projectId: id },
       orderBy: { date: 'desc' },
       select: { date: true },
     }),
-    // stage4: WeeklyProgress distinct (year,weekNo) count
+    prisma.dailyReport.count({ where: { projectId: id } }),
     prisma.weeklyProgress.findMany({
       where: { projectId: id },
       select: { year: true, weekNo: true },
@@ -47,14 +49,20 @@ export async function GET(_req: NextRequest, { params }: Params) {
     stage1: {
       hasCpm: taskCount > 0,
       totalDuration: project?.lastCpmDuration ?? null,
+      taskCount,
     },
     stage2: {
-      riskCount,
+      riskCount: riskAgg,
+      opportunityCount,
       hasBaseline: baselineCount > 0,
+      baselineTaskCount: baselineCount,
     },
     stage3: {
-      latestRate: latestWeekly._avg.actualRate ?? null,
+      latestRate: weeklyAvg._avg.actualRate ?? null,
+      plannedRate: weeklyAvg._avg.plannedRate ?? null,
       lastReportDate: latestDaily?.date ?? null,
+      dailyReportCount,
+      latestWeek: latestWeekly ? `${latestWeekly.year}년 ${latestWeekly.weekNo}주차` : null,
     },
     stage4: {
       weeklyReportCount: weeklyDistinct.length,
