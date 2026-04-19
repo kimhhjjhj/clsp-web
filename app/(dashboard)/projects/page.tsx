@@ -352,12 +352,17 @@ function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id
             <span><strong className="text-blue-700 font-mono">{p.lastCpmDuration}</strong>일</span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={e => { e.preventDefault(); onDelete(p.id, p.name) }}
             className="p-1 text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
             title="프로젝트 삭제"
           ><Trash2 size={12} /></button>
+          <Link
+            href={`/bid?projectId=${p.id}`}
+            className="text-[10px] text-gray-500 font-semibold no-underline hover:text-gray-900 px-1"
+            title="개략공기·조정값을 /bid에서 다시 편집"
+          >재검토</Link>
           <Link href={`/projects/${p.id}`} className="text-[10px] text-blue-600 font-semibold no-underline hover:underline flex items-center gap-0.5">
             열기 <ChevronRight size={10} />
           </Link>
