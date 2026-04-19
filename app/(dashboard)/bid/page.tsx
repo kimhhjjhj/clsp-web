@@ -12,7 +12,10 @@ import { useToast } from '@/components/common/Toast'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 import AiCostEstimate, { type AiResult } from '@/components/bid/AiCostEstimate'
 import AiScheduleEstimate, { type AiScheduleResult } from '@/components/bid/AiScheduleEstimate'
-import { computeGuidelineSchedule, compareWithCpm } from '@/lib/engine/guideline'
+import {
+  computeGuidelineSchedule, computeGuidelineSchedulePrecise, compareWithCpm,
+  computeGuidelineRegression, guidelineBenchmark, type Region,
+} from '@/lib/engine/guideline'
 import { assessCriticalPath, CP_LEVEL_COLORS } from '@/lib/engine/cp-assessment'
 import { computeBenchmark, BENCHMARK_COLORS, type BenchmarkResult, type BenchmarkSample } from '@/lib/engine/benchmark'
 import { detectAbnormal } from '@/lib/engine/abnormal-detection'
@@ -845,14 +848,21 @@ function BidPage() {
 
                       {/* 국토부 2026 적정 공사기간 가이드라인 참고값 */}
                       {(() => {
-                        const gl = computeGuidelineSchedule({
+                        const baseInput = {
                           type: input.type,
                           ground: Number(input.ground) || 0,
                           basement: Number(input.basement) || 0,
                           lowrise: Number(input.lowrise) || 0,
                           hasTransfer: input.hasTransfer,
-                        })
+                          bldgArea: Number(input.bldgArea) || undefined,
+                        }
+                        // 착공일 있으면 정밀 모드
+                        const gl = input.startDate
+                          ? computeGuidelineSchedulePrecise({ ...baseInput, startDate: input.startDate, region: '서울' as Region })
+                          : computeGuidelineSchedule(baseInput)
                         const cmp = compareWithCpm(result.cpm.totalDuration, gl.total)
+                        const reg = computeGuidelineRegression(input.type || '공동주택', baseInput.bldgArea)
+                        const bench = guidelineBenchmark(baseInput.ground)
                         return (
                           <div className="mx-5 mb-5 relative overflow-hidden rounded-xl bg-white" style={{
                             border: `1px solid ${cmp.color}33`,
@@ -862,11 +872,14 @@ function BidPage() {
                               style={{ background: `linear-gradient(180deg, ${cmp.color}0F, transparent)` }} />
                             <div className="relative px-4 py-3 flex items-start gap-3 flex-wrap">
                               <div className="flex-1 min-w-[260px]">
-                                <div className="flex items-center gap-1.5 mb-1">
+                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                                   <span className="text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: cmp.color }}>
                                     국토부 2026 가이드라인 참고
                                   </span>
-                                  <span className="text-[9px] text-slate-400">p.11~24</span>
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${gl.mode === 'precise' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                    {gl.mode === 'precise' ? '정밀 모드' : '간이'}
+                                  </span>
+                                  <span className="text-[9px] text-slate-400">부록 1·2·3·5</span>
                                 </div>
                                 <p className="text-sm">
                                   공식 산정: <span className="font-bold font-mono tabular-nums" style={{ color: cmp.color }}>{gl.total}일</span>
@@ -877,18 +890,65 @@ function BidPage() {
                                 <p className="text-[11px] text-slate-500 mt-1 font-mono">
                                   준비 {gl.preparationDays} + CP 작업 {gl.criticalWorkDays} + 비작업 {gl.nonWorkDays} + 정리 {gl.cleanupDays}
                                 </p>
+                                {/* 회귀식·벤치마크 보조 */}
+                                <div className="flex gap-3 mt-2 flex-wrap text-[11px]">
+                                  {reg.days != null && (
+                                    <span className={`px-2 py-0.5 rounded-md font-mono ${reg.inRange ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}
+                                      title={`부록 5 회귀식: ${reg.formula ?? ''}${reg.inRange ? '' : ' · 적용범위 밖'}`}
+                                    >
+                                      회귀식 {reg.days}일
+                                    </span>
+                                  )}
+                                  <span className="px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-mono"
+                                    title="실무가이드 공동주택 p.129~"
+                                  >
+                                    업계 {bench.floorRange} {bench.typicalDays[0]}~{bench.typicalDays[1]}일
+                                  </span>
+                                </div>
                               </div>
                               <details className="w-full mt-2">
-                                <summary className="text-[11px] text-slate-500 hover:text-slate-900 cursor-pointer">산정 내역·가정 ▾</summary>
-                                <div className="mt-2 text-[11px] text-slate-600 leading-relaxed space-y-1 pl-3 border-l-2 border-slate-200">
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                    {gl.phases.map(ph => (
-                                      <div key={ph.name} className="font-mono">
-                                        <span className="text-slate-400">{ph.name}</span> <span className="font-bold text-slate-800">{ph.days}일</span>
-                                      </div>
-                                    ))}
+                                <summary className="text-[11px] text-slate-500 hover:text-slate-900 cursor-pointer">산정 내역·월별 비작업일 ▾</summary>
+                                <div className="mt-2 text-[11px] text-slate-600 leading-relaxed space-y-2 pl-3 border-l-2 border-slate-200">
+                                  <div>
+                                    <p className="font-bold text-slate-700 mb-1">CP 공종별 일수</p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                                      {gl.phases.map(ph => (
+                                        <div key={ph.name} className="font-mono">
+                                          <span className="text-slate-400">{ph.name}</span> <span className="font-bold text-slate-800">{ph.days}일</span>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
-                                  <ul className="list-disc ml-4 text-slate-500 mt-2">
+                                  {gl.monthlyNonWork && gl.monthlyNonWork.length > 0 && (
+                                    <div>
+                                      <p className="font-bold text-slate-700 mb-1">월별 비작업일 (정밀 모드 · 서울 철콘 기준)</p>
+                                      <div className="overflow-x-auto">
+                                        <table className="text-[10px] font-mono w-full">
+                                          <thead className="bg-slate-50">
+                                            <tr>
+                                              <th className="text-left px-1.5 py-0.5">월</th>
+                                              <th className="text-right px-1.5 py-0.5">법정</th>
+                                              <th className="text-right px-1.5 py-0.5">기상</th>
+                                              <th className="text-right px-1.5 py-0.5">중복</th>
+                                              <th className="text-right px-1.5 py-0.5">적용</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {gl.monthlyNonWork.map(m => (
+                                              <tr key={m.ym} className="border-t border-slate-100">
+                                                <td className="px-1.5 py-0.5 text-slate-600">{m.ym}</td>
+                                                <td className="px-1.5 py-0.5 text-right">{m.legal}</td>
+                                                <td className="px-1.5 py-0.5 text-right">{m.climate}</td>
+                                                <td className="px-1.5 py-0.5 text-right text-slate-400">-{m.overlap}</td>
+                                                <td className="px-1.5 py-0.5 text-right font-bold text-slate-900">{m.applied}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  )}
+                                  <ul className="list-disc ml-4 text-slate-500">
                                     {gl.notes.map((n, i) => <li key={i}>{n}</li>)}
                                   </ul>
                                 </div>
