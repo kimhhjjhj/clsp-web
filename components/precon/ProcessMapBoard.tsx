@@ -18,6 +18,7 @@ import { exportToPng } from '@/lib/process-map/export-png'
 import { useAutoSaveDraft } from '@/lib/hooks/useAutoSaveDraft'
 import DraftRestoreBanner from '@/components/common/DraftRestoreBanner'
 import { useToast } from '@/components/common/Toast'
+import { FullscreenToggle, fullscreenClass, useFullscreen } from '@/components/common/Fullscreen'
 import FlowCanvas from './FlowCanvas'
 import { AlertTriangle, Zap } from 'lucide-react'
 
@@ -50,6 +51,7 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
   const [linkingFrom, setLinkingFrom] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [viewMode, setViewMode] = useState<'pull' | 'timeline' | 'flow'>('pull')
+  const { fullscreen, toggle: toggleFullscreen } = useFullscreen()
   const toast = useToast()
   const boardRef = useRef<HTMLDivElement>(null)
 
@@ -332,6 +334,18 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
     d.setDate(d.getDate() + day)
     return `${d.getMonth() + 1}/${d.getDate()}`
   }
+  // 주 단위 라벨: { weekNo, startLabel, endLabel } — 헤더에서 "W1 · 12/02 ~ 12/08" 형태
+  const weekInfo = (weekNo: number) => {
+    const startDay = weekNo * 7
+    const endDay = startDay + 6
+    return {
+      weekNo: weekNo + 1,
+      startLabel: dateLabel(startDay),
+      endLabel: dateLabel(endDay),
+      startDay,
+    }
+  }
+  const totalWeeks = Math.ceil(totalDays / 7)
 
   const sortedLanes = useMemo(
     () => [...map.lanes].sort((a, b) => a.order - b.order),
@@ -349,7 +363,7 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
   const totalBoardW = LANE_LABEL_W + totalDays * dayWidth
 
   return (
-    <div className="space-y-3">
+    <div className={`space-y-3 ${fullscreenClass(fullscreen)}`}>
       {/* 복구 배너 (저장되지 않은 초안이 있을 때) */}
       {hasDraft && draftEnvelope && (
         <DraftRestoreBanner
@@ -360,7 +374,8 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
         />
       )}
 
-      {/* 뷰 토글 */}
+      {/* 뷰 토글 + 풀스크린 */}
+      <div className="flex items-center gap-2 flex-wrap">
       <div className="flex items-center gap-0.5 bg-gray-100 p-0.5 rounded-lg w-fit">
         <button
           onClick={() => setViewMode('pull')}
@@ -381,6 +396,8 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
             viewMode === 'flow' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
           }`}
         ><Workflow size={13} /> 플로우 (자유 캔버스)</button>
+      </div>
+      <FullscreenToggle fullscreen={fullscreen} onToggle={toggleFullscreen} className="ml-auto" />
       </div>
 
       {/* 툴바 */}
@@ -534,7 +551,7 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
       <div
         className="bg-white border border-gray-200 rounded-xl overflow-auto"
         ref={boardRef}
-        style={{ maxHeight: 'min(70vh, 720px)' }}
+        style={{ maxHeight: fullscreen ? 'calc(100vh - 200px)' : 'min(70vh, 720px)' }}
       >
         {sortedLanes.length === 0 ? (
           <div className="p-10 text-center text-sm text-gray-400">
@@ -542,21 +559,38 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
           </div>
         ) : (
           <div style={{ width: totalBoardW, position: 'relative' }}>
-            {/* 헤더(시간축) */}
+            {/* 헤더(시간축) — 주 단위로 그룹, 각 주에 시작·완료 날짜 표기 */}
             <div
-              className="flex items-center bg-gray-50 border-b border-gray-200 sticky top-0 z-10"
+              className="relative bg-slate-50 border-b border-slate-200 sticky top-0 z-10"
               style={{ height: HEADER_H, paddingLeft: LANE_LABEL_W }}
             >
-              {Array.from({ length: Math.ceil(totalDays / Math.max(5, Math.floor(30 / (dayWidth / 3)))) + 1 }).map((_, i) => {
-                const step = Math.max(5, Math.floor(30 / (dayWidth / 3)))
-                const day = i * step
-                if (day > totalDays) return null
+              {Array.from({ length: totalWeeks }).map((_, w) => {
+                const { weekNo, startLabel, endLabel, startDay } = weekInfo(w)
+                const weekW = 7 * dayWidth
+                const showDates = dayWidth >= 4    // 좁을 땐 W1만 표시, 충분하면 날짜까지
+                const showEnd = dayWidth >= 7
                 return (
-                  <div key={i} style={{ position: 'absolute', left: LANE_LABEL_W + day * dayWidth }} className="text-[10px] text-gray-500 font-mono">
-                    <div className="h-full border-l border-gray-200" style={{ position: 'absolute', top: HEADER_H, height: totalDays * LANE_H + LANE_H * 10 }} />
-                    <span style={{ position: 'absolute', left: 2, top: 6 }}>
-                      {dateLabel(day)}
-                    </span>
+                  <div
+                    key={w}
+                    className="absolute top-0 bottom-0 border-l border-slate-200 flex flex-col justify-center"
+                    style={{ left: LANE_LABEL_W + startDay * dayWidth, width: weekW }}
+                  >
+                    <div className="px-1.5 flex items-center gap-1 leading-none">
+                      <span className="text-[10px] font-bold text-slate-700">W{weekNo}</span>
+                      {showDates && (
+                        <span className="text-[9px] text-slate-500 font-mono truncate">
+                          {startLabel}{showEnd ? `~${endLabel}` : ''}
+                        </span>
+                      )}
+                    </div>
+                    {/* 주 끝 점선 — 보드 전체로 흐르는 세로 가이드 (마지막 주 제외) */}
+                    {w < totalWeeks - 1 && (
+                      <span
+                        aria-hidden
+                        className="absolute top-full border-l border-dashed border-slate-200/70 pointer-events-none"
+                        style={{ left: weekW, height: totalDays * LANE_H + LANE_H * 10 }}
+                      />
+                    )}
                   </div>
                 )
               })}
