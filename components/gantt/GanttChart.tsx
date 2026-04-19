@@ -2,6 +2,7 @@
 
 import React, { useRef, useCallback, useState, useEffect } from 'react'
 import type { CPMResult } from '@/lib/types'
+import { FullscreenToggle, fullscreenClass, useFullscreen } from '@/components/common/Fullscreen'
 
 export type GanttViewMode = 'day' | 'week' | 'month'
 
@@ -116,6 +117,7 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
   const [hoveredRow,  setHoveredRow]  = useState<string | null>(null)
   const [zoom,        setZoom]        = useState(1)
   const [leftW,       setLeftW]       = useState<number | null>(null)  // null = auto (sum of cols)
+  const { fullscreen, toggle: toggleFullscreen } = useFullscreen()
 
   const leftRef   = useRef<HTMLDivElement>(null)
   const rightRef  = useRef<HTMLDivElement>(null)
@@ -211,7 +213,11 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
   for (const r of rows) { rowTops.push(acc); acc += r.kind === 'cat' ? CAT_H : ROW_H }
 
   return (
-    <div ref={containerRef} className="flex h-full border border-border rounded-xl overflow-hidden bg-background shadow-sm select-none">
+    <div className={fullscreen ? `${fullscreenClass(fullscreen, 'bg-white')} flex flex-col` : 'relative h-full'}>
+      <div className="absolute top-2 right-2 z-30">
+        <FullscreenToggle fullscreen={fullscreen} onToggle={toggleFullscreen} />
+      </div>
+    <div ref={containerRef} className={`flex border border-border rounded-xl overflow-hidden bg-background shadow-sm select-none ${fullscreen ? 'flex-1' : 'h-full'}`}>
 
       {/* ── LEFT PANEL ── */}
       <div className="flex flex-col flex-shrink-0" style={{ width: panelW }}>
@@ -361,6 +367,7 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
         {/* Zoom bar */}
         <ZoomBar zoom={zoom} onChange={setZoom} />
       </div>
+    </div>
     </div>
   )
 }
