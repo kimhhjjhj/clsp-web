@@ -707,7 +707,7 @@ function BidPage() {
                   </div>
 
                   {topTab === 'cost' && (
-                    <div className="p-5 space-y-5">
+                    <div className="p-5">
                       {/* AI 개략 공사비 추정 — 물량 × 단가 방식 */}
                       <AiCostEstimate
                         type={input.type}
@@ -720,316 +720,63 @@ function BidPage() {
                         tasks={result.cpm.tasks}
                         onResult={setAiEstimate}
                       />
-
-                      {/* 월별 필요 인력 */}
-                      <div className="border-t border-gray-100 pt-5">
-                        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1.5">
-                          <Users size={14} /> 월별 필요 인력
-                        </h3>
-                        {result.resourcePlan.monthlyTotals.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic">
-                            착공 예정일이 없어 월별 집계 생략 — 좌측 폼에 날짜 입력 후 재계산
-                          </p>
-                        ) : (
-                          <ul className="space-y-1.5 max-h-64 overflow-auto">
-                            {result.resourcePlan.monthlyTotals.map(m => {
-                              const max = Math.max(...result.resourcePlan.monthlyTotals.map(x => x.total), 1)
-                              const ratio = (m.total / max) * 100
-                              return (
-                                <li key={m.month} className="text-xs">
-                                  <div className="flex items-center justify-between mb-0.5">
-                                    <span className="font-mono text-gray-700">{m.month}</span>
-                                    <span className="text-gray-500"><strong className="text-gray-900">{m.total.toLocaleString()}</strong> 인일 · {m.activeDays}일</span>
-                                  </div>
-                                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${ratio}%` }} />
-                                  </div>
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        )}
-                      </div>
-
-                      {/* CP 요약 */}
-                      <div className="border-t border-gray-100 pt-5">
-                        <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
-                          <ArrowRight size={14} className="text-orange-500" /> Critical Path 요약
-                        </h3>
-                        {(() => {
-                          const cp = assessCriticalPath(result.cpm.tasks, result.cpm.totalDuration)
-                          const color = CP_LEVEL_COLORS[cp.level]
-                          const pct = Math.round(cp.ratio * 100)
-                          return (
-                            <div className="mb-3">
-                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${color.bg} ${color.text}`}>
-                                  <span className={`w-1 h-1 rounded-full ${color.dot}`} />
-                                  CP 집중도 · {cp.label}
-                                </span>
-                                <span className="text-xs text-gray-600">
-                                  <strong className="font-mono" style={{ color: color.hex }}>{pct}%</strong>
-                                  <span className="text-gray-400 mx-1">·</span>
-                                  <span className="text-gray-500">{cp.cpDays}일 / {cp.totalDuration}일</span>
-                                </span>
-                              </div>
-                              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all"
-                                  style={{ width: `${pct}%`, background: color.hex }}
-                                />
-                              </div>
-                              <p className="text-[11px] text-gray-500 mt-1.5">{cp.reason}</p>
-                            </div>
-                          )
-                        })()}
-                        <p className="text-xs text-gray-600 mb-2">
-                          전체 {result.cpm.taskCount}개 공종 중 <strong className="text-orange-600">{result.cpm.criticalPathCount}개</strong>가 Critical Path.
-                          <button onClick={() => { setTopTab('schedule'); setSubTab('critical'); router.replace('/bid?tab=schedule', { scroll: false }) }} className="ml-2 text-[11px] text-blue-600 hover:underline">상세 →</button>
-                        </p>
-                        {result.resourcePlan.uncoveredTasks.length > 0 && (
-                          <div className="mt-3 text-[11px] text-amber-700 bg-amber-50 rounded p-2">
-                            <strong>회사 실적 없는 공종:</strong> {result.resourcePlan.uncoveredTasks.join(', ')}
-                            <br />
-                            <span className="text-amber-600">인원 추정에서 제외됨. 일보 임포트로 데이터 확보 권장.</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 회사 과거 프로젝트 벤치마크 비교 */}
-                      {benchmark && (
-                        <div className="border-t border-gray-100 pt-5">
-                          <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
-                            <BarChart3 size={14} className="text-orange-500" /> 회사 실적 벤치마크
-                          </h3>
-                          {(() => {
-                            const color = BENCHMARK_COLORS[benchmark.level]
-                            return (
-                              <div className={`rounded-lg border ${color.border} ${color.bg} p-3`}>
-                                <div className={`text-xs font-bold ${color.text} mb-1`}>
-                                  {benchmark.label}
-                                </div>
-                                <div className="text-[11px] text-gray-600 leading-relaxed">
-                                  {benchmark.detail}
-                                </div>
-                                {benchmark.samples.length > 0 && benchmark.level !== 'insufficient' && (
-                                  <details className="mt-2">
-                                    <summary className="text-[10px] text-gray-500 cursor-pointer hover:text-gray-700">
-                                      비교 표본 {benchmark.sampleCount}개 ▾
-                                    </summary>
-                                    <ul className="mt-1.5 space-y-0.5 text-[10px] text-gray-600 font-mono">
-                                      {benchmark.samples.map((s, i) => (
-                                        <li key={i} className="flex justify-between">
-                                          <span className="truncate max-w-[140px]">{s.name}</span>
-                                          <span className="text-gray-400">
-                                            {s.totalFloors}층 · {s.duration}일 · <strong>{s.daysPerFloor}일/층</strong>
-                                          </span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </details>
-                                )}
-                              </div>
-                            )
-                          })()}
-                        </div>
-                      )}
-
-                      {/* 공종 단위 벤치마크 편차 — 과거 프로젝트 Task 대비 */}
-                      {taskDeviations.length > 0 && deviantOnly(taskDeviations).length > 0 && (() => {
-                        const taskIdByName = new Map(result.cpm.tasks.map(t => [t.name, t.taskId]))
-                        return (
-                        <div className="border-t border-gray-100 pt-5">
-                          <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
-                            <TrendingUp size={14} className="text-indigo-500" /> 공종별 벤치마크 편차
-                            {multipliers.size > 0 && (
-                              <button onClick={resetMults} className="ml-auto text-[10px] text-gray-500 hover:text-gray-900 font-normal">조정 초기화</button>
-                            )}
-                          </h3>
-                          <ul className="space-y-1.5">
-                            {deviantOnly(taskDeviations).slice(0, 5).map(d => {
-                              const isLong = d.level === 'long'
-                              const color = isLong
-                                ? 'border-red-200 bg-red-50 text-red-900'
-                                : 'border-sky-200 bg-sky-50 text-sky-900'
-                              const sign = d.deviationPercent >= 0 ? '+' : ''
-                              const tid = taskIdByName.get(d.name)
-                              const currentMult = tid ? (multipliers.get(tid) ?? 1.0) : 1.0
-                              return (
-                                <li key={d.name} className={`rounded-lg border ${color} p-2`}>
-                                  <div className="flex items-baseline justify-between gap-2">
-                                    <span className="text-xs font-semibold truncate">{d.name}</span>
-                                    <span className="font-mono text-[11px] whitespace-nowrap">
-                                      {d.current}일 <span className="opacity-60">vs</span> 평균 {d.avg}일
-                                      <span className="ml-1 font-bold">({sign}{d.deviationPercent.toFixed(0)}%)</span>
-                                    </span>
-                                  </div>
-                                  <p className="text-[10px] opacity-70 mt-0.5">
-                                    과거 {d.projects}개 프로젝트 범위 {d.min}~{d.max}일
-                                  </p>
-                                  {tid && (
-                                    <div className="flex flex-wrap gap-1 mt-1.5">
-                                      {[0.75, 1.0, 1.25, 1.5, 2.0].map(m => (
-                                        <button
-                                          key={m}
-                                          onClick={() => setMult(tid, m)}
-                                          className={`text-[10px] px-1.5 py-0.5 rounded border font-mono ${
-                                            Math.abs(currentMult - m) < 0.001
-                                              ? 'bg-gray-900 text-white border-gray-900'
-                                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-500'
-                                          }`}
-                                        >{m}×</button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </li>
-                              )
-                            })}
-                            {deviantOnly(taskDeviations).length > 5 && (
-                              <li className="text-[10px] text-gray-500 text-center">
-                                +{deviantOnly(taskDeviations).length - 5}개 더
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                        )
-                      })()}
-
-                      {/* 비정상 공종 요약 — z-score + dominance */}
-                      {(() => {
-                        const abnormals = detectAbnormal(
-                          result.cpm.tasks.map(t => ({ name: t.name, category: t.category, duration: t.duration })),
-                          result.cpm.totalDuration,
-                        )
-                        if (abnormals.length === 0) return null
-                        const taskIdByName = new Map(result.cpm.tasks.map(t => [t.name, t.taskId]))
-                        return (
-                          <div className="border-t border-gray-100 pt-5">
-                            <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
-                              <AlertTriangle size={14} className="text-amber-500" /> 비정상 공종 {abnormals.length}개
-                            </h3>
-                            <ul className="space-y-1.5">
-                              {abnormals.slice(0, 5).map(a => {
-                                const tid = taskIdByName.get(a.name)
-                                const currentMult = tid ? (multipliers.get(tid) ?? 1.0) : 1.0
-                                return (
-                                <li key={a.name} className="rounded-lg border border-amber-200 bg-amber-50 p-2">
-                                  <div className="flex items-baseline justify-between gap-2">
-                                    <span className="text-xs font-semibold text-amber-900 truncate">{a.name}</span>
-                                    <span className="font-mono text-[11px] text-amber-700 whitespace-nowrap">
-                                      {a.duration}일 · {Math.round(a.shareOfTotal * 100)}%
-                                    </span>
-                                  </div>
-                                  <p className="text-[10px] text-amber-700 mt-0.5">{a.message}</p>
-                                  {tid && (
-                                    <div className="flex flex-wrap gap-1 mt-1.5">
-                                      {[0.75, 1.0, 1.25, 1.5, 2.0].map(m => (
-                                        <button
-                                          key={m}
-                                          onClick={() => setMult(tid, m)}
-                                          className={`text-[10px] px-1.5 py-0.5 rounded border font-mono ${
-                                            Math.abs(currentMult - m) < 0.001
-                                              ? 'bg-gray-900 text-white border-gray-900'
-                                              : 'bg-white border-amber-300 text-amber-800 hover:border-amber-500'
-                                          }`}
-                                        >{m}×</button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </li>
-                              )})}
-                              {abnormals.length > 5 && (
-                                <li className="text-[10px] text-gray-500 text-center">
-                                  +{abnormals.length - 5}개 더 (WBS 표에서 ⚠️ 아이콘 확인)
-                                </li>
-                              )}
-                            </ul>
-                          </div>
-                        )
-                      })()}
-
-                      {/* 노무비 러프 참고 */}
-                      <details className="border-t border-gray-100 pt-5">
-                        <summary className="text-xs font-semibold text-gray-500 cursor-pointer hover:text-gray-800">
-                          참고: 회사 실적 기반 노무비 러프 추정 (AI 없을 때 대체)
-                        </summary>
-                        <div className="mt-3 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5">
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">총 투입 인일</span>
-                            <span className="font-mono font-semibold text-gray-900">{result.resourcePlan.totalManDays.toLocaleString()} 인일</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">× 평균 일단가 27만원</span>
-                            <span className="font-mono font-semibold text-gray-900">{fmtKRW(result.estimate.laborCostKRW)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">× 2.4 (자재·경비 1.4 포함)</span>
-                            <span className="font-mono font-semibold text-gray-900">{fmtKRW(result.estimate.totalEstimateKRW)}</span>
-                          </div>
-                          <p className="text-[10px] text-gray-400 mt-2">
-                            ※ 이 방식은 일단가·자재비 비율이 고정이라 공종·유형별 차이를 반영 못 합니다. AI 추정 실패 시만 참고하세요.
-                          </p>
-                        </div>
-                      </details>
                     </div>
                   )}
 
                   {topTab === 'schedule' && (
                     <div>
-                      {/* 공기 히어로 요약 — 공사비 탭 AI 추정 카드와 동일한 시각 계층 */}
-                      <div className="relative overflow-hidden border-b border-gray-100">
-                        <span
-                          aria-hidden
-                          className="absolute inset-0 pointer-events-none"
-                          style={{ background: 'radial-gradient(ellipse 720px 260px at 12% -30%, rgba(37, 99, 235, 0.12), transparent 60%)' }}
-                        />
-                        <div className="relative p-5">
-                          <div className="flex items-center gap-1.5 mb-4">
-                            <span
-                              className="flex items-center justify-center w-5 h-5 rounded-md"
-                              style={{ background: 'rgba(37, 99, 235, 0.13)', color: '#2563eb' }}
-                            >
-                              <Calendar size={11} />
-                            </span>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: '#2563eb' }}>
-                              공기 요약 · Schedule Overview
-                            </span>
-                            {completionDate() && (
-                              <span className="ml-auto text-[11px] text-gray-500">
-                                착공 <span className="font-semibold text-gray-700">{input.startDate || '미지정'}</span>
-                                <span className="mx-1.5 text-gray-300">→</span>
-                                준공 <span className="font-semibold text-gray-900">{completionDate()}</span>
-                              </span>
-                            )}
+                      {/* 공기 그랜드 요약 — 공사비 AI 추정 카드와 동일한 임팩트 (블루→시안 그라데이션) */}
+                      <div className="p-5 border-b border-gray-100">
+                        <div
+                          className="rounded-xl p-5 text-white"
+                          style={{
+                            background: 'linear-gradient(135deg, #2563eb 0%, #0891b2 100%)',
+                            boxShadow: '0 10px 30px -12px rgba(37, 99, 235, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <Calendar size={16} className="opacity-90" />
+                            <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] opacity-90">
+                              공기 요약 · Schedule Estimate
+                            </h3>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <ScheduleKpi
-                              accent="#2563eb"
-                              rgb="37, 99, 235"
-                              icon={<Calendar size={12} />}
-                              label="총 공기"
-                              value={result.cpm.totalDuration}
-                              unit="일"
-                              sub={`약 ${Math.round(result.cpm.totalDuration / 30)}개월`}
-                            />
-                            <ScheduleKpi
-                              accent="#0f766e"
-                              rgb="15, 118, 110"
-                              icon={<Layers size={12} />}
-                              label="총 공종"
-                              value={result.cpm.taskCount}
-                              unit="개"
-                              sub={`${byCategory ? Object.keys(byCategory).length : 0}개 카테고리`}
-                            />
-                            <ScheduleKpi
-                              accent="#ea580c"
-                              rgb="234, 88, 12"
-                              icon={<AlertTriangle size={12} />}
-                              label="크리티컬 패스"
-                              value={result.cpm.criticalPathCount}
-                              unit="개"
-                              sub={`전체의 ${Math.round((result.cpm.criticalPathCount / Math.max(1, result.cpm.taskCount)) * 100)}% · 지연 시 전체 영향`}
-                            />
+                          <div className="flex items-end justify-between flex-wrap gap-5">
+                            <div>
+                              <p className="text-3xl sm:text-4xl font-bold font-mono leading-none tabular-nums">
+                                {result.cpm.totalDuration}
+                                <span className="text-base font-normal opacity-70 ml-1.5">일</span>
+                              </p>
+                              <p className="text-[11px] opacity-80 mt-2">
+                                약 <span className="font-semibold">{Math.round(result.cpm.totalDuration / 30)}개월</span>
+                                {input.startDate && completionDate() && (
+                                  <>
+                                    <span className="mx-1.5 opacity-50">·</span>
+                                    착공 {input.startDate}
+                                    <span className="mx-1 opacity-60">→</span>
+                                    준공 <span className="font-semibold">{completionDate()}</span>
+                                  </>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-5">
+                              <div>
+                                <p className="text-[9px] font-bold uppercase tracking-[0.14em] opacity-70">총 공종</p>
+                                <p className="text-2xl font-bold font-mono mt-1 tabular-nums leading-none">
+                                  {result.cpm.taskCount}
+                                  <span className="text-[11px] font-normal opacity-70 ml-0.5">개</span>
+                                </p>
+                              </div>
+                              <div className="w-px h-10 bg-white/20" />
+                              <div>
+                                <p className="text-[9px] font-bold uppercase tracking-[0.14em] opacity-70">크리티컬 패스</p>
+                                <p className="text-2xl font-bold font-mono mt-1 tabular-nums leading-none">
+                                  {result.cpm.criticalPathCount}
+                                  <span className="text-[11px] font-normal opacity-70 ml-0.5">
+                                    개 · {Math.round((result.cpm.criticalPathCount / Math.max(1, result.cpm.taskCount)) * 100)}%
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1264,11 +1011,6 @@ function BidPage() {
                   )}
                 </div>
 
-                <div className="text-[11px] text-gray-400 bg-gray-50 border border-gray-200 rounded-lg p-3">
-                  <strong className="text-gray-600">몬테카를로·생산성 조정</strong>은 프로젝트로 저장 후 사용 가능합니다.
-                  저장하면 이 계산 결과가 프로젝트 태스크로 고정되어 시뮬레이션·조정·비교가 가능해집니다.
-                </div>
-
                 {/* 유사 프로젝트 벤치마크 — 참고용, 맨 아래 배치 */}
                 <BenchmarkPanel
                   query={{
@@ -1353,51 +1095,6 @@ function NumInput({
       step={step}
       className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono text-right tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-shadow"
     />
-  )
-}
-
-// 공기 탭 히어로 KPI — 공사비 탭 AI 추정 카드와 동일한 틴트 박스 언어
-function ScheduleKpi({
-  accent, rgb, icon, label, value, unit, sub,
-}: {
-  accent: string
-  rgb: string
-  icon: React.ReactNode
-  label: string
-  value: number | string
-  unit?: string
-  sub?: string
-}) {
-  return (
-    <div
-      className="relative rounded-xl p-4 overflow-hidden bg-white"
-      style={{
-        border: `1px solid rgba(${rgb}, 0.2)`,
-        boxShadow: `0 1px 2px rgba(15, 23, 42, 0.03), 0 6px 18px -8px rgba(${rgb}, 0.22)`,
-      }}
-    >
-      <span
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-14 pointer-events-none"
-        style={{ background: `linear-gradient(180deg, rgba(${rgb}, 0.07) 0%, transparent 100%)` }}
-      />
-      <div className="relative flex items-center gap-2 mb-2.5">
-        <span
-          className="flex items-center justify-center w-6 h-6 rounded-md"
-          style={{ background: `rgba(${rgb}, 0.13)`, color: accent }}
-        >
-          {icon}
-        </span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>
-          {label}
-        </span>
-      </div>
-      <p className="relative text-[26px] font-bold text-slate-900 leading-none tabular-nums tracking-[-0.02em]">
-        {value}
-        {unit && <span className="text-[12px] font-medium text-slate-400 ml-1">{unit}</span>}
-      </p>
-      {sub && <p className="relative text-[11px] text-slate-500 mt-2">{sub}</p>}
-    </div>
   )
 }
 
