@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Play, Loader2, SlidersHorizontal, RotateCcw, TrendingDown, TrendingUp } from 'lucide-react'
+import { useMultiplierStore } from '@/lib/hooks/useMultiplierStore'
 
 interface ProductivityResult {
   originalDuration: number
@@ -29,23 +30,15 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) {
-  const [multipliers, setMultipliers] = useState<Map<string, number>>(new Map())
+  // localStorage 영속화 훅 — 프로젝트·모드별 조정값 복원
+  const { multipliers, setMult, resetAll: resetStore } = useMultiplierStore(projectId, mode)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ProductivityResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  function setMult(taskId: string, value: number) {
-    setMultipliers(prev => {
-      const next = new Map(prev)
-      if (Math.abs(value - 1.0) < 0.001) next.delete(taskId)
-      else next.set(taskId, value)
-      return next
-    })
-  }
-
   function resetAll() {
-    setMultipliers(new Map())
+    resetStore()
     setResult(null)
     setError(null)
   }
