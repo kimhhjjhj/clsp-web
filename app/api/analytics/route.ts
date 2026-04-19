@@ -10,7 +10,7 @@ export async function GET(_req: NextRequest) {
   const [projects, reports] = await Promise.all([
     prisma.project.findMany({
       select: {
-        id: true, name: true, ground: true, basement: true, bldgArea: true,
+        id: true, name: true, ground: true, basement: true, lowrise: true, bldgArea: true,
         startDate: true, lastCpmDuration: true, type: true,
         _count: { select: { tasks: true, dailyReports: true } },
       },
@@ -108,21 +108,48 @@ export async function GET(_req: NextRequest) {
     for (const x of eq) if (x.today > 0) equipmentMap.set(x.name, (equipmentMap.get(x.name) ?? 0) + x.today)
   }
 
+  // 프로젝트별 분모 메타 (연면적·층수) — 공종 단위 지표 계산용
+  const projectMeta = new Map(projects.map(p => [p.id, {
+    bldgArea: p.bldgArea ?? 0,
+    totalFloors: (p.ground ?? 0) + (p.basement ?? 0) + (p.lowrise ?? 0),
+  }]))
+
   // 공종 상위 50 (생산성 DB 페이지용으로 확장)
   const topTrades = Array.from(tradeMap.entries())
-    .map(([trade, v]) => ({
-      trade,
-      category: getTradeCategory(trade),
-      totalManDays: Math.round(v.total * 10) / 10,
-      activeDays: v.days.size,
-      companies: v.companies.size,
-      projectCount: v.projects.size,
-      avgDaily: v.days.size > 0 ? Math.round((v.total / v.days.size) * 10) / 10 : 0,
-      avgDaysPerProject: v.projects.size > 0 ? Math.round(v.days.size / v.projects.size) : 0,
-      monthlyTrend: Array.from(v.monthly.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([month, manDays]) => ({ month, manDays: Math.round(manDays * 10) / 10 })),
-    }))
+    .map(([trade, v]) => {
+      // 참여 프로젝트의 분모 합 (가중 평균 분모)
+      let totalBldgArea = 0
+      let totalFloorsSum = 0
+      for (const pid of v.projects) {
+        const meta = projectMeta.get(pid)
+        if (!meta) continue
+        totalBldgArea += meta.bldgArea
+        totalFloorsSum += meta.totalFloors
+      }
+      return {
+        trade,
+        category: getTradeCategory(trade),
+        totalManDays: Math.round(v.total * 10) / 10,
+        activeDays: v.days.size,
+        companies: v.companies.size,
+        projectCount: v.projects.size,
+        avgDaily: v.days.size > 0 ? Math.round((v.total / v.days.size) * 10) / 10 : 0,
+        avgDaysPerProject: v.projects.size > 0 ? Math.round(v.days.size / v.projects.size) : 0,
+        // 새 실무 지표 — 분모 있는 프로젝트 참여 시만 계산
+        mandaysPerSqm: totalBldgArea > 0
+          ? Math.round((v.total / totalBldgArea) * 10000) / 10000  // 소수 4자리
+          : null,
+        mandaysPerFloor: totalFloorsSum > 0
+          ? Math.round((v.total / totalFloorsSum) * 100) / 100
+          : null,
+        daysPerFloor: totalFloorsSum > 0
+          ? Math.round((v.days.size / totalFloorsSum) * 100) / 100
+          : null,
+        monthlyTrend: Array.from(v.monthly.entries())
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([month, manDays]) => ({ month, manDays: Math.round(manDays * 10) / 10 })),
+      }
+    })
     .sort((a, b) => b.totalManDays - a.totalManDays)
     .slice(0, 50)
 

@@ -28,6 +28,9 @@ interface TradeInsight {
   projectCount: number
   avgDaily: number
   avgDaysPerProject: number
+  mandaysPerSqm?: number | null
+  mandaysPerFloor?: number | null
+  daysPerFloor?: number | null
   monthlyTrend?: MonthlyPoint[]
 }
 
@@ -56,7 +59,7 @@ interface ApiResponse {
   topTrades: TradeInsight[]
 }
 
-type SortKey = 'frequency' | 'duration' | 'intensity' | 'name'
+type SortKey = 'frequency' | 'duration' | 'intensity' | 'name' | 'perFloor' | 'perSqm'
 
 export default function StandardsPage() {
   const [data, setData] = useState<ApiResponse | null>(null)
@@ -94,14 +97,18 @@ export default function StandardsPage() {
       if (sortKey === 'name') return a.trade.localeCompare(b.trade, 'ko')
       if (sortKey === 'duration') return b.avgDaysPerProject - a.avgDaysPerProject
       if (sortKey === 'intensity') return b.avgDaily - a.avgDaily
+      if (sortKey === 'perFloor') return (b.mandaysPerFloor ?? 0) - (a.mandaysPerFloor ?? 0)
+      if (sortKey === 'perSqm') return (b.mandaysPerSqm ?? 0) - (a.mandaysPerSqm ?? 0)
       return b.totalManDays - a.totalManDays
     })
   }, [trades, query, sortKey, categoryFilter])
 
   function downloadCsv() {
-    const header = '공종명,평균기간(일/프로젝트),하루평균투입(명),참여프로젝트수,협력사수,총기록일'
+    const header = '공종명,평균기간(일/프로젝트),하루평균투입(명),층당인일,층당활동일수,㎡당인일,참여프로젝트수,협력사수,총기록일'
     const lines = filtered.map(t => [
-      t.trade, t.avgDaysPerProject, t.avgDaily, t.projectCount, t.companies, t.activeDays,
+      t.trade, t.avgDaysPerProject, t.avgDaily,
+      t.mandaysPerFloor ?? '', t.daysPerFloor ?? '', t.mandaysPerSqm ?? '',
+      t.projectCount, t.companies, t.activeDays,
     ].join(','))
     const csv = '\ufeff' + [header, ...lines].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
@@ -222,6 +229,8 @@ export default function StandardsPage() {
               <option value="frequency">많이 수행된 순</option>
               <option value="duration">평균 기간 긴 순</option>
               <option value="intensity">투입 많은 순</option>
+              <option value="perFloor">층당 인일 많은 순</option>
+              <option value="perSqm">㎡당 인일 많은 순</option>
               <option value="name">이름순</option>
             </select>
           </div>
@@ -338,6 +347,30 @@ function TradeCard({
         </div>
       </div>
 
+      {/* 실무 생산성 지표 — 층수·면적 기반 (참여 프로젝트 분모 합 기준 가중평균) */}
+      {(t.mandaysPerFloor != null || t.mandaysPerSqm != null) && (
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          {t.mandaysPerFloor != null && (
+            <div className="bg-amber-50/60 rounded-lg px-2.5 py-2">
+              <p className="text-[10px] text-amber-700 font-semibold mb-0.5">층당 인일</p>
+              <p className="text-lg font-bold text-amber-900 font-mono leading-none">
+                {t.mandaysPerFloor}
+                <span className="text-xs font-normal text-amber-500 ml-0.5">인일/층</span>
+              </p>
+            </div>
+          )}
+          {t.mandaysPerSqm != null && (
+            <div className="bg-violet-50/60 rounded-lg px-2.5 py-2">
+              <p className="text-[10px] text-violet-700 font-semibold mb-0.5">㎡당 인일</p>
+              <p className="text-lg font-bold text-violet-900 font-mono leading-none">
+                {t.mandaysPerSqm}
+                <span className="text-xs font-normal text-violet-500 ml-0.5">인일/㎡</span>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-gray-100">
         <span className="flex items-center gap-1">
           <Users size={10} /> {t.companies}개 협력사
@@ -371,6 +404,15 @@ function TradeDetail({ trade: t, onClose }: { trade: TradeInsight; onClose: () =
       <div className="space-y-3 mb-5">
         <BigMetric label="프로젝트당 평균 기간" value={t.avgDaysPerProject} unit="일" color="text-blue-700" />
         <BigMetric label="하루 평균 투입 인원" value={t.avgDaily} unit="명" color="text-emerald-700" />
+        {t.mandaysPerFloor != null && (
+          <BigMetric label="층당 인일 (가중 평균)" value={t.mandaysPerFloor} unit="인일/층" color="text-amber-700" />
+        )}
+        {t.daysPerFloor != null && (
+          <BigMetric label="층당 활동일수" value={t.daysPerFloor} unit="일/층" color="text-orange-700" />
+        )}
+        {t.mandaysPerSqm != null && (
+          <BigMetric label="㎡당 인일" value={t.mandaysPerSqm} unit="인일/㎡" color="text-violet-700" />
+        )}
       </div>
 
       {/* 세부 카운트 */}
