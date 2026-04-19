@@ -91,7 +91,9 @@ export default function ProjectsPage() {
       return (
         p.name.toLowerCase().includes(q) ||
         (p.client?.toLowerCase().includes(q) ?? false) ||
-        (p.location?.toLowerCase().includes(q) ?? false)
+        (p.contractor?.toLowerCase().includes(q) ?? false) ||
+        (p.location?.toLowerCase().includes(q) ?? false) ||
+        (p.type?.toLowerCase().includes(q) ?? false)
       )
     })
     // 정렬
@@ -175,7 +177,7 @@ export default function ProjectsPage() {
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="프로젝트명·발주처·위치로 검색"
+              placeholder="프로젝트명·발주처·시공사·위치·유형 검색"
               className="w-full pl-9 pr-8 h-9 bg-white border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
             {query && (
