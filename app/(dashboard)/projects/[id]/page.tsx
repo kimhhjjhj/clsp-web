@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ShieldCheck, TrendingUp, Pencil, CheckCircle2, ArrowRight, HardHat,
-  Calendar, AlertTriangle, Activity, Building2,
+  Calendar, AlertTriangle, Activity, Building2, ClipboardCheck,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { Skeleton } from '@/components/common/Skeleton'
@@ -223,12 +223,21 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
         title={project.name}
         subtitle={projectSubtitle}
         actions={
-          <Link
-            href={`/projects/${id}/edit`}
-            className="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-white/15 bg-white/5 text-xs font-semibold text-slate-200 hover:bg-white/10"
-          >
-            <Pencil size={12} /> 수정
-          </Link>
+          <div className="flex items-center gap-1.5">
+            <Link
+              href={`/bid?projectId=${id}`}
+              className="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-white/15 bg-white/5 text-xs font-semibold text-slate-200 hover:bg-white/10"
+              title="사업 초기 검토에서 개략공기·조정값 다시 편집"
+            >
+              <ClipboardCheck size={12} /> 개략공기 재검토
+            </Link>
+            <Link
+              href={`/projects/${id}/edit`}
+              className="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-white/15 bg-white/5 text-xs font-semibold text-slate-200 hover:bg-white/10"
+            >
+              <Pencil size={12} /> 수정
+            </Link>
+          </div>
         }
       />
 
