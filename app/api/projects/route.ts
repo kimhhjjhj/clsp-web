@@ -21,9 +21,22 @@ export async function GET() {
   return NextResponse.json(shaped)
 }
 
+interface TaskSeed {
+  name: string
+  category?: string | null
+  subcategory?: string | null
+  unit?: string | null
+  quantity?: number | null
+  productivity?: string | null
+  stdDays?: string | null
+  duration: number
+  wbsCode?: string | null
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
+    const tasksSeed = Array.isArray(body.tasks) ? (body.tasks as TaskSeed[]) : null
     const project = await prisma.project.create({
       data: {
         name: body.name,
@@ -43,9 +56,30 @@ export async function POST(req: NextRequest) {
         buildingArea: body.buildingArea,
         wtBottom: body.wtBottom,
         waBottom: body.waBottom,
+        lastCpmDuration: typeof body.lastCpmDuration === 'number' ? body.lastCpmDuration : undefined,
         aiCostEstimate: body.aiCostEstimate ?? undefined,
         productivityAdjustments: body.productivityAdjustments ?? undefined,
+        // Task 시드: /bid에서 저장 시 CPM 결과 함께 보존
+        // → 공종 벤치마크·분석의 표본으로 활용
+        ...(tasksSeed && tasksSeed.length > 0 ? {
+          tasks: {
+            create: tasksSeed
+              .filter(t => t && typeof t.name === 'string' && typeof t.duration === 'number' && t.duration > 0)
+              .map(t => ({
+                name: t.name,
+                category: t.category ?? null,
+                subcategory: t.subcategory ?? null,
+                unit: t.unit ?? null,
+                quantity: t.quantity ?? null,
+                productivity: t.productivity ?? null,
+                stdDays: t.stdDays ?? null,
+                duration: t.duration,
+                wbsCode: t.wbsCode ?? null,
+              })),
+          },
+        } : {}),
       },
+      include: { tasks: true },
     })
     return NextResponse.json(project, { status: 201 })
   } catch (err: any) {

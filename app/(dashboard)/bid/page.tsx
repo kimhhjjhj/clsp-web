@@ -389,6 +389,21 @@ export default function BidPage() {
           productivityAdjustments: multipliers.size > 0
             ? Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier }))
             : null,
+          // 신규 생성 시에만 CPM Task 시드 포함 (업데이트 시 기존 Task 보존)
+          ...(!isUpdate && result ? {
+            lastCpmDuration: result.cpm.totalDuration,
+            tasks: result.cpm.tasks.map(t => ({
+              name: t.name,
+              category: t.category,
+              subcategory: t.subcategory ?? null,
+              unit: t.unit ?? null,
+              quantity: t.quantity ?? null,
+              productivity: t.productivity ?? null,
+              stdDays: t.stdDays ?? null,
+              duration: t.duration,
+              wbsCode: t.wbsCode ?? null,
+            })),
+          } : {}),
         }),
       })
       const data = await res.json()
