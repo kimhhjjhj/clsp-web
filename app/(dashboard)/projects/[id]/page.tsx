@@ -39,6 +39,8 @@ interface Project {
   startDate?: string
   industrySpecific?: IndustrySpecific | null
   aiCostEstimate?: AiCostEstimate | null
+  productivityAdjustments?: Array<{ taskId: string; multiplier: number }> | null
+  lastCpmDuration?: number | null
 }
 
 interface StageStatus {
@@ -276,6 +278,15 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                   <span className="text-xs text-slate-400">·</span>
                   <span className="text-xs text-slate-300">{project.type || '건축 공사'}</span>
                   <IndustrySpecificSummary type={project.type} value={project.industrySpecific ?? undefined} />
+                  {Array.isArray(project.productivityAdjustments) && project.productivityAdjustments.length > 0 && (
+                    <Link
+                      href={`/bid?projectId=${id}`}
+                      title="저장된 공종 조정값 · 클릭 시 /bid에서 편집"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-200 border border-amber-400/30 hover:bg-amber-500/30 no-underline"
+                    >
+                      생산성 조정 {project.productivityAdjustments.length}건
+                    </Link>
+                  )}
                 </div>
                 <div className="flex items-center gap-5 text-xs text-slate-300">
                   {project.startDate && (
