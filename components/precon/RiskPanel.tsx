@@ -1,12 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, ShieldAlert, TrendingUp, AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Pencil, Trash2, ShieldAlert, TrendingUp, AlertTriangle, CheckCircle2, Clock, Upload, Download, Loader2 } from 'lucide-react'
 
 interface RO {
   id: string; type: string; category: string; content: string
   impactType: string; impactDays: number | null; impactCost: number | null
   probability: number; response: string | null; owner: string | null; status: string
+  // 실무 R&O 필드 (엑셀 양식 호환)
+  code?: string | null; rev?: number | null; subCategory?: string | null
+  proposer?: string | null; proposedAt?: string | null
+  proposedCost?: number | null; confirmedCost?: number | null
+  progress?: string | null; confirmedAt?: string | null
+  designApplied?: string | null; note?: string | null
 }
 
 const EMPTY: Omit<RO, 'id'> = {
@@ -66,27 +72,70 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
   const opps  = items.filter(i => i.type === 'opportunity')
   const riskDays = risks.reduce((s, i) => s + (i.impactDays ?? 0), 0)
   const oppDays  = opps.reduce((s, i)  => s + (i.impactDays ?? 0), 0)
+  // R&O 실무 집계 (백만원)
+  const proposedSum = items.reduce((s, i) => s + (i.proposedCost ?? 0), 0)
+  const confirmedSum = items.reduce((s, i) => s + (i.confirmedCost ?? 0), 0)
+  const confirmedCount = items.filter(i => i.progress === '확정').length
+  const inProgressCount = items.filter(i => i.progress === '진행').length
+
+  // 임포트 상태
+  const [importing, setImporting] = useState(false)
+  const [importMsg, setImportMsg] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleImport(file: File, replace: boolean) {
+    setImporting(true)
+    setImportMsg(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      if (replace) fd.append('replace', '1')
+      const res = await fetch(`/api/projects/${projectId}/rno/import`, { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? '임포트 실패')
+      setImportMsg(`✅ ${data.totalRows}건 임포트 (생성 ${data.created} / 업데이트 ${data.updated})`)
+      await load()
+      onUpdate?.()
+    } catch (e: unknown) {
+      setImportMsg(`❌ ${(e as Error).message}`)
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  function handleExport() {
+    window.location.href = `/api/projects/${projectId}/rno/export`
+  }
 
   return (
     <div className="space-y-4">
-      {/* KPI 카드 */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: '총 리스크', value: risks.length + '건', sub: `공기영향 +${riskDays.toFixed(1)}일`, color: '#ef4444', icon: <ShieldAlert size={16} /> },
-          { label: '총 기회',   value: opps.length  + '건', sub: `공기단축 -${oppDays.toFixed(1)}일`,  color: '#16a34a', icon: <TrendingUp size={16} /> },
-          { label: '식별 중',   value: items.filter(i => i.status === 'identified').length + '건', sub: '조치 필요', color: '#f97316', icon: <AlertTriangle size={16} /> },
-          { label: '완료',      value: items.filter(i => i.status === 'closed').length + '건',      sub: '처리 완료', color: '#2563eb', icon: <CheckCircle2 size={16} /> },
-        ].map(k => (
-          <div key={k.label} className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-1" style={{ color: k.color }}>{k.icon}<span className="text-xs font-semibold text-gray-500">{k.label}</span></div>
-            <p className="text-2xl font-bold text-gray-900">{k.value}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{k.sub}</p>
-          </div>
-        ))}
+      {/* KPI 카드 — R&O 실무 중심 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-1 text-blue-600"><TrendingUp size={16} /><span className="text-xs font-semibold text-gray-500">총 R&O</span></div>
+          <p className="text-2xl font-bold text-gray-900">{items.length}<span className="text-sm font-normal text-gray-400 ml-1">건</span></p>
+          <p className="text-xs text-gray-400 mt-0.5">확정 {confirmedCount} · 진행 {inProgressCount}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-1 text-emerald-600"><TrendingUp size={16} /><span className="text-xs font-semibold text-gray-500">제안 절감 합</span></div>
+          <p className="text-2xl font-bold text-emerald-700">{proposedSum.toLocaleString()}<span className="text-sm font-normal text-gray-400 ml-1">백만</span></p>
+          <p className="text-xs text-gray-400 mt-0.5">전 공종 누계</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-1 text-blue-700"><CheckCircle2 size={16} /><span className="text-xs font-semibold text-gray-500">확정 절감 합</span></div>
+          <p className="text-2xl font-bold text-blue-700">{confirmedSum.toLocaleString()}<span className="text-sm font-normal text-gray-400 ml-1">백만</span></p>
+          <p className="text-xs text-gray-400 mt-0.5">제안 대비 {proposedSum !== 0 ? (confirmedSum / proposedSum * 100).toFixed(1) : '-'}%</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-1 text-orange-600"><AlertTriangle size={16} /><span className="text-xs font-semibold text-gray-500">레거시 리스크</span></div>
+          <p className="text-2xl font-bold text-gray-900">{risks.length}<span className="text-sm font-normal text-gray-400 ml-1">건</span></p>
+          <p className="text-xs text-gray-400 mt-0.5">공기영향 +{riskDays.toFixed(1)}일</p>
+        </div>
       </div>
 
       {/* 툴바 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {(['all','risk','opportunity'] as const).map(t => (
             <button key={t} onClick={() => setSortType(t)}
@@ -95,11 +144,47 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
             </button>
           ))}
         </div>
-        <button onClick={() => { setForm(EMPTY); setEditId(null); setShowForm(true) }}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#2563eb] text-white rounded-lg text-sm font-semibold hover:bg-[#1d4ed8]">
-          <Plus size={14} /> 항목 추가
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* 엑셀 임포트 — 실무 양식 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={e => {
+              const f = e.target.files?.[0]
+              if (!f) return
+              const replace = confirm(`"${f.name}" 임포트\n\n[확인] 기존 R&O 전체 삭제 후 교체 (replace)\n[취소] code+rev 기준 병합 (merge)`)
+              handleImport(f, replace)
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-xs font-semibold hover:border-gray-400 disabled:opacity-50"
+            title="엑셀 파일(.xlsx)로 R&O 일괄 임포트"
+          >
+            {importing ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            엑셀 임포트
+          </button>
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-xs font-semibold hover:border-gray-400"
+            title="현재 R&O를 동양건설 양식 엑셀로 다운로드"
+          >
+            <Download size={12} /> 엑셀 익스포트
+          </button>
+          <button onClick={() => { setForm(EMPTY); setEditId(null); setShowForm(true) }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#2563eb] text-white rounded-lg text-sm font-semibold hover:bg-[#1d4ed8]">
+            <Plus size={14} /> 항목 추가
+          </button>
+        </div>
       </div>
+      {importMsg && (
+        <div className={`text-xs rounded-lg p-2 border ${importMsg.startsWith('✅') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
+          {importMsg}
+        </div>
+      )}
 
       {/* 폼 */}
       {showForm && (
@@ -181,37 +266,57 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
         </div>
       )}
 
-      {/* 테이블 */}
+      {/* 테이블 — 엑셀 양식과 동일한 컬럼 */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[900px]">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
-              {['구분','공종','내용','영향','확률','대응방안','담당자','상태',''].map((h,i) => (
-                <th key={i} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500">{h}</th>
+              {['NO','공종','세부','내용','제안(백만)','확정(백만)','진행','설계반영','제안일','담당자','상태',''].map((h,i) => (
+                <th key={i} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={9} className="text-center py-10 text-gray-400 text-sm">항목이 없습니다.</td></tr>
+              <tr><td colSpan={12} className="text-center py-10 text-gray-400 text-sm">
+                항목이 없습니다. 상단 &apos;엑셀 임포트&apos;로 실무 R&O 파일을 올리거나 &apos;항목 추가&apos;로 수동 입력하세요.
+              </td></tr>
             )}
-            {filtered.map(item => (
+            {filtered.map(item => {
+              const PROGRESS_COLOR: Record<string, string> = {
+                '확정': 'bg-emerald-100 text-emerald-700',
+                '진행': 'bg-blue-100 text-blue-700',
+                '미반영': 'bg-gray-100 text-gray-500',
+                '재검토': 'bg-amber-100 text-amber-700',
+              }
+              return (
               <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="px-3 py-2">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${item.type === 'risk' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                    {item.type === 'risk' ? '리스크' : '기회'}
-                  </span>
+                <td className="px-3 py-2 font-mono text-[11px] text-gray-700 whitespace-nowrap">
+                  {item.code ?? <span className="text-gray-300">—</span>}
+                  {item.rev != null && item.rev !== 0 && <span className="ml-1 text-blue-500">·r{item.rev}</span>}
                 </td>
                 <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{item.category}</td>
-                <td className="px-3 py-2 text-gray-900 max-w-[200px] truncate">{item.content}</td>
-                <td className="px-3 py-2 whitespace-nowrap text-gray-600">
-                  {item.impactType === 'schedule'
-                    ? <span className={item.type === 'risk' ? 'text-red-600' : 'text-green-600'}>{item.type === 'risk' ? '+' : '-'}{item.impactDays ?? 0}일</span>
-                    : <span className="text-gray-600">{item.impactCost ?? 0}만원</span>}
+                <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{item.subCategory ?? <span className="text-gray-300">—</span>}</td>
+                <td className="px-3 py-2 text-gray-900 max-w-[320px]">
+                  <div className="truncate" title={item.content}>{item.content}</div>
                 </td>
-                <td className="px-3 py-2 text-gray-600">{item.probability}%</td>
-                <td className="px-3 py-2 text-gray-500 max-w-[160px] truncate">{item.response || '—'}</td>
-                <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{item.owner || '—'}</td>
+                <td className="px-3 py-2 text-right whitespace-nowrap font-mono text-gray-700">
+                  {item.proposedCost != null ? item.proposedCost.toLocaleString() : <span className="text-gray-300">—</span>}
+                </td>
+                <td className="px-3 py-2 text-right whitespace-nowrap font-mono font-semibold">
+                  {item.confirmedCost != null ? <span className={item.confirmedCost < 0 ? 'text-emerald-700' : 'text-gray-700'}>{item.confirmedCost.toLocaleString()}</span> : <span className="text-gray-300">—</span>}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {item.progress ? (
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${PROGRESS_COLOR[item.progress] ?? 'bg-gray-100 text-gray-500'}`}>
+                      {item.progress}
+                    </span>
+                  ) : <span className="text-gray-300">—</span>}
+                </td>
+                <td className="px-3 py-2 text-xs whitespace-nowrap text-gray-500">{item.designApplied ?? <span className="text-gray-300">—</span>}</td>
+                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{item.proposedAt ?? <span className="text-gray-300">—</span>}</td>
+                <td className="px-3 py-2 text-gray-500 whitespace-nowrap text-xs">{item.proposer || item.owner || <span className="text-gray-300">—</span>}</td>
                 <td className="px-3 py-2">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                     style={{ background: STATUS_COLOR[item.status] + '20', color: STATUS_COLOR[item.status] }}>
@@ -225,9 +330,11 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
                   </div>
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )
