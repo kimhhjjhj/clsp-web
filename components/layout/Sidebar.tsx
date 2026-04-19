@@ -166,8 +166,8 @@ export default function Sidebar({ onClose }: Props) {
           />
         </NavGroup>
 
-        {/* 현재 프로젝트 섹션 — 토글 */}
-        {currentProject && (
+        {/* 현재 프로젝트 섹션 — 선택된 경우만 단계 메뉴, 아니면 가이드 */}
+        {currentProject ? (
           <Section
             label="현재 프로젝트"
             open={projectOpen}
@@ -175,6 +175,26 @@ export default function Sidebar({ onClose }: Props) {
             accent="#3b82f6"
           >
             <CurrentProjectSection project={currentProject} onNavigate={onClose} />
+          </Section>
+        ) : (
+          <Section
+            label="현재 프로젝트"
+            open={projectOpen}
+            onToggle={() => setProjectOpen()}
+            accent="#64748b"
+          >
+            <div className="mx-2 mt-1 mb-1 p-3 rounded-lg border border-dashed border-white/10 bg-white/[0.02]">
+              <p className="text-[11px] text-slate-400 leading-relaxed mb-2">
+                프로젝트를 선택하면 <strong className="text-slate-200 font-semibold">프리콘·시공 관리·분석</strong> 메뉴가 여기에 나타납니다.
+              </p>
+              <Link
+                href="/projects"
+                onClick={onClose}
+                className="inline-flex items-center gap-1 text-[11px] text-blue-300 hover:text-blue-200 font-medium no-underline"
+              >
+                프로젝트 목록 보기 <ChevronRight size={11} />
+              </Link>
+            </div>
           </Section>
         )}
 
