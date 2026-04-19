@@ -80,6 +80,16 @@ export const UNIT_PRICES: Record<string, { unit: string; price: number; label: s
   '비계':            { unit: '㎡',   price: 45_000,   label: '외부 비계 (연면적 환산)' },
   '가설전기':        { unit: '식',   price: 35_000_000, label: '가설전기 일체' },
   '가설사무실':      { unit: '식',   price: 50_000_000, label: '가설사무실·창고 일체' },
+  // 데이터센터 전용 (Tier III 기준, 2026-Q2)
+  'DC_UPS':           { unit: 'kVA',  price: 850_000,       label: 'UPS 시스템 (kVA당, 배터리·Switchgear 포함)' },
+  'DC_발전기':        { unit: 'kW',   price: 450_000,       label: '디젤발전기 (kW당, 연료탱크·배관 포함)' },
+  'DC_CRAC':          { unit: '대',   price: 85_000_000,    label: '정밀공조 CRAC 50kW급' },
+  'DC_수배전':        { unit: 'MVA',  price: 180_000_000,   label: '수변전 (MVA당, 변압기·AS·MCSG)' },
+  'DC_FM200':         { unit: '식',   price: 180_000_000,   label: 'FM-200/Inergen 자동소화 (홀 단위)' },
+  'DC_RMS_BMS':       { unit: '식',   price: 250_000_000,   label: 'RMS/BMS 모니터링 시스템' },
+  'DC_보안':          { unit: '식',   price: 120_000_000,   label: '보안 (카드리더·CCTV·생체인증)' },
+  'DC_PowerDist':     { unit: '랙',   price: 12_000_000,    label: 'PDU/RPP 분전 (IT랙당)' },
+  'DC_액세스바닥':    { unit: '㎡',   price: 280_000,       label: '액세스플로어 (데이터홀)' },
 }
 
 export type PriceKey = string
@@ -157,8 +167,45 @@ function mapTaskToPrice(taskName: string, category: string): PriceKey | null {
   return null
 }
 
+// 데이터센터 장비 자동 산정 — 연면적(㎡) 기반 근사
+// 가정: 데이터홀 60% · 용량 1.2kW/㎡ (IT load)
+function buildDataCenterEquipment(bldgArea: number): CostTrade {
+  const itHallArea = bldgArea * 0.6
+  const itLoadKW = Math.round(itHallArea * 1.2)       // IT 파워(kW)
+  const totalLoadKW = Math.round(itLoadKW * 2.2)      // + 공조·손실 (PUE 2.2 역산)
+  const kvaLoad = Math.round(itLoadKW * 1.1)          // UPS kVA (PF 0.9)
+  const mvaLoad = Math.max(1, Math.round(totalLoadKW / 1000))  // 수변전 MVA
+  const cracCount = Math.max(2, Math.round(itLoadKW / 250))    // 50kW급 × N+1 가정
+  const rackCount = Math.max(20, Math.round(itLoadKW / 8))     // 랙당 8kW 평균
+  const firePods = Math.max(1, Math.round(itHallArea / 500))   // FM200 1식/500㎡
+
+  const items: CostItem[] = []
+  const add = (key: string, qty: number) => {
+    const u = UNIT_PRICES[key]; if (!u) return
+    items.push({
+      name: u.label, qty, unit: u.unit, unitPriceKRW: u.price,
+      subtotalKRW: Math.round(qty * u.price),
+    })
+  }
+  add('DC_UPS',        kvaLoad)
+  add('DC_발전기',     totalLoadKW)
+  add('DC_수배전',     mvaLoad)
+  add('DC_CRAC',       cracCount)
+  add('DC_PowerDist',  rackCount)
+  add('DC_액세스바닥', itHallArea)
+  add('DC_FM200',      firePods)
+  add('DC_RMS_BMS',    1)
+  add('DC_보안',       1)
+
+  return {
+    category: 'IT 전용설비 (데이터센터)',
+    items,
+    categorySubtotalKRW: items.reduce((s, i) => s + i.subtotalKRW, 0),
+  }
+}
+
 // 유형별 추가 아이템 — CPM에 없지만 연면적 기반으로 꼭 들어가는 것들
-function buildAreaBasedItems(bldgArea: number, preset: TypePreset, cpmCategories: Set<string>): CostTrade[] {
+function buildAreaBasedItems(bldgArea: number, preset: TypePreset, cpmCategories: Set<string>, projectType?: string): CostTrade[] {
   const trades: CostTrade[] = []
   const addIf = (cond: boolean, cat: string, items: CostItem[]) => {
     if (cond && items.length > 0) {
@@ -183,6 +230,11 @@ function buildAreaBasedItems(bldgArea: number, preset: TypePreset, cpmCategories
     push('방수', bldgArea * 0.15)
     push('창호', bldgArea * 0.12)
     addIf(true, '마감공사', finishItems)
+  }
+
+  // 데이터센터 전용 IT 설비
+  if (projectType === '데이터센터') {
+    trades.push(buildDataCenterEquipment(bldgArea))
   }
 
   // 설비 (기계+전기+통신+소방) — CPM에 '설비공사'·'전기공사' 분리 없으면
@@ -256,7 +308,7 @@ export function estimateFromPreset(input: {
   }))
 
   // 누락 카테고리 (연면적 기반 보충)
-  const extraTrades = buildAreaBasedItems(bldgArea, preset, cpmCategories)
+  const extraTrades = buildAreaBasedItems(bldgArea, preset, cpmCategories, input.type)
   trades.push(...extraTrades)
 
   // 직접공사비 = 모든 카테고리 합
