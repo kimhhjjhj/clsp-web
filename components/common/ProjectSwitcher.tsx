@@ -109,12 +109,12 @@ export default function ProjectSwitcher() {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className={`h-9 px-3 rounded-lg border flex items-center gap-2 text-sm font-semibold transition-colors max-w-[260px] ${triggerLabel.color}`}
+        className={`h-9 px-2 sm:px-3 rounded-lg border flex items-center gap-1.5 sm:gap-2 text-sm font-semibold transition-colors max-w-[140px] sm:max-w-[260px] ${triggerLabel.color}`}
       >
         {triggerLabel.icon}
         <span className="flex-1 min-w-0 text-left">
-          <span className="block truncate leading-tight">{triggerLabel.text}</span>
-          <span className="block text-[10px] text-gray-500 font-normal leading-tight mt-0.5 truncate">
+          <span className="block truncate leading-tight text-xs sm:text-sm">{triggerLabel.text}</span>
+          <span className="hidden sm:block text-[10px] text-gray-500 font-normal leading-tight mt-0.5 truncate">
             {triggerLabel.sub}
           </span>
         </span>
@@ -122,7 +122,7 @@ export default function ProjectSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute left-0 top-full mt-1 w-[min(20rem,calc(100vw-1rem))] bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
           {/* 현재 프로젝트 빠른 액션 — 선택됐을 때만 */}
           {currentProject && (
             <div className="px-2.5 py-2 border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
