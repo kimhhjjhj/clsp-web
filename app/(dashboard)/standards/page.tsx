@@ -1,615 +1,380 @@
 'use client'
 
 // ═══════════════════════════════════════════════════════════
-// 생산성 DB — 공종별 실전 벤치마크
-// - '인일' 같은 엔지니어링 단위 대신 '평균 며칠', '하루 몇 명'
-//   같은 현장 친화적 표현
-// - 검색 + 정렬 + 카드 그리드
-// - 공종 클릭 시 상세 패널 (협력사, 프로젝트)
+// 표준 공정 DB — 개략 공기 산정에 실제 쓰이는 기준 DB
+//
+// 목적: 신규 프로젝트 계획 시 "이 규모면 각 공종이 며칠 걸리는가"를
+// 표준 공정 DB(CP_DB) 기반으로 바로 읽을 수 있게 한다.
+//
+// 데이터 소스: lib/engine/wbs.ts의 CP_DB — 대분류/중분류/작업명/단위/
+// 생산성(단위/일) 또는 표준일수(일/층) 구조. CPM이 실제로 쓰는 값.
 // ═══════════════════════════════════════════════════════════
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
-  Database, Search, X, SortAsc, Users, Calendar, Building2,
-  Download, ExternalLink, ChevronRight, TrendingUp, CheckCircle2, Clock, Inbox,
+  Database, Building2, Calendar, ExternalLink, Info, Layers, Ruler, AlertTriangle,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
-import EmptyState from '@/components/common/EmptyState'
-import { Skeleton } from '@/components/common/Skeleton'
+import { FullscreenToggle, fullscreenClass, useFullscreen } from '@/components/common/Fullscreen'
+import { CP_DB, computeQuantities, calcDuration, getWorkRate, type DBRow } from '@/lib/engine/wbs'
+import type { ProjectInput } from '@/lib/types'
 
-interface MonthlyPoint { month: string; manDays: number }
-interface TradeInsight {
-  trade: string
-  category: string
-  totalManDays: number
-  activeDays: number
-  companies: number
-  projectCount: number
-  avgDaily: number
-  avgDaysPerProject: number
-  mandaysPerSqm?: number | null
-  mandaysPerFloor?: number | null
-  daysPerFloor?: number | null
-  monthlyTrend?: MonthlyPoint[]
+interface PlanSize {
+  type: string
+  ground: number
+  basement: number
+  lowrise: number
+  hasTransfer: boolean
+  bldgArea: number
+  buildingArea: number
+  siteArea: number
+  sitePerim: number
+  bldgPerim: number
+  wtBottom: number
+  waBottom: number
 }
 
-const CATEGORIES = ['전체', '골조', '토목', '마감', '설비', '전기·통신', '가설·관리', '외부·조경', '기타'] as const
-type CategoryFilter = typeof CATEGORIES[number]
-
-const CATEGORY_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  '골조':      { bg: 'bg-blue-50',    text: 'text-blue-700',    dot: 'bg-blue-500' },
-  '토목':      { bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-500' },
-  '마감':      { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-  '설비':      { bg: 'bg-cyan-50',    text: 'text-cyan-700',    dot: 'bg-cyan-500' },
-  '전기·통신':  { bg: 'bg-violet-50',  text: 'text-violet-700',  dot: 'bg-violet-500' },
-  '가설·관리':  { bg: 'bg-slate-100',  text: 'text-slate-700',   dot: 'bg-slate-500' },
-  '외부·조경':  { bg: 'bg-lime-50',    text: 'text-lime-700',    dot: 'bg-lime-500' },
-  '기타':      { bg: 'bg-gray-100',   text: 'text-gray-600',    dot: 'bg-gray-400' },
+const INITIAL_PLAN: PlanSize = {
+  type: '공동주택',
+  ground: 20, basement: 2, lowrise: 0, hasTransfer: false,
+  bldgArea: 30000, buildingArea: 1500, siteArea: 6000,
+  sitePerim: 300, bldgPerim: 220,
+  wtBottom: 3, waBottom: 6,
 }
 
-interface ApiResponse {
-  overall: {
-    projectCount: number
-    totalReports: number
-    totalManDays: number
-    uniqueTrades: number
-    uniqueCompanies: number
-  }
-  topTrades: TradeInsight[]
+const CATEGORY_META: Record<string, { rgb: string; color: string; label: string; note: string }> = {
+  '공사준비': { rgb: '100, 116, 139', color: '#64748b', label: '공사준비', note: '가설울타리·사무실·전기/용수·부지정지' },
+  '토목공사': { rgb: '234, 88, 12',   color: '#ea580c', label: '토목공사', note: '흙막이·차수·토공사 (터파기)' },
+  '골조공사': { rgb: '37, 99, 235',   color: '#2563eb', label: '골조공사', note: '기초·지하·지상층·전이층' },
+  '마감공사': { rgb: '16, 185, 129',  color: '#059669', label: '마감공사', note: '내·외부·세대 마감' },
 }
 
-type SortKey = 'frequency' | 'duration' | 'intensity' | 'name' | 'perFloor' | 'perSqm'
+const CATEGORY_ORDER = ['공사준비', '토목공사', '골조공사', '마감공사']
 
-interface PlanSize { ground: number; basement: number; bldgArea: number }
-
-// 공종별 예측 계산 — 층수·면적 기반 가중평균 기대 인일 + 기간 + 피크
-function predictForPlan(t: TradeInsight, plan: PlanSize) {
-  const totalFloors = Math.max(0, plan.ground + plan.basement)
-  const area = Math.max(0, plan.bldgArea)
-  const byFloor = t.mandaysPerFloor != null && totalFloors > 0 ? t.mandaysPerFloor * totalFloors : null
-  const bySqm   = t.mandaysPerSqm   != null && area > 0 ? t.mandaysPerSqm * area : null
-  let manDays: number | null = null
-  if (byFloor != null && bySqm != null) manDays = Math.round((byFloor + bySqm) / 2)
-  else if (byFloor != null) manDays = Math.round(byFloor)
-  else if (bySqm   != null) manDays = Math.round(bySqm)
-  if (manDays == null || manDays <= 0 || t.avgDaily <= 0) return null
-  const days = Math.ceil(manDays / t.avgDaily)
-  return { manDays, days, daily: t.avgDaily }
+function fmtNum(n: number, decimals = 0): string {
+  if (!Number.isFinite(n)) return '—'
+  const v = Math.round(n * Math.pow(10, decimals)) / Math.pow(10, decimals)
+  return v.toLocaleString()
 }
 
 export default function StandardsPage() {
-  const [data, setData] = useState<ApiResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState('')
-  const [sortKey, setSortKey] = useState<SortKey>('frequency')
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('전체')
-  const [selected, setSelected] = useState<TradeInsight | null>(null)
-  const [plan, setPlan] = useState<PlanSize>({ ground: 20, basement: 2, bldgArea: 30000 })
+  const [plan, setPlan] = useState<PlanSize>(INITIAL_PLAN)
+  const { fullscreen, toggle: toggleFullscreen } = useFullscreen()
 
-  useEffect(() => {
-    fetch('/api/analytics')
-      .then(r => r.json())
-      .then(d => { setData(d); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
-
-  const trades = data?.topTrades ?? []
-
-  // 카테고리별 개수 (필터 버튼에 표시)
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { '전체': trades.length }
-    for (const c of CATEGORIES) if (c !== '전체') counts[c] = 0
-    for (const t of trades) counts[t.category] = (counts[t.category] ?? 0) + 1
-    return counts
-  }, [trades])
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const rows = trades.filter(t => {
-      if (categoryFilter !== '전체' && t.category !== categoryFilter) return false
-      if (q && !t.trade.toLowerCase().includes(q)) return false
-      return true
-    })
-    return rows.sort((a, b) => {
-      if (sortKey === 'name') return a.trade.localeCompare(b.trade, 'ko')
-      if (sortKey === 'duration') return b.avgDaysPerProject - a.avgDaysPerProject
-      if (sortKey === 'intensity') return b.avgDaily - a.avgDaily
-      if (sortKey === 'perFloor') return (b.mandaysPerFloor ?? 0) - (a.mandaysPerFloor ?? 0)
-      if (sortKey === 'perSqm') return (b.mandaysPerSqm ?? 0) - (a.mandaysPerSqm ?? 0)
-      return b.totalManDays - a.totalManDays
-    })
-  }, [trades, query, sortKey, categoryFilter])
-
-  function downloadCsv() {
-    const header = '공종명,평균기간(일/프로젝트),하루평균투입(명),층당인일,층당활동일수,㎡당인일,참여프로젝트수,협력사수,총기록일'
-    const lines = filtered.map(t => [
-      t.trade, t.avgDaysPerProject, t.avgDaily,
-      t.mandaysPerFloor ?? '', t.daysPerFloor ?? '', t.mandaysPerSqm ?? '',
-      t.projectCount, t.companies, t.activeDays,
-    ].join(','))
-    const csv = '\ufeff' + [header, ...lines].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `productivity-db-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(a.href)
+  // 계획 규모 기반 물량 자동 산정
+  const projectInput: ProjectInput = {
+    name: '표준DB 시뮬',
+    type: plan.type,
+    ground: plan.ground,
+    basement: plan.basement,
+    lowrise: plan.lowrise,
+    hasTransfer: plan.hasTransfer,
+    bldgArea: plan.bldgArea,
+    buildingArea: plan.buildingArea,
+    siteArea: plan.siteArea,
+    sitePerim: plan.sitePerim,
+    bldgPerim: plan.bldgPerim,
+    wtBottom: plan.wtBottom,
+    waBottom: plan.waBottom,
+    mode: 'cp',
   }
+  const qtys = useMemo(() => computeQuantities(projectInput), [plan]) // eslint-disable-line
+
+  // 각 공종에 계산값 덧붙임
+  const enriched = useMemo(() => {
+    return CP_DB.map(row => {
+      const qty = qtys[row.name] ?? 0
+      const applicable = qty > 0 || ['전체', '개소', '대', '주'].includes(row.unit)
+      const effectiveQty = qty > 0 ? qty : (applicable ? 1 : 0)
+      const dur = effectiveQty > 0 ? calcDuration(row, effectiveQty) : 0
+      return {
+        ...row,
+        qty: effectiveQty,
+        dur,
+        applicable: dur > 0,
+        workRate: getWorkRate(row.category),
+      }
+    })
+  }, [qtys])
+
+  // 대분류별 그룹
+  const grouped = useMemo(() => {
+    const g: Record<string, typeof enriched> = {}
+    for (const cat of CATEGORY_ORDER) g[cat] = []
+    for (const e of enriched) (g[e.category] ??= []).push(e)
+    return g
+  }, [enriched])
+
+  // 총 예상 기간 (단순 합 — 실제 CPM은 병렬로 줄어들지만 대략 상한 기준)
+  const totalDuration = enriched.filter(e => e.applicable).reduce((s, e) => s + e.dur, 0)
+  const activeCount = enriched.filter(e => e.applicable).length
 
   return (
     <div className="flex flex-col h-full">
       <PageHeader
         icon={Database}
-        title="생산성 DB"
-        subtitle="신규 프로젝트 계획 참고 — 규모를 입력하면 공종별 예상 인일·기간이 자동 계산됩니다"
+        title="표준 공정 DB"
+        subtitle="개략 공기 산정에 직접 사용되는 공종별 생산성·단위·기간 — 계획 규모를 입력하면 예상 기간이 바로 계산됩니다"
         accent="blue"
         actions={
-          <>
-            <button
-              onClick={downloadCsv}
-              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-white/15 bg-white/5 text-sm font-semibold text-slate-200 hover:bg-white/10"
-            >
-              <Download size={14} /> CSV
-            </button>
-            <Link
-              href="/admin/productivity"
-              className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-white text-slate-900 text-sm font-semibold hover:bg-slate-100"
-            >
-              <ExternalLink size={13} /> <span className="hidden sm:inline">관리자 승인</span><span className="sm:hidden">승인</span>
-            </Link>
-          </>
+          <Link
+            href="/admin/productivity"
+            className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-white text-slate-900 text-sm font-semibold hover:bg-slate-100"
+          >
+            <ExternalLink size={13} /> <span className="hidden sm:inline">관리자 승인</span><span className="sm:hidden">승인</span>
+          </Link>
         }
       />
 
-      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-5">
-        {/* KPI */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Stat
-            label="축적된 공종"
-            value={data?.overall.uniqueTrades ?? 0}
-            unit="종"
-            icon={<TrendingUp size={16} className="text-blue-600" />}
-            bg="bg-blue-50"
-          />
-          <Stat
-            label="참여 프로젝트"
-            value={data?.overall.projectCount ?? 0}
-            unit="개"
-            icon={<Building2 size={16} className="text-emerald-600" />}
-            bg="bg-emerald-50"
-          />
-          <Stat
-            label="현장 기록일"
-            value={(data?.overall.totalReports ?? 0).toLocaleString()}
-            unit="일"
-            icon={<Calendar size={16} className="text-orange-600" />}
-            bg="bg-orange-50"
-          />
-          <Stat
-            label="거래 협력사"
-            value={data?.overall.uniqueCompanies ?? 0}
-            unit="개"
-            icon={<Users size={16} className="text-violet-600" />}
-            bg="bg-violet-50"
-          />
-        </div>
+      <div className={`flex-1 overflow-auto p-4 sm:p-6 space-y-5 ${fullscreenClass(fullscreen)}`}>
+        {fullscreen && (
+          <div className="absolute top-2 right-2 z-30">
+            <FullscreenToggle fullscreen={fullscreen} onToggle={toggleFullscreen} />
+          </div>
+        )}
 
-        {/* 계획 규모 시뮬레이터 — 이 수치 기준으로 아래 모든 카드에 예측값 자동 갱신 */}
-        <div
-          className="relative rounded-xl overflow-hidden bg-white p-4"
+        {/* 계획 규모 시뮬레이터 */}
+        <section
+          className="relative rounded-xl overflow-hidden bg-white p-4 sm:p-5"
           style={{
             border: '1px solid rgba(37, 99, 235, 0.2)',
             boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -10px rgba(37, 99, 235, 0.22)',
           }}
         >
-          <span
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-16 pointer-events-none"
-            style={{ background: 'linear-gradient(180deg, rgba(37, 99, 235, 0.07) 0%, transparent 100%)' }}
-          />
-          <div className="relative flex items-center gap-3 flex-wrap">
+          <span aria-hidden className="absolute inset-x-0 top-0 h-16 pointer-events-none"
+            style={{ background: 'linear-gradient(180deg, rgba(37, 99, 235, 0.07) 0%, transparent 100%)' }} />
+
+          <div className="relative flex items-center justify-between gap-3 mb-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ background: 'rgba(37, 99, 235, 0.12)', color: '#2563eb' }}>
-                <Building2 size={15} />
+              <span className="flex items-center justify-center w-9 h-9 rounded-xl" style={{ background: 'rgba(37, 99, 235, 0.12)', color: '#2563eb' }}>
+                <Building2 size={16} />
               </span>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-700">계획 규모</p>
-                <p className="text-[11px] text-slate-500">입력값 기준으로 각 공종의 예상 인일·기간이 갱신됩니다</p>
+                <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">계획 규모</h3>
+                <p className="text-[11px] text-slate-500">각 공종의 물량·기간이 이 값을 기준으로 자동 계산됩니다</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 ml-auto flex-wrap">
-              <PlanInput label="지상" unit="층" value={plan.ground}   onChange={v => setPlan(p => ({ ...p, ground: v }))}   />
-              <PlanInput label="지하" unit="층" value={plan.basement} onChange={v => setPlan(p => ({ ...p, basement: v }))} />
-              <PlanInput label="연면적" unit="㎡" value={plan.bldgArea} onChange={v => setPlan(p => ({ ...p, bldgArea: v }))} width={120} />
-              <button
-                onClick={() => setPlan({ ground: 20, basement: 2, bldgArea: 30000 })}
-                className="text-[11px] text-slate-500 hover:text-slate-900 font-medium px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50"
-                title="기본값 (20층/지하2/연면적 30,000㎡)"
-              >초기화</button>
-            </div>
-          </div>
-        </div>
-
-        {/* 카테고리 필터 탭 */}
-        <div className="flex items-center gap-1 overflow-x-auto -mx-1 px-1">
-          {CATEGORIES.map(c => {
-            const active = categoryFilter === c
-            const color = c === '전체' ? null : CATEGORY_COLORS[c]
-            const count = categoryCounts[c] ?? 0
-            return (
-              <button
-                key={c}
-                onClick={() => setCategoryFilter(c)}
-                className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                  active
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-              >
-                {color && <span className={`w-1.5 h-1.5 rounded-full ${color.dot}`} />}
-                {c}
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                  active ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
-                }`}>{count}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* 검색·정렬 */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[220px] max-w-md">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="공종명 검색 (예: 철근, 형틀, 창호)"
-              className="w-full pl-9 pr-8 h-10 bg-white border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-            {query && (
-              <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
-                <X size={12} />
-              </button>
+            {!fullscreen && (
+              <FullscreenToggle fullscreen={fullscreen} onToggle={toggleFullscreen} />
             )}
+            <button
+              onClick={() => setPlan(INITIAL_PLAN)}
+              className="text-[11px] text-slate-500 hover:text-slate-900 font-medium px-2.5 py-1.5 rounded border border-slate-200 bg-white hover:bg-slate-50"
+            >초기화</button>
           </div>
-          <div className="inline-flex items-center gap-1 text-xs text-gray-500 ml-auto">
-            <SortAsc size={12} className="text-gray-400" />
-            <select
-              value={sortKey}
-              onChange={e => setSortKey(e.target.value as SortKey)}
-              className="h-9 px-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+
+          <div className="relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <Input label="유형"     value={plan.type}     onChange={v => setPlan(p => ({ ...p, type: String(v) }))} type="select" options={['공동주택','오피스텔','업무시설','데이터센터','기타']} />
+            <Input label="지상"     value={plan.ground}   onChange={v => setPlan(p => ({ ...p, ground: Number(v) || 0 }))}   unit="층" />
+            <Input label="지하"     value={plan.basement} onChange={v => setPlan(p => ({ ...p, basement: Number(v) || 0 }))} unit="층" />
+            <Input label="저층부"   value={plan.lowrise}  onChange={v => setPlan(p => ({ ...p, lowrise: Number(v) || 0 }))}  unit="층" />
+            <Input label="연면적"   value={plan.bldgArea}     onChange={v => setPlan(p => ({ ...p, bldgArea: Number(v) || 0 }))}     unit="㎡" />
+            <Input label="건축면적" value={plan.buildingArea} onChange={v => setPlan(p => ({ ...p, buildingArea: Number(v) || 0 }))} unit="㎡" />
+            <Input label="대지면적" value={plan.siteArea}     onChange={v => setPlan(p => ({ ...p, siteArea: Number(v) || 0 }))}     unit="㎡" />
+            <Input label="대지둘레" value={plan.sitePerim}    onChange={v => setPlan(p => ({ ...p, sitePerim: Number(v) || 0 }))}    unit="m" />
+            <Input label="건물둘레" value={plan.bldgPerim}    onChange={v => setPlan(p => ({ ...p, bldgPerim: Number(v) || 0 }))}    unit="m" />
+            <Input label="풍화토"   value={plan.wtBottom}     onChange={v => setPlan(p => ({ ...p, wtBottom: Number(v) || 0 }))}     unit="m" />
+            <Input label="풍화암"   value={plan.waBottom}     onChange={v => setPlan(p => ({ ...p, waBottom: Number(v) || 0 }))}     unit="m" />
+            <label className="flex items-center gap-2 px-3 h-10 rounded-md border border-slate-300 bg-slate-50 text-[11px] cursor-pointer hover:bg-white">
+              <input type="checkbox" checked={plan.hasTransfer} onChange={e => setPlan(p => ({ ...p, hasTransfer: e.target.checked }))} />
+              <span className="font-semibold">전이층 포함</span>
+            </label>
+          </div>
+        </section>
+
+        {/* 요약 */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Stat label="DB 공종 수" value={CP_DB.length} unit="종" accent="#2563eb" rgb="37, 99, 235" icon={<Database size={14} />} />
+          <Stat label="적용 공종" value={activeCount} unit="종" accent="#059669" rgb="16, 185, 129" icon={<Layers size={14} />} />
+          <Stat label="누적 공기 상한" value={Math.round(totalDuration * 10) / 10} unit="일" accent="#ea580c" rgb="234, 88, 12" icon={<Calendar size={14} />}
+            note="각 공종 기간 단순 합 (CPM 병렬 반영 전)" />
+          <Stat label="개략 개월" value={(totalDuration / 30).toFixed(1)} unit="개월" accent="#7c3aed" rgb="139, 92, 246" icon={<Ruler size={14} />} />
+        </section>
+
+        {/* 대분류별 공종 테이블 */}
+        {CATEGORY_ORDER.map(cat => {
+          const meta = CATEGORY_META[cat]
+          const rows = grouped[cat] ?? []
+          if (rows.length === 0) return null
+          const catDur = rows.filter(r => r.applicable).reduce((s, r) => s + r.dur, 0)
+          const applyCount = rows.filter(r => r.applicable).length
+          return (
+            <section
+              key={cat}
+              className="relative rounded-xl overflow-hidden bg-white"
+              style={{
+                border: `1px solid rgba(${meta.rgb}, 0.22)`,
+                boxShadow: `0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -10px rgba(${meta.rgb}, 0.22)`,
+              }}
             >
-              <option value="frequency">많이 수행된 순</option>
-              <option value="duration">평균 기간 긴 순</option>
-              <option value="intensity">투입 많은 순</option>
-              <option value="perFloor">층당 인일 많은 순</option>
-              <option value="perSqm">㎡당 인일 많은 순</option>
-              <option value="name">이름순</option>
-            </select>
-          </div>
-          <span className="text-xs text-gray-500 hidden sm:block">{filtered.length}종</span>
-        </div>
-
-        {/* 공종 카드 그리드 + 상세 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[0, 1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-32" />)}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="card-elevated">
-                <EmptyState
-                  icon={Inbox}
-                  title={trades.length === 0 ? '아직 축적된 공종 데이터가 없습니다' : '검색 결과가 없습니다'}
-                  description={trades.length === 0
-                    ? '프로젝트에 일보를 쌓으면 자동으로 공종별 벤치마크가 생성됩니다.'
-                    : `"${query}"에 해당하는 공종이 없습니다. 다른 키워드로 검색해보세요.`}
-                  actions={trades.length === 0 ? [
-                    { label: '엑셀 일보 임포트', href: '/import', variant: 'primary' },
-                  ] : [
-                    { label: '검색 초기화', onClick: () => setQuery(''), variant: 'secondary' },
-                  ]}
-                />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {filtered.map(t => (
-                  <TradeCard
-                    key={t.trade}
-                    trade={t}
-                    plan={plan}
-                    selected={selected?.trade === t.trade}
-                    onClick={() => setSelected(selected?.trade === t.trade ? null : t)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 우측 상세 패널 */}
-          <div className="lg:col-span-1">
-            {selected ? (
-              <TradeDetail trade={selected} onClose={() => setSelected(null)} />
-            ) : (
-              <div className="card-elevated p-5 text-center text-sm text-gray-500 sticky top-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-violet-50 border border-blue-100/50 flex items-center justify-center mx-auto mb-3">
-                  <Database size={20} className="text-blue-500" />
+              <span aria-hidden className="absolute inset-x-0 top-0 h-20 pointer-events-none"
+                style={{ background: `linear-gradient(180deg, rgba(${meta.rgb}, 0.07) 0%, transparent 100%)` }} />
+              <div className="relative flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
+                <span className="flex items-center justify-center w-9 h-9 rounded-xl"
+                  style={{ background: `rgba(${meta.rgb}, 0.12)`, color: meta.color }}>
+                  <Database size={14} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">{meta.label}</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{meta.note}</p>
                 </div>
-                <p className="font-semibold text-gray-700">공종을 선택하세요</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  카드를 클릭하면 해당 공종의<br />협력사·프로젝트 이력이 여기에 표시됩니다
-                </p>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">소계</p>
+                  <p className="text-sm font-bold text-slate-900 tabular-nums">
+                    {applyCount}종 · <span style={{ color: meta.color }}>{Math.round(catDur * 10) / 10}일</span>
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+              <div className="relative overflow-x-auto">
+                <table className="w-full text-[12px]">
+                  <thead className="bg-slate-50/70 border-b border-slate-100">
+                    <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">
+                      <th className="text-left px-4 py-2 w-[70px]">WBS</th>
+                      <th className="text-left px-3 py-2 w-[90px]">중분류</th>
+                      <th className="text-left px-3 py-2">작업명</th>
+                      <th className="text-center px-2 py-2 w-[48px]">단위</th>
+                      <th className="text-right px-2 py-2 w-[100px]">
+                        생산성
+                        <span className="block text-[9px] font-normal text-slate-400 normal-case">단위/일</span>
+                      </th>
+                      <th className="text-right px-2 py-2 w-[90px]">
+                        표준일수
+                        <span className="block text-[9px] font-normal text-slate-400 normal-case">일/단위</span>
+                      </th>
+                      <th className="text-center px-2 py-2 w-[60px]">가동률</th>
+                      <th className="text-right px-3 py-2 w-[110px]">
+                        내 물량
+                        <span className="block text-[9px] font-normal text-slate-400 normal-case">계획 규모 기준</span>
+                      </th>
+                      <th className="text-right px-3 py-2 w-[90px]">
+                        예상 기간
+                        <span className="block text-[9px] font-normal text-slate-400 normal-case">일</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {rows.map(r => (
+                      <tr key={r.wbsCode ?? r.name}
+                        className={r.applicable ? 'hover:bg-slate-50/60' : 'opacity-50'}
+                        title={!r.applicable ? '계획 규모 기준 이 공종은 적용되지 않습니다' : undefined}
+                      >
+                        <td className="px-4 py-2 font-mono text-[10px] text-slate-400">{r.wbsCode ?? ''}</td>
+                        <td className="px-3 py-2 text-slate-600">{r.sub}</td>
+                        <td className="px-3 py-2 font-semibold text-slate-900">{r.name}</td>
+                        <td className="px-2 py-2 text-center text-slate-500 font-mono">{r.unit}</td>
+                        <td className="px-2 py-2 text-right font-mono tabular-nums">
+                          {r.prod != null ? <span className="text-slate-900">{r.prod}</span> : <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="px-2 py-2 text-right font-mono tabular-nums">
+                          {r.stdDays != null ? <span className="text-slate-900">{r.stdDays}</span> : <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="px-2 py-2 text-center text-[11px] text-slate-500 font-mono tabular-nums">
+                          {r.workRate != null ? `${Math.round(r.workRate * 100)}%` : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">
+                          {r.applicable ? (
+                            <>
+                              <span className="text-slate-900 font-semibold">{fmtNum(r.qty, r.qty < 10 ? 1 : 0)}</span>
+                              <span className="text-[10px] text-slate-400 ml-0.5">{r.unit}</span>
+                            </>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-semibold">
+                              <AlertTriangle size={10} /> 미적용
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">
+                          {r.applicable ? (
+                            <span className="text-base font-bold tracking-[-0.01em]" style={{ color: meta.color }}>
+                              {Math.round(r.dur * 10) / 10}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )
+        })}
 
         {/* 설명 */}
-        <div className="card-elevated p-4 text-xs text-gray-600 leading-relaxed">
-          <p className="font-semibold text-gray-900 mb-1">💡 이 데이터는 어떻게 만들어지나요?</p>
-          <p>
-            모든 프로젝트의 <strong>공사 일보(투입 인원)</strong>에서 공종·협력사·투입 규모를 자동 집계합니다.
-            프로젝트가 늘어날수록 더 정확한 벤치마크가 됩니다.
-            신규 프로젝트의 CPM 산정 시 <strong>회사 표준</strong>으로 참조되며,
-            관리자 승인을 거쳐 <Link href="/admin/productivity" className="text-blue-600 hover:underline">승인된 표준</Link>은 고정값으로 사용됩니다.
+        <section className="rounded-xl p-4 text-xs text-slate-600 leading-relaxed bg-white border border-slate-200">
+          <p className="font-semibold text-slate-900 mb-2 flex items-center gap-1.5">
+            <Info size={13} className="text-blue-500" /> 이 DB가 어떻게 쓰이나요?
           </p>
-        </div>
+          <ul className="list-disc ml-5 space-y-1">
+            <li><strong>사업 초기 검토(/bid)</strong>에서 WBS를 자동 생성할 때 이 CP_DB가 표준값으로 사용됩니다.</li>
+            <li>산정식: <span className="font-mono bg-slate-100 px-1 rounded">기간 = 물량 ÷ 생산성 ÷ 가동률</span> 또는 <span className="font-mono bg-slate-100 px-1 rounded">기간 = 물량 × 표준일수 ÷ 가동률</span></li>
+            <li>가동률: 공사준비·토목 66.6% · 골조 63.2% · 마감은 raw 값 그대로.</li>
+            <li>관리자 승인 후의 회사 실적 표준은 CPM에서 이 기본값을 덮어씁니다 — <Link href="/admin/productivity" className="text-blue-600 hover:underline">관리자 승인</Link>.</li>
+          </ul>
+        </section>
       </div>
     </div>
   )
 }
 
-// ────────────────────────────────────────────────
-// 공종 카드 — 평균 기간·투입 규모 한눈에
-// ────────────────────────────────────────────────
-function TradeCard({
-  trade: t, plan, selected, onClick,
-}: { trade: TradeInsight; plan: PlanSize; selected: boolean; onClick: () => void }) {
-  const color = CATEGORY_COLORS[t.category] ?? CATEGORY_COLORS['기타']
-  const pred = predictForPlan(t, plan)
-  return (
-    <button
-      onClick={onClick}
-      className={`card-elevated text-left p-4 transition-all ${selected ? 'ring-2 ring-blue-500' : 'hover:-translate-y-0.5'}`}
-    >
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded ${color.bg} ${color.text}`}>
-          <span className={`w-1 h-1 rounded-full ${color.dot}`} />
-          {t.category}
-        </span>
-        <span className="text-[10px] font-semibold text-gray-400 ml-auto">
-          {t.projectCount}개 현장
-        </span>
-      </div>
-      <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 mb-3">{t.trade}</h3>
-
-      {/* 내 프로젝트 예측 — 핵심 */}
-      {pred ? (
-        <div className="rounded-lg p-3 mb-2" style={{ background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%)', border: '1px solid rgba(37, 99, 235, 0.18)' }}>
-          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-blue-700 mb-1.5">
-            내 프로젝트({plan.ground}+{plan.basement}층 · {plan.bldgArea.toLocaleString()}㎡) 예측
-          </p>
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <div>
-              <span className="text-xl font-bold text-slate-900 font-mono tabular-nums tracking-[-0.01em]">{pred.manDays.toLocaleString()}</span>
-              <span className="text-[10px] text-slate-500 ml-0.5">인일</span>
-            </div>
-            <span className="text-slate-300">·</span>
-            <div>
-              <span className="text-xl font-bold text-slate-900 font-mono tabular-nums tracking-[-0.01em]">{pred.days}</span>
-              <span className="text-[10px] text-slate-500 ml-0.5">일</span>
-            </div>
-            <span className="text-slate-300">·</span>
-            <div className="text-[11px] text-slate-500">
-              하루 <strong className="text-slate-900 font-mono">{pred.daily}</strong>명
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-lg p-3 mb-2 bg-slate-50 border border-slate-200 text-[11px] text-slate-500">
-          예측 불가 · 층수·면적 기반 샘플이 부족합니다
-        </div>
-      )}
-
-      {/* 과거 실적 참고 (avg) */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        <div className="rounded-lg px-2.5 py-1.5 bg-slate-50 border border-slate-100">
-          <p className="text-[9px] text-slate-500 font-semibold">과거 평균 기간</p>
-          <p className="text-[13px] font-bold text-slate-900 font-mono leading-tight">
-            {t.avgDaysPerProject}<span className="text-[10px] font-normal text-slate-400 ml-0.5">일/프로젝트</span>
-          </p>
-        </div>
-        <div className="rounded-lg px-2.5 py-1.5 bg-slate-50 border border-slate-100">
-          <p className="text-[9px] text-slate-500 font-semibold">하루 평균 투입</p>
-          <p className="text-[13px] font-bold text-slate-900 font-mono leading-tight">
-            {t.avgDaily}<span className="text-[10px] font-normal text-slate-400 ml-0.5">명</span>
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-gray-100">
-        <span className="flex items-center gap-1">
-          <Users size={10} /> {t.companies}개 협력사
-        </span>
-        <span className="flex items-center gap-1 text-gray-400">
-          <Calendar size={10} /> 누적 {t.activeDays}일
-        </span>
-      </div>
-    </button>
-  )
-}
-
-function PlanInput({
-  label, unit, value, onChange, width = 80,
+function Input({
+  label, unit, value, onChange, type = 'number', options,
 }: {
   label: string
-  unit: string
-  value: number
-  onChange: (n: number) => void
-  width?: number
+  unit?: string
+  value: string | number
+  onChange: (v: string | number) => void
+  type?: 'number' | 'select'
+  options?: string[]
 }) {
+  if (type === 'select') {
+    return (
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">{label}</span>
+        <select
+          value={String(value)}
+          onChange={e => onChange(e.target.value)}
+          className="h-10 px-2.5 bg-slate-50 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
+        >
+          {options?.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </label>
+    )
+  }
   return (
-    <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
-      <span className="font-semibold">{label}</span>
+    <label className="flex flex-col gap-1">
+      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em] flex items-center justify-between">
+        {label}
+        {unit && <span className="text-[9px] font-mono text-slate-400 normal-case">{unit}</span>}
+      </span>
       <input
         type="number"
-        inputMode="numeric"
-        value={value}
-        onChange={e => onChange(Number(e.target.value) || 0)}
+        inputMode="decimal"
+        value={String(value)}
+        onChange={e => onChange(e.target.value)}
         onFocus={e => e.target.select()}
-        style={{ width }}
-        className="h-8 px-2 bg-slate-50 border border-slate-300 rounded-md text-sm text-right font-mono tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
+        className="h-10 px-2.5 bg-slate-50 border border-slate-300 rounded-md text-sm text-right font-mono tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
       />
-      <span className="text-[10px] text-slate-400 font-mono">{unit}</span>
     </label>
   )
 }
 
-// ────────────────────────────────────────────────
-// 공종 상세 패널
-// ────────────────────────────────────────────────
-function TradeDetail({ trade: t, onClose }: { trade: TradeInsight; onClose: () => void }) {
-  return (
-    <div className="card-elevated p-5 sticky top-4">
-      <div className="flex items-start justify-between gap-2 mb-4">
-        <h3 className="font-bold text-gray-900 text-base leading-tight flex-1">{t.trade}</h3>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-700 p-1 -mt-1 -mr-1"
-          aria-label="닫기"
-        >
-          <X size={14} />
-        </button>
-      </div>
-
-      {/* 핵심 지표 */}
-      <div className="space-y-3 mb-5">
-        <BigMetric label="프로젝트당 평균 기간" value={t.avgDaysPerProject} unit="일" color="text-blue-700" />
-        <BigMetric label="하루 평균 투입 인원" value={t.avgDaily} unit="명" color="text-emerald-700" />
-        {t.mandaysPerFloor != null && (
-          <BigMetric label="층당 인일 (가중 평균)" value={t.mandaysPerFloor} unit="인일/층" color="text-amber-700" />
-        )}
-        {t.daysPerFloor != null && (
-          <BigMetric label="층당 활동일수" value={t.daysPerFloor} unit="일/층" color="text-orange-700" />
-        )}
-        {t.mandaysPerSqm != null && (
-          <BigMetric label="㎡당 인일" value={t.mandaysPerSqm} unit="인일/㎡" color="text-violet-700" />
-        )}
-      </div>
-
-      {/* 세부 카운트 */}
-      <dl className="grid grid-cols-2 gap-3 text-xs border-t border-gray-100 pt-4">
-        <div>
-          <dt className="text-gray-500 text-[10px] uppercase tracking-wider mb-0.5">참여 프로젝트</dt>
-          <dd className="font-bold text-gray-900 font-mono">{t.projectCount}개</dd>
-        </div>
-        <div>
-          <dt className="text-gray-500 text-[10px] uppercase tracking-wider mb-0.5">거래 협력사</dt>
-          <dd className="font-bold text-gray-900 font-mono">{t.companies}개</dd>
-        </div>
-        <div>
-          <dt className="text-gray-500 text-[10px] uppercase tracking-wider mb-0.5">전사 누적 기록</dt>
-          <dd className="font-bold text-gray-900 font-mono">{t.activeDays}일</dd>
-        </div>
-        <div>
-          <dt className="text-gray-500 text-[10px] uppercase tracking-wider mb-0.5">누적 투입</dt>
-          <dd className="font-bold text-gray-900 font-mono">{t.totalManDays.toLocaleString()}<span className="text-[9px] text-gray-400 ml-0.5">인일</span></dd>
-        </div>
-      </dl>
-
-      {/* 월별 트렌드 (데이터 2개월 이상일 때만) */}
-      {t.monthlyTrend && t.monthlyTrend.length >= 2 && (
-        <div className="mt-5 pt-4 border-t border-gray-100">
-          <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-            월별 투입 추이
-          </h4>
-          <MonthlyTrendBars trend={t.monthlyTrend} />
-        </div>
-      )}
-
-      <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col gap-2">
-        <Link
-          href={`/analytics`}
-          className="flex items-center justify-between text-xs text-blue-600 hover:bg-blue-50 rounded-md px-2 py-1.5 transition-colors no-underline"
-        >
-          <span>전사 분석에서 보기</span>
-          <ChevronRight size={12} />
-        </Link>
-        <Link
-          href={`/companies?q=${encodeURIComponent(t.trade)}`}
-          className="flex items-center justify-between text-xs text-blue-600 hover:bg-blue-50 rounded-md px-2 py-1.5 transition-colors no-underline"
-        >
-          <span>이 공종 담당 협력사 찾기</span>
-          <ChevronRight size={12} />
-        </Link>
-      </div>
-    </div>
-  )
-}
-
-// 월별 막대 그래프 — 짧은 sparkline 스타일
-function MonthlyTrendBars({ trend }: { trend: MonthlyPoint[] }) {
-  const max = Math.max(...trend.map(p => p.manDays), 1)
-  // 최대 24개월만 표시 (너무 길면 좁아짐)
-  const visible = trend.length > 24 ? trend.slice(-24) : trend
-  return (
-    <div>
-      <div className="flex items-end gap-[2px] h-16 bg-gray-50/50 rounded px-1.5 py-1">
-        {visible.map(p => {
-          const h = Math.max(4, (p.manDays / max) * 100)
-          return (
-            <div
-              key={p.month}
-              className="flex-1 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-sm min-w-[3px]"
-              style={{ height: `${h}%` }}
-              title={`${p.month} · ${p.manDays.toLocaleString()} 인일`}
-            />
-          )
-        })}
-      </div>
-      <div className="flex items-center justify-between mt-1.5 text-[9px] text-gray-400 font-mono">
-        <span>{visible[0]?.month}</span>
-        <span>{visible.length}개월 · 최대 {Math.round(max).toLocaleString()} 인일</span>
-        <span>{visible[visible.length - 1]?.month}</span>
-      </div>
-    </div>
-  )
-}
-
-function BigMetric({
-  label, value, unit, color,
-}: { label: string; value: number; unit: string; color: string }) {
-  return (
-    <div className="flex items-end justify-between gap-2 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className={`text-xl font-bold font-mono ${color}`}>
-        {value}
-        <span className="text-xs font-normal text-gray-400 ml-1">{unit}</span>
-      </span>
-    </div>
-  )
-}
-
 function Stat({
-  label, value, unit, icon, bg,
-}: { label: string; value: number | string; unit: string; icon: React.ReactNode; bg: string }) {
-  const rgbMap: Record<string, string> = {
-    'bg-blue-50': '37, 99, 235',
-    'bg-emerald-50': '16, 185, 129',
-    'bg-amber-50': '245, 158, 11',
-    'bg-orange-50': '234, 88, 12',
-    'bg-violet-50': '139, 92, 246',
-    'bg-red-50': '225, 29, 72',
-    'bg-slate-50': '15, 23, 42',
-    'bg-indigo-50': '99, 102, 241',
-    'bg-purple-50': '139, 92, 246',
-  }
-  const rgb = rgbMap[bg] ?? '15, 23, 42'
+  label, value, unit, accent, rgb, icon, note,
+}: {
+  label: string
+  value: number | string
+  unit: string
+  accent: string
+  rgb: string
+  icon: React.ReactNode
+  note?: string
+}) {
   return (
     <div
-      className="relative rounded-xl overflow-hidden bg-white p-5"
+      className="relative rounded-xl overflow-hidden bg-white p-4"
       style={{
         border: `1px solid rgba(${rgb}, 0.18)`,
         boxShadow: `0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px -10px rgba(${rgb}, 0.22)`,
@@ -620,16 +385,17 @@ function Stat({
         className="absolute inset-x-0 top-0 h-14 pointer-events-none"
         style={{ background: `linear-gradient(180deg, rgba(${rgb}, 0.06) 0%, transparent 100%)` }}
       />
-      <div className="relative flex items-start justify-between gap-2 mb-3">
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.14em]">{label}</p>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${bg}`}>
+      <div className="relative flex items-center gap-2 mb-2">
+        <span className="flex items-center justify-center w-6 h-6 rounded-md" style={{ background: `rgba(${rgb}, 0.12)`, color: accent }}>
           {icon}
-        </div>
+        </span>
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>{label}</p>
       </div>
-      <p className="relative text-3xl font-bold text-slate-900 tracking-[-0.02em] leading-none tabular-nums">
+      <p className="relative text-2xl font-bold text-slate-900 leading-none tabular-nums tracking-[-0.02em]">
         {value}
-        <span className="text-base font-medium text-slate-400 ml-1.5">{unit}</span>
+        <span className="text-xs font-medium text-slate-400 ml-1">{unit}</span>
       </p>
+      {note && <p className="relative text-[10px] text-slate-400 mt-2 leading-tight">{note}</p>}
     </div>
   )
 }
