@@ -17,7 +17,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, BarChart3, Database, ShieldAlert, Users2,
-  Upload, ShieldCheck, Settings, X, DollarSign, ChevronRight, Layers, Plus,
+  Upload, ShieldCheck, Settings, X, DollarSign, ChevronRight, Plus,
 } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
 import CurrentProjectSection from './CurrentProjectSection'
@@ -94,21 +94,28 @@ export default function Sidebar({ onClose }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* 로고 — CLSP 브랜드 */}
+      {/* CLSP — 워드마크 타이포그래피 (아이콘 제거, 글자 자체가 로고) */}
       <div className="flex items-start justify-between px-5 py-5 border-b border-white/10 flex-shrink-0">
-        <Link href="/" onClick={onClose} className="flex items-center gap-3 no-underline group">
-          {/* 로고 아이콘 — 계층 쌓인 블록 느낌 */}
-          <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-900/40 ring-1 ring-white/10 group-hover:shadow-blue-800/60 group-hover:scale-105 transition-all">
-            <Layers size={20} className="text-white drop-shadow-sm" strokeWidth={2.5} />
-            {/* 빛나는 하이라이트 */}
-            <span className="absolute top-0.5 left-0.5 right-0.5 h-1/2 rounded-t-xl bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-black text-white tracking-tight leading-none">CLSP</h1>
-            <p className="text-[9px] text-slate-400 uppercase tracking-[0.14em] font-semibold leading-tight mt-1.5">
-              Construction<br />Lifecycle Solution
-            </p>
-          </div>
+        <Link href="/" onClick={onClose} className="flex flex-col no-underline group select-none">
+          <h1
+            className="relative text-[44px] font-black leading-none tracking-[-0.04em] bg-gradient-to-br from-white via-blue-100 to-blue-300 bg-clip-text text-transparent group-hover:tracking-[-0.03em] transition-all"
+            style={{ textShadow: '0 2px 24px rgba(59, 130, 246, 0.25)' }}
+          >
+            CLSP
+            {/* P 우측에 accent dot */}
+            <span
+              aria-hidden
+              className="absolute -right-1 -bottom-0.5 w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.8)]"
+            />
+          </h1>
+          {/* 얇은 그라데이션 언더라인 */}
+          <span
+            aria-hidden
+            className="mt-1.5 block h-px w-16 bg-gradient-to-r from-blue-400 via-indigo-400/60 to-transparent group-hover:w-20 transition-all"
+          />
+          <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-semibold leading-tight mt-2">
+            Construction<br />Lifecycle&nbsp;Solution<br />Platform
+          </p>
         </Link>
         <button
           onClick={onClose}
