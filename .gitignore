@@ -49,3 +49,6 @@ public/data/layers.csv
 
 # 일보 첨부 사진 (유출 방지 + 용량)
 /public/uploads/
+
+# R&O 첨부파일 (도면·사진·PDF)
+/data/uploads/

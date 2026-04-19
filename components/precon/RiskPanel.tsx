@@ -14,6 +14,7 @@ interface RO {
   progress?: string | null; confirmedAt?: string | null
   expectedAt?: string | null
   designApplied?: string | null; note?: string | null
+  attachments?: Array<{ name: string; size: number; type: string; uploadedAt: string; url: string }> | null
 }
 
 const EMPTY: Omit<RO, 'id'> = {
@@ -307,6 +308,9 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
                 <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{item.subCategory ?? <span className="text-gray-300">—</span>}</td>
                 <td className="px-3 py-2 text-gray-900 max-w-[320px]">
                   <div className="truncate" title={item.content}>{item.content}</div>
+                  {item.attachments && item.attachments.length > 0 && (
+                    <div className="text-[10px] text-blue-600 mt-0.5">📎 첨부 {item.attachments.length}</div>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap font-mono text-gray-700">
                   {item.proposedCost != null ? item.proposedCost.toLocaleString() : <span className="text-gray-300">—</span>}
@@ -541,6 +545,14 @@ function RODetailModal({
               rows={2}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="추가 메모 (선택)" />
           </Field>
+
+          {/* 첨부파일 — 도면·사진·PDF */}
+          <RODetailAttachments
+            projectId={projectId}
+            rid={item.id}
+            attachments={draft.attachments ?? []}
+            onChange={list => setDraft(p => ({ ...p, attachments: list }))}
+          />
         </div>
 
         {/* 푸터 */}
@@ -571,6 +583,195 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="text-[11px] text-gray-500 font-semibold mb-1 block">{label}</label>
       {children}
+    </div>
+  )
+}
+
+// ─────────────────────────── 첨부파일 업로드·미리보기 ───────────────────────────
+type Attachment = NonNullable<RO['attachments']>[number]
+
+function RODetailAttachments({
+  projectId, rid, attachments, onChange,
+}: {
+  projectId: string
+  rid: string
+  attachments: Attachment[]
+  onChange: (list: Attachment[]) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [preview, setPreview] = useState<Attachment | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function upload(files: FileList | File[]) {
+    const arr = Array.from(files)
+    if (arr.length === 0) return
+    setUploading(true)
+    setError(null)
+    try {
+      const fd = new FormData()
+      for (const f of arr) fd.append('file', f)
+      const res = await fetch(`/api/projects/${projectId}/risks/${rid}/attachments`, {
+        method: 'POST', body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? '업로드 실패')
+      onChange(data.attachments)
+    } catch (e: unknown) {
+      setError((e as Error).message)
+    } finally {
+      setUploading(false)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  async function remove(name: string) {
+    if (!confirm(`"${name}" 삭제하시겠습니까?`)) return
+    const res = await fetch(
+      `/api/projects/${projectId}/risks/${rid}/attachments?name=${encodeURIComponent(name)}`,
+      { method: 'DELETE' }
+    )
+    const data = await res.json()
+    if (res.ok) onChange(data.attachments)
+  }
+
+  function isImage(a: Attachment) { return a.type.startsWith('image/') || /\.(png|jpe?g|gif|webp|heic|heif)$/i.test(a.name) }
+  function isPdf(a: Attachment) { return a.type === 'application/pdf' || /\.pdf$/i.test(a.name) }
+  function iconFor(a: Attachment) {
+    if (isImage(a)) return '🖼'
+    if (isPdf(a)) return '📄'
+    if (/\.(dwg|dxf)$/i.test(a.name)) return '📐'
+    return '📎'
+  }
+  function fmtBytes(n: number) {
+    if (n < 1024) return `${n} B`
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`
+    return `${(n / 1024 / 1024).toFixed(1)} MB`
+  }
+
+  return (
+    <div className="pt-2 border-t border-dashed border-gray-200">
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-[11px] text-gray-500 font-semibold">
+          첨부파일 {attachments.length > 0 && <span className="text-gray-400">({attachments.length})</span>}
+        </label>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept="image/*,.pdf,.dwg,.dxf"
+          className="hidden"
+          onChange={e => e.target.files && upload(e.target.files)}
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="text-[11px] font-semibold text-blue-700 hover:text-blue-900 flex items-center gap-1 disabled:opacity-40"
+        >
+          {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+          {uploading ? '업로드 중...' : '파일 추가'}
+        </button>
+      </div>
+      {error && (
+        <div className="text-[11px] bg-red-50 text-red-700 border border-red-200 rounded p-2 mb-2">{error}</div>
+      )}
+      {attachments.length === 0 ? (
+        <div
+          onDragOver={e => { e.preventDefault() }}
+          onDrop={e => { e.preventDefault(); if (e.dataTransfer.files) upload(e.dataTransfer.files) }}
+          onClick={() => inputRef.current?.click()}
+          className="text-center py-6 border border-dashed border-gray-300 rounded-lg text-[11px] text-gray-400 cursor-pointer hover:bg-gray-50"
+        >
+          도면·사진·PDF 드래그하거나 클릭
+          <div className="text-[10px] text-gray-300 mt-0.5">이미지·PDF는 미리보기, DWG은 다운로드만</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {attachments.map(a => {
+            const img = isImage(a)
+            return (
+              <div key={a.name} className="relative group border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => isImage(a) || isPdf(a) ? setPreview(a) : window.open(a.url, '_blank')}
+                  className="block w-full text-left"
+                  title={a.name}
+                >
+                  <div className="aspect-[4/3] flex items-center justify-center bg-gray-100 overflow-hidden">
+                    {img ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-3xl">{iconFor(a)}</div>
+                    )}
+                  </div>
+                  <div className="p-1.5">
+                    <div className="text-[11px] font-medium text-gray-800 truncate">{a.name}</div>
+                    <div className="text-[9px] text-gray-400">{fmtBytes(a.size)}</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => remove(a.name)}
+                  title="삭제"
+                  className="absolute top-1 right-1 p-1 rounded-full bg-white/90 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            )
+          })}
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="border border-dashed border-gray-300 rounded-lg text-[11px] text-gray-400 hover:bg-gray-50 flex items-center justify-center aspect-[4/3]"
+          >
+            <div className="flex flex-col items-center">
+              <Upload size={14} />
+              <span className="mt-1">추가</span>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* 미리보기 오버레이 */}
+      {preview && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setPreview(null)}
+        >
+          <button
+            onClick={() => setPreview(null)}
+            className="absolute top-3 right-3 text-white/80 hover:text-white bg-black/40 rounded-full p-2"
+            aria-label="닫기"
+          >
+            <X size={18} />
+          </button>
+          {isImage(preview) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview.url} alt={preview.name}
+              className="max-w-[92vw] max-h-[90vh] object-contain shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            />
+          ) : isPdf(preview) ? (
+            <iframe
+              src={preview.url}
+              title={preview.name}
+              className="bg-white rounded w-[min(95vw,900px)] h-[min(90vh,1100px)]"
+              onClick={e => e.stopPropagation()}
+            />
+          ) : null}
+          <a
+            href={preview.url}
+            download={preview.name}
+            onClick={e => e.stopPropagation()}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-white bg-black/50 px-3 py-1.5 rounded-full hover:bg-black/70 no-underline"
+          >
+            ⬇ 원본 다운로드 ({preview.name})
+          </a>
+        </div>
+      )}
     </div>
   )
 }
