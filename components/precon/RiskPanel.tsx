@@ -86,6 +86,24 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
   // 카테고리 옵션 목록 (현재 items 기반 자동 생성)
   const categories = Array.from(new Set(items.map(i => i.category).filter(Boolean))).sort()
 
+  // 공종별 집계 (그래프용) — 제안·확정 합 + 건수
+  const byCategory = (() => {
+    const m = new Map<string, { count: number; proposed: number; confirmed: number; confirmedCount: number }>()
+    for (const i of items) {
+      const k = i.category || '기타'
+      const cur = m.get(k) ?? { count: 0, proposed: 0, confirmed: 0, confirmedCount: 0 }
+      cur.count++
+      cur.proposed += i.proposedCost ?? 0
+      cur.confirmed += i.confirmedCost ?? 0
+      if (i.progress === '확정') cur.confirmedCount++
+      m.set(k, cur)
+    }
+    return Array.from(m.entries())
+      .map(([name, v]) => ({ name, ...v, achievement: v.proposed !== 0 ? v.confirmed / v.proposed : 0 }))
+      .sort((a, b) => Math.abs(b.proposed) - Math.abs(a.proposed))
+  })()
+  const maxAbs = Math.max(1, ...byCategory.map(c => Math.max(Math.abs(c.proposed), Math.abs(c.confirmed))))
+
   // 1) type 필터  2) 공종 필터  3) 진행현황 필터  4) 검색
   const preFiltered = items.filter(i => {
     if (sortType !== 'all' && i.type !== sortType) return false
@@ -186,6 +204,55 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
           <p className="text-xs text-gray-400 mt-0.5">공기영향 +{riskDays.toFixed(1)}일</p>
         </div>
       </div>
+
+      {/* 공종별 절감 차트 — 엑셀 '3.공종별절감' 재현 */}
+      {byCategory.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h3 className="text-sm font-bold text-gray-800">공종별 절감 현황</h3>
+            <div className="flex items-center gap-3 text-[10px] text-gray-500">
+              <span className="flex items-center gap-1"><span className="w-3 h-2 rounded bg-emerald-200" /> 제안</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-2 rounded bg-emerald-600" /> 확정</span>
+              <span className="text-gray-400">(단위: 백만원)</span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            {byCategory.map(c => {
+              const propW = Math.min(100, (Math.abs(c.proposed) / maxAbs) * 100)
+              const confW = Math.min(100, (Math.abs(c.confirmed) / maxAbs) * 100)
+              const pct = Math.round(c.achievement * 100)
+              return (
+                <button
+                  key={c.name}
+                  onClick={() => setCategoryFilter(c.name === categoryFilter ? 'all' : c.name)}
+                  className={`w-full grid grid-cols-[72px_1fr_90px] sm:grid-cols-[96px_1fr_110px] gap-2 items-center py-1 px-1 rounded text-left hover:bg-gray-50 ${categoryFilter === c.name ? 'bg-blue-50 ring-1 ring-blue-300' : ''}`}
+                  title={`${c.name} · ${c.count}건 · 클릭하면 해당 공종으로 필터`}
+                >
+                  <span className="text-xs font-semibold text-gray-700 truncate">
+                    {c.name}
+                    <span className="text-[10px] text-gray-400 ml-1">{c.count}</span>
+                  </span>
+                  {/* 2단 막대: 회색 제안 위에 녹색 확정 */}
+                  <div className="relative h-4 bg-gray-100 rounded-sm">
+                    <div className="absolute inset-y-0 left-0 rounded-sm bg-emerald-200" style={{ width: `${propW}%` }} />
+                    <div className="absolute inset-y-0 left-0 rounded-sm bg-emerald-600" style={{ width: `${confW}%` }} />
+                  </div>
+                  <div className="text-[10px] text-right text-gray-600 font-mono tabular-nums">
+                    <div>
+                      <span className="text-gray-700 font-semibold">{Math.round(c.confirmed).toLocaleString()}</span>
+                      <span className="text-gray-400"> / {Math.round(c.proposed).toLocaleString()}</span>
+                    </div>
+                    <div className={pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-gray-400'}>
+                      {c.proposed !== 0 ? `달성 ${pct}%` : '—'}
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-3">※ 공종 바 클릭 시 해당 공종만 필터됨 · 다시 클릭하면 해제</p>
+        </div>
+      )}
 
       {/* 1열: 검색 + type 탭 + 엑셀 버튼 */}
       <div className="flex items-center justify-between flex-wrap gap-2">

@@ -44,8 +44,20 @@ interface BTask {
   level: number
 }
 
+interface AiCostSummary {
+  summary?: {
+    grandTotalKRW?: number
+    pricePerPyongKRW?: number
+    pricePerSqmKRW?: number
+  }
+  trades?: Array<{ name: string; totalKRW: number }>
+  estimatedAt?: string
+}
+
 interface ProjectInfo {
   startDate?: string
+  bldgArea?: number | null
+  aiCostEstimate?: AiCostSummary | null
 }
 
 interface Props {
@@ -176,6 +188,86 @@ function Stage2Inner({ projectId }: Props) {
         <div className="p-4 sm:p-6 max-w-6xl mx-auto">
           {tab === 'overview' && (
             <div className="space-y-4">
+              {/* 공사비 요약 카드 — aiCostEstimate 있을 때만 */}
+              {project?.aiCostEstimate?.summary && (
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">공사비 추정 (AI)</p>
+                      <h3 className="text-sm font-bold text-gray-800 mt-0.5">초기 검토 기반 개략 공사비</h3>
+                    </div>
+                    <a
+                      href={`/bid?projectId=${projectId}`}
+                      className="text-[11px] text-blue-600 hover:underline no-underline font-semibold"
+                    >개략공기 재검토 →</a>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                      <p className="text-[10px] text-blue-700 font-bold uppercase">총 공사비</p>
+                      <p className="text-2xl font-bold text-blue-900 mt-1 font-mono">
+                        {fmtKRW(project.aiCostEstimate.summary.grandTotalKRW)}
+                        <span className="text-xs font-normal text-blue-500 ml-1">원</span>
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                      <p className="text-[10px] text-gray-500 font-bold uppercase">평당</p>
+                      <p className="text-xl font-bold text-gray-800 mt-1 font-mono">
+                        {project.aiCostEstimate.summary.pricePerPyongKRW
+                          ? Math.round(project.aiCostEstimate.summary.pricePerPyongKRW / 10000).toLocaleString()
+                          : '—'}
+                        <span className="text-xs font-normal text-gray-400 ml-1">만원/평</span>
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                      <p className="text-[10px] text-gray-500 font-bold uppercase">㎡당</p>
+                      <p className="text-xl font-bold text-gray-800 mt-1 font-mono">
+                        {project.aiCostEstimate.summary.pricePerSqmKRW
+                          ? Math.round(project.aiCostEstimate.summary.pricePerSqmKRW / 1000).toLocaleString()
+                          : '—'}
+                        <span className="text-xs font-normal text-gray-400 ml-1">천원/㎡</span>
+                      </p>
+                    </div>
+                  </div>
+                  {/* 공종별 상위 트레이드 */}
+                  {Array.isArray(project.aiCostEstimate.trades) && project.aiCostEstimate.trades.length > 0 && (
+                    <details className="mt-3">
+                      <summary className="text-[11px] text-gray-500 cursor-pointer hover:text-gray-800 font-semibold">
+                        공종별 내역 ({project.aiCostEstimate.trades.length}종) ▾
+                      </summary>
+                      <div className="mt-2 space-y-1">
+                        {[...project.aiCostEstimate.trades].sort((a, b) => b.totalKRW - a.totalKRW).slice(0, 10).map((t, i) => {
+                          const max = Math.max(...project.aiCostEstimate!.trades!.map(x => x.totalKRW))
+                          const pct = max > 0 ? (t.totalKRW / max) * 100 : 0
+                          return (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-[11px] text-gray-600 w-20 truncate">{t.name}</span>
+                              <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
+                                <div className="h-full bg-blue-500/70" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-[11px] text-gray-700 font-mono w-20 text-right">{fmtKRW(t.totalKRW)}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </details>
+                  )}
+                  {project.aiCostEstimate.estimatedAt && (
+                    <p className="text-[10px] text-gray-400 mt-3">
+                      추정 시각: {new Date(project.aiCostEstimate.estimatedAt).toLocaleString('ko-KR')}
+                    </p>
+                  )}
+                </div>
+              )}
+              {!project?.aiCostEstimate?.summary && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <strong>공사비 추정이 없습니다.</strong>
+                    <span className="text-amber-700 ml-2 text-xs">개략공기 재검토 화면에서 AI 공사비 추정을 한 번 실행하면 여기에 표시됩니다.</span>
+                  </div>
+                  <a href={`/bid?projectId=${projectId}`} className="text-xs font-semibold text-amber-800 bg-amber-200 hover:bg-amber-300 px-3 py-1.5 rounded no-underline">추정하러 가기 →</a>
+                </div>
+              )}
+
               {!cpmResult && !calculating && (
                 <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center justify-between">
                   <p className="text-sm text-gray-600">
@@ -250,6 +342,13 @@ function Stage2Inner({ projectId }: Props) {
       </div>
     </div>
   )
+}
+
+function fmtKRW(n: number | undefined | null): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`
+  if (n >= 10_000) return `${Math.round(n / 10_000).toLocaleString()}만`
+  return n.toLocaleString()
 }
 
 function EmptyGate({ title, desc, action }: { title: string; desc: string; action?: React.ReactNode }) {
