@@ -1,58 +1,51 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { BarChart3, TrendingUp } from 'lucide-react'
 import ProgressDashboard from '@/components/analytics/ProgressDashboard'
 import ExecutionAnalytics from '@/components/analytics/ExecutionAnalytics'
+import { StageTabs, type StageTabDef } from '@/components/common/StageTabs'
 
 interface Props {
   projectId: string
   projectName?: string
 }
 
-const TABS = [
-  { id: 'analytics', label: '실적 분석' },
-  { id: 'progress', label: '주간 보고 · S-Curve' },
-] as const
+type TabId = 'analytics' | 'progress'
 
-type TabId = (typeof TABS)[number]['id']
+export default function Stage4Page(props: Props) {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-gray-500">불러오는 중…</div>}>
+      <Inner {...props} />
+    </Suspense>
+  )
+}
 
-export default function Stage4Page({ projectId, projectName }: Props) {
-  const [tab, setTab] = useState<TabId>('analytics')
+function Inner({ projectId, projectName }: Props) {
+  const sp = useSearchParams()
+  const initial = ((sp?.get('tab') as TabId) || 'analytics')
+  const [tab, setTab] = useState<TabId>(initial)
+
+  const tabs: StageTabDef<TabId>[] = [
+    { id: 'analytics', label: '실적 분석', icon: <BarChart3 size={14} />, hint: '공종·월·요일·날씨별 집계' },
+    { id: 'progress',  label: 'S-Curve',  icon: <TrendingUp size={14} />, hint: '주간 보고 + 진행 곡선' },
+  ]
 
   return (
-    <div className="h-full overflow-auto">
-      {/* 탭 헤더 — 반투명 + 구분선 강조 */}
-      <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-slate-200 px-6 pt-1">
-        <div className="flex gap-1">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`relative px-4 py-3 text-sm font-semibold transition-colors ${
-                tab === t.id
-                  ? 'text-violet-700'
-                  : 'text-gray-400 hover:text-gray-700'
-              }`}
-            >
-              {t.label}
-              {tab === t.id && (
-                <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-violet-600" />
-              )}
-            </button>
-          ))}
+    <div className="flex flex-col h-full bg-gray-50">
+      <StageTabs tabs={tabs} current={tab} onChange={setTab} />
+      <div className="flex-1 overflow-auto">
+        <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+          {tab === 'analytics' && <ExecutionAnalytics projectId={projectId} />}
+          {tab === 'progress' && (
+            <ProgressDashboard
+              projectId={projectId}
+              projectName={projectName}
+              cpmResult={null}
+            />
+          )}
         </div>
-      </div>
-
-      {/* 콘텐츠 */}
-      <div className="p-5">
-        {tab === 'analytics' && <ExecutionAnalytics projectId={projectId} />}
-        {tab === 'progress' && (
-          <ProgressDashboard
-            projectId={projectId}
-            projectName={projectName}
-            cpmResult={null}
-          />
-        )}
       </div>
     </div>
   )
