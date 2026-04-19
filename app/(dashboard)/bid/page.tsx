@@ -13,6 +13,7 @@ import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 import AiCostEstimate from '@/components/bid/AiCostEstimate'
 import { assessCriticalPath, CP_LEVEL_COLORS } from '@/lib/engine/cp-assessment'
 import { computeBenchmark, BENCHMARK_COLORS, type BenchmarkResult, type BenchmarkSample } from '@/lib/engine/benchmark'
+import { detectAbnormal } from '@/lib/engine/abnormal-detection'
 import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/components/wbs/WBSTable'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
@@ -732,6 +733,40 @@ export default function BidPage() {
                           })()}
                         </div>
                       )}
+
+                      {/* 비정상 공종 요약 — z-score + dominance */}
+                      {(() => {
+                        const abnormals = detectAbnormal(
+                          result.cpm.tasks.map(t => ({ name: t.name, category: t.category, duration: t.duration })),
+                          result.cpm.totalDuration,
+                        )
+                        if (abnormals.length === 0) return null
+                        return (
+                          <div className="border-t border-gray-100 pt-5">
+                            <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
+                              <AlertTriangle size={14} className="text-amber-500" /> 비정상 공종 {abnormals.length}개
+                            </h3>
+                            <ul className="space-y-1.5">
+                              {abnormals.slice(0, 5).map(a => (
+                                <li key={a.name} className="rounded-lg border border-amber-200 bg-amber-50 p-2">
+                                  <div className="flex items-baseline justify-between gap-2">
+                                    <span className="text-xs font-semibold text-amber-900 truncate">{a.name}</span>
+                                    <span className="font-mono text-[11px] text-amber-700 whitespace-nowrap">
+                                      {a.duration}일 · {Math.round(a.shareOfTotal * 100)}%
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-amber-700 mt-0.5">{a.message}</p>
+                                </li>
+                              ))}
+                              {abnormals.length > 5 && (
+                                <li className="text-[10px] text-gray-500 text-center">
+                                  +{abnormals.length - 5}개 더 (WBS 표에서 ⚠️ 아이콘 확인)
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )
+                      })()}
 
                       {/* 노무비 러프 참고 */}
                       <details className="border-t border-gray-100 pt-5">
