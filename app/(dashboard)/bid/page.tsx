@@ -11,6 +11,7 @@ import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 import AiCostEstimate, { type AiResult } from '@/components/bid/AiCostEstimate'
+import AiScheduleEstimate, { type AiScheduleResult } from '@/components/bid/AiScheduleEstimate'
 import { assessCriticalPath, CP_LEVEL_COLORS } from '@/lib/engine/cp-assessment'
 import { computeBenchmark, BENCHMARK_COLORS, type BenchmarkResult, type BenchmarkSample } from '@/lib/engine/benchmark'
 import { detectAbnormal } from '@/lib/engine/abnormal-detection'
@@ -128,6 +129,9 @@ function BidPage() {
 
   // AI 공사비 추정 결과 (저장 시 함께 전송)
   const [aiEstimate, setAiEstimate] = useState<unknown | null>(null)
+
+  // AI 공기 추정 결과 (공기 탭용 — 저장은 localStorage만)
+  const [aiSchedule, setAiSchedule] = useState<AiScheduleResult | null>(null)
 
   // 회사 과거 프로젝트 벤치마크 (CPM 결과 나오면 자동 로드)
   const [benchmark, setBenchmark] = useState<BenchmarkResult | null>(null)
@@ -721,7 +725,26 @@ function BidPage() {
 
                   {topTab === 'schedule' && (
                     <div>
-                      {/* 공기 그랜드 요약 — 공사비 AI 추정 카드와 동일한 임팩트 (블루→시안 그라데이션) */}
+                      {/* AI 공기 추정 — 유형·규모 기반 룰 프리셋 */}
+                      <div className="p-5 border-b border-gray-100">
+                        <AiScheduleEstimate
+                          type={input.type}
+                          ground={Number(input.ground) || undefined}
+                          basement={Number(input.basement) || undefined}
+                          lowrise={Number(input.lowrise) || undefined}
+                          hasTransfer={input.hasTransfer}
+                          bldgArea={Number(input.bldgArea) || undefined}
+                          buildingArea={Number(input.buildingArea) || undefined}
+                          siteArea={Number(input.siteArea) || undefined}
+                          wtBottom={Number(input.wtBottom) || undefined}
+                          waBottom={Number(input.waBottom) || undefined}
+                          startDate={input.startDate || undefined}
+                          storageKey={storeKey}
+                          onResult={setAiSchedule}
+                        />
+                      </div>
+
+                      {/* 공기 그랜드 요약 — CPM 기반 결과 (AI 추정과 비교용) */}
                       <div className="p-5 border-b border-gray-100">
                         <div
                           className="rounded-xl p-5 text-white"
