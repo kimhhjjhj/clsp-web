@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { CP_DB, computeQuantities, calcDuration } from '@/lib/engine/wbs'
-import { CPDB_KEYWORDS, matchesTask } from '@/lib/engine/wbs-keyword-map'
+import { CPDB_RULES, matchesTask, rulesSummary } from '@/lib/engine/wbs-keyword-map'
 import type { ProjectInput } from '@/lib/types'
 
 interface WorkItem { text?: string; title?: string; [k: string]: unknown }
@@ -90,14 +90,16 @@ export async function GET(req: NextRequest) {
   // 2) 일보 텍스트를 미리 추출
   const reportTexts = reports.map(r => ({ date: r.date, text: extractDailyText(r), manpower: r.manpower }))
 
-  // 3) CP_DB 각 공종마다 텍스트 매칭
+  // 3) CP_DB 각 공종마다 텍스트 매칭 (절 단위 + AND 규칙 조합)
   const rows = CP_DB.map(row => {
-    const keywords = CPDB_KEYWORDS[row.name] ?? []
+    const rules = CPDB_RULES[row.name] ?? []
+    const keywords = rulesSummary(row.name) // display용 'A+B' 형태
     const matchedDates: string[] = []
     for (const rt of reportTexts) {
       if (!rt.text) continue
       if (matchesTask(rt.text, row.name)) matchedDates.push(rt.date)
     }
+    void rules // type side effect; 실제 사용은 matchesTask 내부
     // 첫/마지막 등장일
     const sorted = [...matchedDates].sort()
     const firstDate = sorted[0] ?? null
@@ -136,7 +138,7 @@ export async function GET(req: NextRequest) {
       activeDays,
       deviationDays,
       deviationPct,
-      hasKeywords: keywords.length > 0,
+      hasKeywords: rules.length > 0,
       hasObservation: matchedDates.length > 0,
       applicable,
     }
