@@ -21,6 +21,8 @@ interface Props {
   projectId: string
   mode: 'cp' | 'full'
   cpmTasks: { taskId: string; name: string; category: string; duration: number; isCritical: boolean }[] | null
+  // DB에 저장된 조정값 시드 (localStorage 비어있을 때 초기화에 사용)
+  initialAdjustments?: Array<{ taskId: string; multiplier: number }> | null
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -29,13 +31,34 @@ const CATEGORY_COLORS: Record<string, string> = {
   '외부공사': '#16a34a', '부대공사': '#dc2626',
 }
 
-export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) {
-  // localStorage 영속화 훅 — 프로젝트·모드별 조정값 복원
-  const { multipliers, setMult, resetAll: resetStore } = useMultiplierStore(projectId, mode)
+export default function ProductivityPanel({ projectId, mode, cpmTasks, initialAdjustments }: Props) {
+  // DB 시드 → localStorage 훅 초기화 (훅 자체가 비어있을 때만 시드 적용)
+  const seed = initialAdjustments
+    ? initialAdjustments.map(a => [a.taskId, a.multiplier] as [string, number])
+    : null
+  const { multipliers, setMult, resetAll: resetStore } = useMultiplierStore(projectId, mode, seed)
   const [loading, setLoading] = useState(false)
+  const [savingDb, setSavingDb] = useState(false)
   const [result, setResult] = useState<ProductivityResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  async function saveToDb() {
+    setSavingDb(true)
+    try {
+      const adjustments = Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier }))
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productivityAdjustments: adjustments.length > 0 ? adjustments : null }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data?.error ?? 'DB 저장 실패')
+      }
+    } catch (e: any) {
+      setError(e?.message ?? '네트워크 오류')
+    } finally { setSavingDb(false) }
+  }
 
   function resetAll() {
     resetStore()
@@ -126,6 +149,12 @@ export default function ProductivityPanel({ projectId, mode, cpmTasks }: Props) 
               className="flex items-center gap-1.5 px-4 py-1.5 bg-[#2563eb] text-white rounded-lg text-xs font-semibold hover:bg-[#1d4ed8] disabled:opacity-50">
               {loading ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
               {loading ? '계산 중...' : '재계산'}
+            </button>
+            <button onClick={saveToDb} disabled={savingDb}
+              title="현재 조정값을 프로젝트에 영구 저장"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-semibold hover:border-gray-500 disabled:opacity-50">
+              {savingDb ? <Loader2 size={12} className="animate-spin" /> : null}
+              {savingDb ? '저장 중...' : 'DB 저장'}
             </button>
           </div>
         </div>

@@ -47,15 +47,33 @@ function saveToStorage(key: string, m: Map<string, number>) {
   }
 }
 
-export function useMultiplierStore(projectId: string, mode: 'cp' | 'full') {
+export function useMultiplierStore(
+  projectId: string,
+  mode: 'cp' | 'full',
+  initialSeed?: Array<[string, number]> | null,  // DB에 저장된 값 시드 (localStorage 없을 때만)
+) {
   const key = storageKey(projectId, mode)
   const [multipliers, setMultipliers] = useState<Map<string, number>>(new Map())
   const hydratedRef = useRef(false)
 
   // 초기 마운트·projectId/mode 전환 시 로드
   useEffect(() => {
-    setMultipliers(loadFromStorage(key))
+    const fromStorage = loadFromStorage(key)
+    if (fromStorage.size === 0 && initialSeed && initialSeed.length > 0) {
+      // localStorage 비어있고 DB 시드 있으면 그걸로 초기화
+      const seeded = new Map<string, number>()
+      for (const [k, v] of initialSeed) {
+        if (typeof k === 'string' && typeof v === 'number' && v > 0 && Math.abs(v - 1.0) > 0.001) {
+          seeded.set(k, v)
+        }
+      }
+      setMultipliers(seeded)
+    } else {
+      setMultipliers(fromStorage)
+    }
     hydratedRef.current = true
+    // initialSeed는 의존성에서 제외 — 매번 새 배열 생성 시 무한 루프 방지
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
 
   // 변경 시 저장 (하이드레이션 이후만)

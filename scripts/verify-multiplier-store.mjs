@@ -81,5 +81,37 @@ assert(aCp.get('t1') === 2.0 && aFull.get('t1') === 0.5 && bCp.get('t1') === 1.3
 globalThis.window.localStorage.setItem(storageKey('bad', 'cp'), '{not valid json')
 assert(loadFromStorage(storageKey('bad', 'cp')).size === 0, '손상 JSON 방어 (빈 Map 반환)')
 
+// [7] DB seed 로직 — localStorage 비어있을 때만 시드 적용
+function seedIfEmpty(key, seed) {
+  const fromStorage = loadFromStorage(key)
+  if (fromStorage.size === 0 && seed && seed.length > 0) {
+    const m = new Map()
+    for (const [k, v] of seed) {
+      if (typeof k === 'string' && typeof v === 'number' && v > 0 && Math.abs(v - 1.0) > 0.001) {
+        m.set(k, v)
+      }
+    }
+    return m
+  }
+  return fromStorage
+}
+
+// 7-1: 빈 localStorage + DB seed → seed 적용
+const k7 = storageKey('seed-test', 'cp')
+const seed1 = [['t1', 1.5], ['t2', 0.8]]
+const result7 = seedIfEmpty(k7, seed1)
+assert(result7.size === 2 && result7.get('t1') === 1.5, '빈 localStorage + seed → 시드 적용')
+
+// 7-2: localStorage 값 있으면 seed 무시 (사용자 편집 우선)
+saveToStorage(k7, new Map([['tx', 2.0]]))
+const result7b = seedIfEmpty(k7, [['t1', 1.5]])
+assert(result7b.size === 1 && result7b.get('tx') === 2.0, 'localStorage 있으면 seed 무시')
+
+// 7-3: seed에 1.0 포함 시 필터
+const k8 = storageKey('seed-filter', 'cp')
+const seed2 = [['a', 1.0], ['b', 1.25], ['c', -1]]
+const result8 = seedIfEmpty(k8, seed2)
+assert(result8.size === 1 && result8.get('b') === 1.25, 'seed 1.0/음수 필터링')
+
 console.log(`\n결과: ${pass}개 통과 / ${fail}개 실패`)
 process.exit(fail === 0 ? 0 : 1)

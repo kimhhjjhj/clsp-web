@@ -25,6 +25,7 @@ interface Project {
   basement?: number
   bldgArea?: number
   startDate?: string
+  productivityAdjustments?: Array<{ taskId: string; multiplier: number }> | null
 }
 
 interface Props {
@@ -567,6 +568,7 @@ export default function Stage1Page({ projectId, project }: Props) {
                       duration: t.duration,
                       isCritical: t.isCritical,
                     })) : null}
+                    initialAdjustments={project?.productivityAdjustments ?? null}
                   />
                 </div>
               )}
