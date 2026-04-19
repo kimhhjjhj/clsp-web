@@ -17,7 +17,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, BarChart3, Database, ShieldAlert, Users2,
-  Upload, ShieldCheck, Settings, X, DollarSign, ChevronRight, Plus,
+  Upload, ShieldCheck, Settings, X, ChevronRight, Plus, Calculator, CalendarClock,
 } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
 import CurrentProjectSection from './CurrentProjectSection'
@@ -30,9 +30,9 @@ interface NavItem { href: string; label: string; icon: typeof LayoutDashboard }
 const DASH_ITEM: NavItem = { href: '/', label: '대시보드', icon: LayoutDashboard }
 const PROJECTS_ITEM: NavItem = { href: '/projects', label: '프로젝트', icon: FolderKanban }
 const BID_ITEM: NavItem = { href: '/bid', label: '사업 초기 검토', icon: ClipboardCheck }
-const BID_SUB: { tab: string; label: string; icon: typeof DollarSign }[] = [
-  { tab: 'cost',     label: '공사비',   icon: DollarSign },
-  { tab: 'schedule', label: '공기',     icon: BarChart3 },
+const BID_SUB: { tab: string; label: string; icon: typeof Calculator }[] = [
+  { tab: 'cost',     label: '공사비',   icon: Calculator },
+  { tab: 'schedule', label: '공기',     icon: CalendarClock },
 ]
 
 const DB_ITEMS: NavItem[] = [
