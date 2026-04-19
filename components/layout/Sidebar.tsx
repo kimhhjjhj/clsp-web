@@ -25,11 +25,7 @@ import ClspLogo from '@/components/brand/ClspLogo'
 
 interface NavItem { href: string; label: string; icon: typeof LayoutDashboard }
 
-// 전역 메뉴 순서: 대시보드 → 사업 초기 검토 → 프로젝트
-// (기획·검토가 앞단, 저장된 프로젝트 운영이 뒤)
-const DASH_ITEM: NavItem = { href: '/', label: '대시보드', icon: LayoutDashboard }
-const PROJECTS_ITEM: NavItem = { href: '/projects', label: '프로젝트', icon: FolderKanban }
-const BID_ITEM: NavItem = { href: '/bid', label: '사업 초기 검토', icon: ClipboardCheck }
+// 사업 초기 검토 내부 서브탭 (공사비·공기)
 const BID_SUB: { tab: string; label: string; icon: typeof Calculator }[] = [
   { tab: 'cost',     label: '공사비',   icon: Calculator },
   { tab: 'schedule', label: '공기',     icon: CalendarClock },
@@ -125,59 +121,40 @@ export default function Sidebar({ onClose }: Props) {
 
       {/* 본문 — 스크롤 */}
       <nav className="sidebar-scroll flex-1 px-2 py-3 overflow-y-auto overscroll-contain">
-        {/* 대시보드 — 포인트 홈 버튼 (다른 링크보다 도드라지게) */}
-        <Link
+        {/* 전역 상단 3버튼 — 홈·기획·운영, 통일된 포인트 스타일 */}
+        <AccentNavButton
           href="/"
-          onClick={onClose}
-          aria-current={pathname === '/' ? 'page' : undefined}
-          className={`group relative flex items-center gap-3 px-3 h-11 rounded-xl no-underline overflow-hidden mb-3 transition-all ${
-            pathname === '/' ? 'shadow-lg shadow-blue-900/30' : 'hover:shadow-md hover:shadow-blue-900/20'
-          }`}
-          style={{
-            background: pathname === '/'
-              ? 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)'
-              : 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(99, 102, 241, 0.08))',
-            border: pathname === '/'
-              ? '1px solid rgba(255, 255, 255, 0.15)'
-              : '1px solid rgba(59, 130, 246, 0.18)',
-          }}
-        >
-          <span
-            className={`flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-colors ${
-              pathname === '/' ? 'bg-white/15' : 'bg-white/[0.06] group-hover:bg-white/10'
-            }`}
-          >
-            <LayoutDashboard size={15} strokeWidth={2} className={pathname === '/' ? 'text-white' : 'text-blue-200'} />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className={`block text-[13px] font-bold leading-none tracking-[-0.01em] ${
-              pathname === '/' ? 'text-white' : 'text-slate-100 group-hover:text-white'
-            }`}>
-              대시보드
-            </span>
-            <span className={`block text-[9.5px] uppercase tracking-[0.14em] font-semibold mt-1 ${
-              pathname === '/' ? 'text-blue-100/80' : 'text-slate-400 group-hover:text-blue-200'
-            }`}>
-              Home
-            </span>
-          </span>
-          <ChevronRight size={13} className={`flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${
-            pathname === '/' ? 'text-white/70' : 'text-slate-500'
-          }`} />
-        </Link>
+          label="대시보드"
+          kicker="Home"
+          icon={LayoutDashboard}
+          accent="blue"
+          active={pathname === '/'}
+          onNavigate={onClose}
+        />
 
-        {/* 전역 메뉴 — 사업 초기 검토(토글) / 프로젝트 */}
-        <NavGroup>
-          {/* 사업 초기 검토 — 토글 서브메뉴 */}
-          <CollapsibleItem
-            item={BID_ITEM}
-            active={isBid}
-            open={bidOpen}
-            onToggle={() => setBidOpen()}
-            onNavigate={onClose}
-          />
-          {bidOpen && (
-            <div className="ml-[18px] pl-3 border-l border-white/[0.06] space-y-px mt-0.5 mb-1">
+        <AccentNavButton
+          href="/bid"
+          label="사업 초기 검토"
+          kicker="Bid · Plan"
+          icon={ClipboardCheck}
+          accent="violet"
+          active={isBid}
+          onNavigate={onClose}
+          expandable
+          expanded={bidOpen}
+          onToggle={() => setBidOpen()}
+        />
+        {bidOpen && (
+          <div
+            className="relative mx-2 -mt-1 mb-3 rounded-lg overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.05) 40%, transparent 100%)',
+              border: '1px solid rgba(139, 92, 246, 0.18)',
+              boxShadow: '0 4px 16px -4px rgba(139, 92, 246, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
+            }}
+          >
+            <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-violet-400 via-indigo-400 to-violet-500" />
+            <div className="py-1.5 space-y-px">
               {BID_SUB.map(sub => {
                 const subActive = isBid && activeBidTab === sub.tab
                 const Icon = sub.icon
@@ -186,26 +163,31 @@ export default function Sidebar({ onClose }: Props) {
                     key={sub.tab}
                     href={`/bid?tab=${sub.tab}`}
                     onClick={onClose}
-                    className={`flex items-center gap-2 px-2 h-7 rounded-md text-[12px] transition-colors no-underline ${
+                    className={`mx-1.5 flex items-center gap-2 pl-2.5 pr-2 h-8 rounded-md text-[12px] transition-colors no-underline ${
                       subActive
-                        ? 'text-white font-medium'
-                        : 'text-slate-500 hover:text-slate-200'
+                        ? 'text-white font-semibold bg-white/[0.06]'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.03]'
                     }`}
                   >
-                    <Icon size={11} strokeWidth={1.75} className="flex-shrink-0" />
+                    <Icon size={12} strokeWidth={1.75} className={`flex-shrink-0 ${subActive ? 'text-violet-300' : ''}`} />
                     <span className="flex-1 truncate">{sub.label}</span>
+                    {subActive && <span className="w-1 h-1 rounded-full bg-violet-300 flex-shrink-0" />}
                   </Link>
                 )
               })}
             </div>
-          )}
+          </div>
+        )}
 
-          <SidebarLink
-            item={PROJECTS_ITEM}
-            active={pathname.startsWith('/projects')}
-            onNavigate={onClose}
-          />
-        </NavGroup>
+        <AccentNavButton
+          href="/projects"
+          label="프로젝트"
+          kicker="Projects"
+          icon={FolderKanban}
+          accent="emerald"
+          active={pathname.startsWith('/projects')}
+          onNavigate={onClose}
+        />
 
         {/* 현재 프로젝트 섹션 — 포인트 강조 카드 */}
         {currentProject ? (
@@ -353,51 +335,129 @@ function SidebarLink({
   )
 }
 
-// 사업 초기 검토처럼 '클릭=이동' + '토글 버튼'이 필요한 아이템
-function CollapsibleItem({
-  item, active, open, onToggle, onNavigate,
+// 상단 포인트 버튼 — 대시보드·사업초기검토·프로젝트 3개를 통일된 스타일로
+type AccentColor = 'blue' | 'violet' | 'emerald'
+
+const ACCENT_STYLE: Record<AccentColor, {
+  grad: string       // active: 솔리드 그라데이션
+  tint: string       // idle: 은은한 틴트
+  borderActive: string
+  borderIdle: string
+  shadowActive: string
+  shadowHover: string
+  iconIdle: string   // 비활성 아이콘 색
+  kickerIdle: string // 비활성 부제 색 (hover 포함)
+  kickerActive: string
+}> = {
+  blue: {
+    grad: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+    tint: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(99, 102, 241, 0.08))',
+    borderActive: 'rgba(255, 255, 255, 0.15)',
+    borderIdle: 'rgba(59, 130, 246, 0.18)',
+    shadowActive: 'shadow-lg shadow-blue-900/30',
+    shadowHover: 'hover:shadow-md hover:shadow-blue-900/20',
+    iconIdle: 'text-blue-200',
+    kickerIdle: 'text-slate-400 group-hover:text-blue-200',
+    kickerActive: 'text-blue-100/80',
+  },
+  violet: {
+    grad: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+    tint: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(99, 102, 241, 0.08))',
+    borderActive: 'rgba(255, 255, 255, 0.15)',
+    borderIdle: 'rgba(139, 92, 246, 0.18)',
+    shadowActive: 'shadow-lg shadow-violet-900/30',
+    shadowHover: 'hover:shadow-md hover:shadow-violet-900/20',
+    iconIdle: 'text-violet-200',
+    kickerIdle: 'text-slate-400 group-hover:text-violet-200',
+    kickerActive: 'text-violet-100/80',
+  },
+  emerald: {
+    grad: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
+    tint: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(20, 184, 166, 0.08))',
+    borderActive: 'rgba(255, 255, 255, 0.15)',
+    borderIdle: 'rgba(16, 185, 129, 0.18)',
+    shadowActive: 'shadow-lg shadow-emerald-900/30',
+    shadowHover: 'hover:shadow-md hover:shadow-emerald-900/20',
+    iconIdle: 'text-emerald-200',
+    kickerIdle: 'text-slate-400 group-hover:text-emerald-200',
+    kickerActive: 'text-emerald-100/80',
+  },
+}
+
+function AccentNavButton({
+  href, label, kicker, icon: Icon, accent, active, onNavigate,
+  expandable, expanded, onToggle,
 }: {
-  item: NavItem
+  href: string
+  label: string
+  kicker: string
+  icon: typeof LayoutDashboard
+  accent: AccentColor
   active: boolean
-  open: boolean
-  onToggle: () => void
   onNavigate: () => void
+  expandable?: boolean
+  expanded?: boolean
+  onToggle?: () => void
 }) {
-  const Icon = item.icon
+  const a = ACCENT_STYLE[accent]
   return (
     <div
-      className={`relative flex items-center gap-0.5 h-9 rounded-md transition-colors duration-150 overflow-hidden ${
-        active
-          ? 'text-white bg-white/[0.08]'
-          : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+      className={`relative flex items-center rounded-xl overflow-hidden mb-2 transition-all ${
+        active ? a.shadowActive : a.shadowHover
       }`}
+      style={{
+        background: active ? a.grad : a.tint,
+        border: `1px solid ${active ? a.borderActive : a.borderIdle}`,
+      }}
     >
-      {active && (
-        <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-gradient-to-b from-blue-400 to-indigo-500" />
-      )}
       <Link
-        href={item.href}
+        href={href}
         onClick={onNavigate}
-        className="flex items-center gap-2.5 pl-3 pr-1 h-full flex-1 min-w-0 no-underline"
+        aria-current={active ? 'page' : undefined}
+        className={`group flex items-center gap-3 flex-1 min-w-0 px-3 h-11 no-underline ${expandable ? 'pr-1' : ''}`}
       >
-        <Icon size={14} strokeWidth={active ? 2 : 1.75} className={`flex-shrink-0 ${active ? 'text-blue-300' : ''}`} />
-        <span className={`flex-1 text-[13px] leading-none truncate tracking-[-0.005em] ${active ? 'font-semibold' : 'font-medium'}`}>
-          {item.label}
+        <span
+          className={`flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-colors ${
+            active ? 'bg-white/15' : 'bg-white/[0.06] group-hover:bg-white/10'
+          }`}
+        >
+          <Icon size={15} strokeWidth={2} className={active ? 'text-white' : a.iconIdle} />
         </span>
+        <span className="flex-1 min-w-0">
+          <span className={`block text-[13px] font-bold leading-none tracking-[-0.01em] ${
+            active ? 'text-white' : 'text-slate-100 group-hover:text-white'
+          }`}>
+            {label}
+          </span>
+          <span className={`block text-[9.5px] uppercase tracking-[0.14em] font-semibold mt-1 ${
+            active ? a.kickerActive : a.kickerIdle
+          }`}>
+            {kicker}
+          </span>
+        </span>
+        {!expandable && (
+          <ChevronRight size={13} className={`flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${
+            active ? 'text-white/70' : 'text-slate-500'
+          }`} />
+        )}
       </Link>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={open ? '접기' : '펼치기'}
-        className={`h-full px-2 flex items-center justify-center transition-colors ${
-          active ? 'hover:bg-white/10' : 'hover:bg-white/[0.04]'
-        }`}
-      >
-        <ChevronRight
-          size={13}
-          className={`transition-transform ${open ? 'rotate-90' : ''} ${active ? 'text-white/80' : 'text-slate-500'}`}
-        />
-      </button>
+      {expandable && (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={expanded ? '접기' : '펼치기'}
+          className={`h-11 px-3 flex items-center justify-center transition-colors border-l ${
+            active
+              ? 'border-white/15 hover:bg-white/10 text-white/80'
+              : 'border-white/[0.06] hover:bg-white/[0.05] text-slate-400 hover:text-slate-100'
+          }`}
+        >
+          <ChevronRight
+            size={13}
+            className={`transition-transform ${expanded ? 'rotate-90' : ''}`}
+          />
+        </button>
+      )}
     </div>
   )
 }
