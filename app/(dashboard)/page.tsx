@@ -333,24 +333,22 @@ function KpiCard({
       {accent && (
         <span
           aria-hidden
-          className="absolute top-0 left-0 h-full w-0.5 opacity-70 group-hover:opacity-100 transition-opacity"
+          className="absolute top-0 left-0 h-full w-[3px] rounded-r-full opacity-80 group-hover:opacity-100 transition-opacity"
           style={{ background: accent }}
         />
       )}
       <div className="flex items-start justify-between gap-3 mb-5">
-        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.12em] leading-none mt-2">
-          {label}
-        </p>
+        <p className="u-stat-label">{label}</p>
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBg}`}>
           <Icon size={14} className={iconColor} strokeWidth={2} />
         </div>
       </div>
       {loading ? (
-        <Skeleton className="h-9 w-1/2" />
+        <Skeleton className="h-8 w-1/2" />
       ) : (
-        <p className="text-[32px] font-semibold text-slate-900 tracking-[-0.03em] leading-none tabular-nums">
+        <p className="u-stat-value">
           {value}
-          {unit && <span className="text-base font-normal text-slate-400 ml-1.5">{unit}</span>}
+          {unit && <span className="text-[15px] font-normal text-slate-400 ml-1.5">{unit}</span>}
         </p>
       )}
       {sub && <p className="text-[12px] text-slate-500 mt-3 line-clamp-1">{sub}</p>}

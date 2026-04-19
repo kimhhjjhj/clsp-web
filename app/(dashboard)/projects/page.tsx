@@ -153,8 +153,8 @@ function ProjectsPage() {
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-4">
-        {/* 상태 탭 */}
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin -mx-1 px-1">
+        {/* 상태 탭 — segmented control 스타일 */}
+        <div className="flex items-center gap-0.5 p-0.5 bg-[rgba(15,23,42,0.04)] border border-[rgba(15,23,42,0.06)] rounded-[10px] overflow-x-auto w-fit">
           {STATUS_TABS.map(t => {
             const active = statusFilter === t.key
             const count = statusCounts[t.key]
@@ -162,16 +162,16 @@ function ProjectsPage() {
               <button
                 key={t.key}
                 onClick={() => setStatusFilter(t.key)}
-                className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[12.5px] font-medium whitespace-nowrap transition-all ${
                   active
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                    ? 'bg-white text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.08)] font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 {t.dot && <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />}
                 {t.label}
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                  active ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
+                <span className={`text-[10px] font-medium tabular-nums ${
+                  active ? 'text-slate-400' : 'text-slate-400'
                 }`}>{count}</span>
               </button>
             )

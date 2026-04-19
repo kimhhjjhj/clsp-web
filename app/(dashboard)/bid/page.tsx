@@ -654,9 +654,9 @@ function BidPage() {
                 <button
                   onClick={() => estimate()}
                   disabled={loading}
-                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm transition-colors"
+                  className="u-btn u-btn-primary u-btn-lg w-full"
                 >
-                  {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={14} />}
+                  {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={13} />}
                   {loading ? '계산 중...' : '개략 견적 산출'}
                 </button>
 
@@ -664,7 +664,7 @@ function BidPage() {
                   <button
                     onClick={saveAsProject}
                     disabled={saving}
-                    className="w-full h-10 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors"
+                    className="u-btn u-btn-secondary w-full"
                   >
                     {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                     {editingProjectId ? '프로젝트 업데이트' : '프로젝트로 저장'}

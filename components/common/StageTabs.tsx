@@ -43,8 +43,8 @@ export function StageTabs<T extends string>({
   }, [onChange, router, pathname, queryKey, searchParams])
 
   return (
-    <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-200">
-      <div className="flex items-center gap-0.5 overflow-x-auto px-3 py-2 -mx-px">
+    <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-[rgba(15,23,42,0.06)]">
+      <div className="flex items-center gap-0.5 overflow-x-auto px-3 pt-1.5 pb-[9px] -mx-px">
         {tabs.map(t => {
           const active = t.id === current
           return (
@@ -53,17 +53,15 @@ export function StageTabs<T extends string>({
               type="button"
               onClick={() => handleChange(t.id)}
               title={t.hint}
-              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-md whitespace-nowrap text-xs sm:text-sm font-semibold transition-colors ${
-                active
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-              }`}
+              className={`u-tab ${active ? 'u-tab-active' : ''}`}
             >
               {t.icon}
               <span>{t.label}</span>
               {t.badge != null && t.badge !== '' && t.badge !== 0 && (
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                  active ? 'bg-white/20' : 'bg-gray-200 text-gray-600'
+                <span className={`text-[10px] font-medium tabular-nums px-1.5 py-0.5 rounded ${
+                  active
+                    ? 'bg-slate-900/5 text-slate-900'
+                    : 'bg-slate-100 text-slate-500'
                 }`}>
                   {t.badge}
                 </span>
@@ -79,7 +77,7 @@ export function StageTabs<T extends string>({
 // 상단 요약 바 — 작은 숫자 카드를 한 줄로
 export function SummaryStrip({ children }: { children: ReactNode }) {
   return (
-    <div className="flex gap-2 sm:gap-3 overflow-x-auto px-4 sm:px-6 py-3 bg-gradient-to-b from-gray-50 to-white border-b border-gray-100">
+    <div className="flex gap-2.5 overflow-x-auto px-4 sm:px-6 py-3 bg-white border-b border-[rgba(15,23,42,0.06)]">
       {children}
     </div>
   )
@@ -90,12 +88,12 @@ export function SummaryStat({
 }: { label: string; value: ReactNode; sub?: ReactNode; accent?: string }) {
   return (
     <div
-      className="flex-shrink-0 min-w-[110px] sm:min-w-[140px] px-3 py-2 border border-gray-200 bg-white rounded-lg relative"
-      style={accent ? { boxShadow: `inset 3px 0 0 ${accent}` } : undefined}
+      className="flex-shrink-0 min-w-[128px] sm:min-w-[148px] px-3.5 py-2.5 border border-[rgba(15,23,42,0.06)] bg-white rounded-[10px] relative"
+      style={accent ? { boxShadow: `inset 3px 0 0 ${accent}, 0 1px 2px rgba(15,23,42,0.03)` } : { boxShadow: '0 1px 2px rgba(15,23,42,0.03)' }}
     >
-      <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{label}</div>
-      <div className="text-base sm:text-lg font-bold text-gray-900 leading-tight mt-0.5">{value}</div>
-      {sub && <div className="text-[10px] text-gray-400 mt-0.5 truncate">{sub}</div>}
+      <div className="u-stat-label">{label}</div>
+      <div className="text-[18px] font-semibold text-slate-900 leading-none mt-2 tracking-[-0.02em] tabular-nums">{value}</div>
+      {sub && <div className="text-[11px] text-slate-500 mt-1.5 truncate">{sub}</div>}
     </div>
   )
 }
