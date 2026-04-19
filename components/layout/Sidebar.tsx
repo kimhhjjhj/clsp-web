@@ -94,34 +94,21 @@ export default function Sidebar({ onClose }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* CLSP — 워드마크 타이포그래피 (아이콘 제거, 글자 자체가 로고) */}
-      <div className="flex items-start justify-between px-5 py-5 border-b border-white/10 flex-shrink-0">
-        <Link href="/" onClick={onClose} className="flex flex-col no-underline group select-none">
-          <h1
-            className="relative text-[44px] font-black leading-none tracking-[-0.04em] bg-gradient-to-br from-white via-blue-100 to-blue-300 bg-clip-text text-transparent group-hover:tracking-[-0.03em] transition-all"
-            style={{ textShadow: '0 2px 24px rgba(59, 130, 246, 0.25)' }}
-          >
+      {/* CLSP 브랜드 — Linear 톤 워드마크 */}
+      <div className="flex items-center justify-between px-5 h-[60px] border-b border-white/[0.06] flex-shrink-0">
+        <Link href="/" onClick={onClose} className="flex items-baseline gap-2 no-underline group select-none">
+          <h1 className="text-[17px] font-semibold tracking-tight text-white leading-none">
             CLSP
-            {/* P 우측에 accent dot */}
-            <span
-              aria-hidden
-              className="absolute -right-1 -bottom-0.5 w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-            />
           </h1>
-          {/* 얇은 그라데이션 언더라인 */}
-          <span
-            aria-hidden
-            className="mt-1.5 block h-px w-16 bg-gradient-to-r from-blue-400 via-indigo-400/60 to-transparent group-hover:w-20 transition-all"
-          />
-          <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-semibold leading-tight mt-2">
-            Construction<br />Lifecycle&nbsp;Solution<br />Platform
-          </p>
+          <span className="text-[10px] font-medium tracking-[0.14em] text-white/40 uppercase leading-none">
+            Construction
+          </span>
         </Link>
         <button
           onClick={onClose}
-          className="lg:hidden p-1 -mr-1 text-slate-400 hover:text-white"
+          className="lg:hidden p-1 -mr-1 text-white/50 hover:text-white"
           aria-label="메뉴 닫기"
-        ><X size={16} /></button>
+        ><X size={14} /></button>
       </div>
 
       {/* 본문 — 스크롤 */}
@@ -232,9 +219,9 @@ export default function Sidebar({ onClose }: Props) {
             ))}
             <button
               type="button"
-              className="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-[13px] font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+              className="w-full flex items-center gap-2.5 pl-3 pr-2.5 h-8 rounded-md text-[13px] font-normal text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
             >
-              <Settings size={16} strokeWidth={1.85} className="flex-shrink-0" />
+              <Settings size={14} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
               <span className="flex-1 text-left">설정</span>
             </button>
           </NavGroup>
@@ -246,10 +233,9 @@ export default function Sidebar({ onClose }: Props) {
         <Link
           href="/projects/new"
           onClick={onClose}
-          className="group flex items-center justify-center gap-2 w-full h-10 rounded-lg text-white text-[13px] font-semibold shadow-lg shadow-orange-900/30 hover:shadow-orange-900/50 transition-all no-underline"
-          style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
+          className="flex items-center justify-center gap-2 w-full h-9 rounded-md bg-white text-black text-[13px] font-medium hover:bg-white/90 transition-colors no-underline"
         >
-          <Plus size={15} strokeWidth={2.5} />
+          <Plus size={14} strokeWidth={2} />
           새 프로젝트
         </Link>
       </div>
@@ -273,14 +259,14 @@ function SidebarLink({
     <Link
       href={item.href}
       onClick={onNavigate}
-      className={`group relative flex items-center gap-2.5 px-3 h-9 rounded-lg transition-all no-underline ${
+      className={`group relative flex items-center gap-2.5 pl-3 pr-2.5 h-8 rounded-md transition-colors duration-150 no-underline text-[13px] ${
         active
-          ? 'nav-item-active text-white'
-          : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
+          ? 'nav-item-active'
+          : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
       }`}
     >
-      <Icon size={16} strokeWidth={active ? 2.25 : 1.85} className="flex-shrink-0" />
-      <span className={`flex-1 text-[13px] leading-none truncate ${active ? 'font-semibold' : 'font-medium'}`}>
+      <Icon size={14} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
+      <span className={`flex-1 leading-none truncate ${active ? 'font-medium text-white' : 'font-normal'}`}>
         {item.label}
       </span>
     </Link>
@@ -300,10 +286,10 @@ function CollapsibleItem({
   const Icon = item.icon
   return (
     <div
-      className={`flex items-center gap-0.5 h-9 rounded-lg transition-all overflow-hidden ${
+      className={`flex items-center gap-0.5 h-8 rounded-md transition-colors duration-150 overflow-hidden text-[13px] ${
         active
-          ? 'nav-item-active text-white'
-          : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
+          ? 'nav-item-active'
+          : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
       }`}
     >
       <Link
@@ -311,7 +297,7 @@ function CollapsibleItem({
         onClick={onNavigate}
         className="flex items-center gap-2.5 pl-3 pr-1 h-full flex-1 min-w-0 no-underline"
       >
-        <Icon size={16} strokeWidth={active ? 2.25 : 1.85} className="flex-shrink-0" />
+        <Icon size={14} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
         <span className={`flex-1 text-[13px] leading-none truncate ${active ? 'font-semibold' : 'font-medium'}`}>
           {item.label}
         </span>
@@ -344,19 +330,18 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="mt-5 pt-2 border-t border-white/[0.05]">
+    <div className="mt-4 pt-3 border-t border-white/[0.04]">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center gap-1.5 px-2.5 py-1 mb-0.5 group"
+        className="w-full flex items-center gap-1.5 px-2.5 py-1 mb-1 group"
       >
-        {accent && <span className="w-1 h-3 rounded-full flex-shrink-0" style={{ background: accent }} />}
-        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.12em] group-hover:text-slate-300 transition-colors">
+        <span className="text-[10px] font-semibold text-white/35 uppercase tracking-[0.12em] group-hover:text-white/70 transition-colors">
           {label}
         </span>
         <ChevronRight
-          size={11}
-          className={`ml-auto text-slate-600 group-hover:text-slate-400 transition-all ${open ? 'rotate-90' : ''}`}
+          size={10}
+          className={`ml-auto text-white/25 group-hover:text-white/60 transition-all ${open ? 'rotate-90' : ''}`}
         />
       </button>
       {open && <div>{children}</div>}
