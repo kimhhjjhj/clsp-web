@@ -16,6 +16,7 @@ import { computeBenchmark, BENCHMARK_COLORS, type BenchmarkResult, type Benchmar
 import { detectAbnormal } from '@/lib/engine/abnormal-detection'
 import { compareTaskBenchmarks, deviantOnly, type TaskStat, type TaskBenchDeviation } from '@/lib/engine/task-benchmark'
 import { useMultiplierStore } from '@/lib/hooks/useMultiplierStore'
+import { useProjectContext } from '@/lib/project-context/ProjectContext'
 import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/components/wbs/WBSTable'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
@@ -130,6 +131,12 @@ export default function BidPage() {
   const editingProjectId = searchParams?.get('projectId') ?? null
   const [loadedAdjustments, setLoadedAdjustments] = useState<Array<[string, number]> | null>(null)
   const [loadingProject, setLoadingProject] = useState(false)
+
+  // 편집 모드 진입 시 ProjectContext에도 '현재 프로젝트'로 등록 (상단 Switcher가 반영)
+  const { selectProject } = useProjectContext()
+  useEffect(() => {
+    if (editingProjectId) selectProject(editingProjectId)
+  }, [editingProjectId, selectProject])
 
   // 공종별 생산성 조정
   // - 신규 견적: key='bid-draft' (localStorage만)
