@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, ShieldAlert, TrendingUp, AlertTriangle, CheckCircle2, Clock, Upload, Download, Loader2, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, ShieldAlert, TrendingUp, AlertTriangle, CheckCircle2, Clock, Upload, Download, Loader2, X, Search, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 
 interface RO {
   id: string; type: string; category: string; content: string
@@ -34,6 +34,18 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
   const [editId, setEditId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [sortType, setSortType] = useState<'all' | 'risk' | 'opportunity'>('all')
+  // 필터
+  const [query, setQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [progressFilter, setProgressFilter] = useState<string>('all')
+  // 정렬 — 컬럼 클릭 토글 (같은 컬럼 재클릭 시 방향 뒤집기)
+  type SortKey = 'code' | 'category' | 'subCategory' | 'content' | 'proposedCost' | 'confirmedCost' | 'progress' | 'proposedAt'
+  const [sortKey, setSortKey] = useState<SortKey>('code')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir('asc') }
+  }
   // 행 클릭 → 상세 모달
   const [detailItem, setDetailItem] = useState<RO | null>(null)
 
@@ -71,7 +83,44 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
     setEditId(item.id); setShowForm(true)
   }
 
-  const filtered = sortType === 'all' ? items : items.filter(i => i.type === sortType)
+  // 카테고리 옵션 목록 (현재 items 기반 자동 생성)
+  const categories = Array.from(new Set(items.map(i => i.category).filter(Boolean))).sort()
+
+  // 1) type 필터  2) 공종 필터  3) 진행현황 필터  4) 검색
+  const preFiltered = items.filter(i => {
+    if (sortType !== 'all' && i.type !== sortType) return false
+    if (categoryFilter !== 'all' && i.category !== categoryFilter) return false
+    if (progressFilter !== 'all' && (i.progress ?? '') !== progressFilter) return false
+    if (query) {
+      const q = query.toLowerCase()
+      const hay = [i.code, i.content, i.subCategory, i.proposer, i.note].filter(Boolean).join(' ').toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    return true
+  })
+
+  // 5) 정렬
+  function valueOf(i: RO, key: typeof sortKey): string | number {
+    switch (key) {
+      case 'code':          return i.code ?? ''
+      case 'category':      return i.category ?? ''
+      case 'subCategory':   return i.subCategory ?? ''
+      case 'content':       return i.content ?? ''
+      case 'proposedCost':  return i.proposedCost ?? 0
+      case 'confirmedCost': return i.confirmedCost ?? 0
+      case 'progress':      return i.progress ?? ''
+      case 'proposedAt':    return i.proposedAt ?? ''
+    }
+  }
+  const filtered = [...preFiltered].sort((a, b) => {
+    const va = valueOf(a, sortKey)
+    const vb = valueOf(b, sortKey)
+    let cmp = 0
+    if (typeof va === 'number' && typeof vb === 'number') cmp = va - vb
+    else cmp = String(va).localeCompare(String(vb), 'ko-KR', { numeric: true })
+    return sortDir === 'asc' ? cmp : -cmp
+  })
+
   const risks = items.filter(i => i.type === 'risk')
   const opps  = items.filter(i => i.type === 'opportunity')
   const riskDays = risks.reduce((s, i) => s + (i.impactDays ?? 0), 0)
@@ -138,15 +187,32 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
         </div>
       </div>
 
-      {/* 툴바 */}
+      {/* 1열: 검색 + type 탭 + 엑셀 버튼 */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {(['all','risk','opportunity'] as const).map(t => (
-            <button key={t} onClick={() => setSortType(t)}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${sortType === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {t === 'all' ? '전체' : t === 'risk' ? '리스크' : '기회'}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* 검색창 */}
+          <div className="relative">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="NO·내용·세부·제안사·비고 검색"
+              className="w-56 sm:w-72 pl-7 pr-7 h-9 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+            />
+            {query && (
+              <button onClick={() => setQuery('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-700">
+                <X size={11} />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+            {(['all','risk','opportunity'] as const).map(t => (
+              <button key={t} onClick={() => setSortType(t)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${sortType === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {t === 'all' ? '전체' : t === 'risk' ? '리스크' : '기회'}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* 엑셀 임포트 — 실무 양식 */}
@@ -189,6 +255,40 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
           {importMsg}
         </div>
       )}
+
+      {/* 2열: 공종·진행현황 필터 + 활성 필터 리셋 */}
+      <div className="flex items-center gap-2 flex-wrap text-xs">
+        <span className="text-gray-400 font-semibold">필터</span>
+        <select
+          value={categoryFilter}
+          onChange={e => setCategoryFilter(e.target.value)}
+          className="h-8 px-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:border-blue-500"
+        >
+          <option value="all">전체 공종</option>
+          {categories.map(c => (<option key={c} value={c}>{c}</option>))}
+        </select>
+        <select
+          value={progressFilter}
+          onChange={e => setProgressFilter(e.target.value)}
+          className="h-8 px-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:border-blue-500"
+        >
+          <option value="all">전체 진행</option>
+          <option value="진행">진행</option>
+          <option value="확정">확정</option>
+          <option value="미반영">미반영</option>
+          <option value="재검토">재검토</option>
+          <option value="">미지정</option>
+        </select>
+        <span className="text-gray-400">
+          {filtered.length}건 {filtered.length !== items.length && `/ 전체 ${items.length}건`}
+        </span>
+        {(query || categoryFilter !== 'all' || progressFilter !== 'all' || sortType !== 'all') && (
+          <button
+            onClick={() => { setQuery(''); setCategoryFilter('all'); setProgressFilter('all'); setSortType('all') }}
+            className="text-gray-500 hover:text-gray-900 underline ml-auto"
+          >필터 초기화</button>
+        )}
+      </div>
 
       {/* 폼 */}
       {showForm && (
@@ -276,9 +376,38 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
         <table className="w-full text-sm min-w-[900px]">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
-              {['NO','공종','세부','내용','제안(백만)','확정(백만)','진행','설계반영','제안일','담당자','상태',''].map((h,i) => (
-                <th key={i} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">{h}</th>
-              ))}
+              {([
+                { label: 'NO',         key: 'code' as SortKey },
+                { label: '공종',       key: 'category' as SortKey },
+                { label: '세부',       key: 'subCategory' as SortKey },
+                { label: '내용',       key: 'content' as SortKey },
+                { label: '제안(백만)', key: 'proposedCost' as SortKey, numeric: true },
+                { label: '확정(백만)', key: 'confirmedCost' as SortKey, numeric: true },
+                { label: '진행',       key: 'progress' as SortKey },
+                { label: '설계반영',   key: null },
+                { label: '제안일',     key: 'proposedAt' as SortKey },
+                { label: '담당자',     key: null },
+                { label: '상태',       key: null },
+                { label: '',           key: null },
+              ] as const).map((h,i) => {
+                const sortable = !!h.key
+                const active = sortable && sortKey === h.key
+                return (
+                  <th key={i}
+                    onClick={sortable ? () => toggleSort(h.key as SortKey) : undefined}
+                    className={`px-3 py-2.5 text-left text-xs font-semibold text-gray-500 whitespace-nowrap select-none ${sortable ? 'cursor-pointer hover:text-gray-900' : ''} ${active ? 'text-gray-900' : ''}`}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {h.label}
+                      {sortable && (
+                        active
+                          ? (sortDir === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)
+                          : <ArrowUpDown size={10} className="text-gray-300" />
+                      )}
+                    </span>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
