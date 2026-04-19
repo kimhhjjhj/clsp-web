@@ -1,18 +1,39 @@
 // ═══════════════════════════════════════════════════════════
-// CLSP 브랜드 마크 — 3면 육각형 큐브
+// CLSP 브랜드 마크 — 정육각형 이소메트릭 큐브
 // Construction Lifecycle Solution Platform
-// 상·좌·우 3면 = 설계·시공·준공 3단계 통합
+// 3면(상·좌·우) = 설계 · 시공 · 운영 통합
 // ═══════════════════════════════════════════════════════════
 
 interface Props {
   size?: number
   className?: string
-  /** 배경 어두운 곳(사이드바 등)에서는 luminous=true */
   luminous?: boolean
 }
 
-export default function ClspLogo({ size = 36, className = '', luminous = false }: Props) {
+/*
+ * 정육각형 좌표 (pointy-top, center=50,50, R=45):
+ *   top:        (50, 5)
+ *   right-up:   (89, 27.5)   [50 + R·√3/2, 50 − R/2]
+ *   right-down: (89, 72.5)
+ *   bottom:     (50, 95)
+ *   left-down:  (11, 72.5)
+ *   left-up:    (11, 27.5)
+ *
+ *   3면 분할선: 중심(50,50)에서 top / left-up / right-up 꼭짓점
+ */
+export default function ClspLogo({ size = 40, className = '', luminous = false }: Props) {
+  // 매 렌더마다 유니크 id (중복 gradient 방지)
   const uid = Math.random().toString(36).slice(2, 7)
+
+  // 육각형 꼭짓점
+  const T  = '50,5'      // top
+  const RU = '89,27.5'   // right-up
+  const RD = '89,72.5'   // right-down
+  const B  = '50,95'     // bottom
+  const LD = '11,72.5'   // left-down
+  const LU = '11,27.5'   // left-up
+  const C  = '50,50'     // 중심
+
   return (
     <svg
       viewBox="0 0 100 100"
@@ -23,74 +44,74 @@ export default function ClspLogo({ size = 36, className = '', luminous = false }
       aria-label="CLSP"
     >
       <defs>
-        {/* 상단면 — emerald → teal */}
-        <linearGradient id={`top-${uid}`} x1="20%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#34d399" />
+        {/* 상단면 — emerald → teal (준공·데이터 자산) */}
+        <linearGradient id={`top-${uid}`} x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="#4ade80" />
           <stop offset="100%" stopColor="#0d9488" />
         </linearGradient>
-        {/* 좌측면 — blue → indigo (핵심 브랜드) */}
-        <linearGradient id={`left-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#1e40af" />
+        {/* 좌측면 — blue → indigo (설계·검토) */}
+        <linearGradient id={`left-${uid}`} x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#60a5fa" />
+          <stop offset="100%" stopColor="#1e3a8a" />
         </linearGradient>
-        {/* 우측면 — violet → indigo */}
+        {/* 우측면 — violet → indigo (시공·운영) */}
         <linearGradient id={`right-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#8b5cf6" />
-          <stop offset="100%" stopColor="#6366f1" />
+          <stop offset="0%" stopColor="#a78bfa" />
+          <stop offset="100%" stopColor="#4f46e5" />
         </linearGradient>
-        {/* 내부 음각 — 다크 hex (depth) */}
-        <linearGradient id={`inner-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#0f172a" />
-          <stop offset="100%" stopColor="#1e293b" />
-        </linearGradient>
-        {/* 하이라이트 엣지 */}
-        <linearGradient id={`edge-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.35)" />
-          <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
+        {/* 내부 음각 — 더 어두운 코어 */}
+        <linearGradient id={`inner-${uid}`} x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="#1e293b" />
+          <stop offset="100%" stopColor="#0f172a" />
         </linearGradient>
       </defs>
 
-      {/* 외곽 은은한 glow (luminous 옵션일 때만) */}
+      {/* 외곽 glow (옵션) */}
       {luminous && (
-        <ellipse cx="50" cy="50" rx="48" ry="48" fill="none" stroke="rgba(99, 102, 241, 0.2)" strokeWidth="1" />
+        <circle cx="50" cy="50" r="48"
+          fill="none"
+          stroke="rgba(99, 102, 241, 0.15)"
+          strokeWidth="0.6"
+        />
       )}
 
-      {/* ── 외곽 육각형 3면 분할 ──────────────────── */}
+      {/* ── 외곽 3면 분할 (대칭) ─────────────── */}
       {/* 상단 로즌지 */}
-      <polygon
-        points="50,6  93,30  50,54  7,30"
-        fill={`url(#top-${uid})`}
-      />
+      <polygon points={`${T} ${RU} ${C} ${LU}`} fill={`url(#top-${uid})`} />
       {/* 좌측 로즌지 */}
-      <polygon
-        points="7,30  50,54  50,94  7,70"
-        fill={`url(#left-${uid})`}
-      />
+      <polygon points={`${LU} ${C} ${B} ${LD}`} fill={`url(#left-${uid})`} />
       {/* 우측 로즌지 */}
-      <polygon
-        points="93,30  50,54  50,94  93,70"
-        fill={`url(#right-${uid})`}
-      />
+      <polygon points={`${RU} ${C} ${B} ${RD}`} fill={`url(#right-${uid})`} />
 
-      {/* ── 내부 음각 작은 hex cube ─────────────── */}
-      {/* 축소 좌표: 중심 (50,54) 기준 0.5배 크기 */}
+      {/* ── 내부 축소 hex (depth 음각) ─────────
+          중심 (50,50) · 축소 반지름 R=22
+          좌표:
+            top: (50,28)
+            right-up: (69, 39)
+            right-down: (69, 61)
+            bottom: (50, 72)
+            left-down: (31, 61)
+            left-up: (31, 39)
+      */}
       <polygon
-        points="50,30  71,42  71,66  50,78  29,66  29,42"
+        points="50,28 69,39 69,61 50,72 31,61 31,39"
         fill={`url(#inner-${uid})`}
-        opacity="0.85"
+        opacity="0.9"
       />
 
-      {/* ── 모서리 하이라이트 (얇은 상단 엣지) ───── */}
+      {/* 3면 접합선 — 얇은 하이라이트 */}
+      <line x1="50" y1="5"  x2="50" y2="50" stroke="rgba(255, 255, 255, 0.18)" strokeWidth="0.6" />
+      <line x1="11" y1="27.5" x2="50" y2="50" stroke="rgba(255, 255, 255, 0.10)" strokeWidth="0.4" />
+      <line x1="89" y1="27.5" x2="50" y2="50" stroke="rgba(255, 255, 255, 0.10)" strokeWidth="0.4" />
+
+      {/* 상단 외곽 엣지 하이라이트 */}
       <path
-        d="M 7 30 L 50 6 L 93 30"
-        stroke={`url(#edge-${uid})`}
-        strokeWidth="1.2"
+        d="M 11 27.5 L 50 5 L 89 27.5"
         fill="none"
+        stroke="rgba(255, 255, 255, 0.28)"
+        strokeWidth="0.8"
         strokeLinejoin="round"
       />
-
-      {/* 세 면이 만나는 중앙 접합선 (1px) */}
-      <line x1="50" y1="6" x2="50" y2="54" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="0.6" />
     </svg>
   )
 }

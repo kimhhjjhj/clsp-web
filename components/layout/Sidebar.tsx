@@ -97,22 +97,22 @@ export default function Sidebar({ onClose }: Props) {
     <div className="flex flex-col h-full">
       {/* CLSP 브랜드 — 육각형 큐브 로고 + 워드마크 */}
       <div className="flex items-start justify-between px-5 py-5 border-b border-white/10 flex-shrink-0">
-        <Link href="/" onClick={onClose} className="flex items-center gap-3 no-underline group select-none">
+        <Link href="/" onClick={onClose} className="flex items-start gap-3 no-underline group select-none">
           <div
-            className="relative flex-shrink-0 transition-transform duration-300 group-hover:rotate-[4deg]"
-            style={{ filter: 'drop-shadow(0 4px 14px rgba(59, 130, 246, 0.28))' }}
+            className="relative flex-shrink-0 transition-transform duration-300 group-hover:rotate-[5deg] mt-0.5"
+            style={{ filter: 'drop-shadow(0 6px 16px rgba(99, 102, 241, 0.32))' }}
           >
-            <ClspLogo size={40} luminous />
+            <ClspLogo size={44} luminous />
           </div>
           <div className="flex flex-col">
             <h1
-              className="relative text-[26px] font-black leading-none tracking-[-0.035em] bg-gradient-to-br from-white via-blue-100 to-blue-300 bg-clip-text text-transparent"
-              style={{ textShadow: '0 2px 14px rgba(59, 130, 246, 0.2)' }}
+              className="relative text-[28px] font-black leading-none tracking-[-0.04em] bg-gradient-to-br from-white via-blue-50 to-indigo-200 bg-clip-text text-transparent"
+              style={{ textShadow: '0 2px 14px rgba(99, 102, 241, 0.25)' }}
             >
               CLSP
             </h1>
-            <p className="text-[8px] text-slate-400 uppercase tracking-[0.22em] font-semibold leading-tight mt-1.5">
-              Lifecycle<br />Platform
+            <p className="text-[8.5px] text-slate-400 uppercase tracking-[0.22em] font-semibold leading-[1.5] mt-2">
+              Construction<br />Lifecycle&nbsp;Solution<br />Platform
             </p>
           </div>
         </Link>
@@ -172,16 +172,45 @@ export default function Sidebar({ onClose }: Props) {
           />
         </NavGroup>
 
-        {/* 현재 프로젝트 섹션 — 선택된 경우만 단계 메뉴, 아니면 가이드 */}
+        {/* 현재 프로젝트 섹션 — 포인트 강조 카드 */}
         {currentProject ? (
-          <Section
-            label="현재 프로젝트"
-            open={projectOpen}
-            onToggle={() => setProjectOpen()}
-            accent="#3b82f6"
-          >
-            <CurrentProjectSection project={currentProject} onNavigate={onClose} />
-          </Section>
+          <div className="mt-5 pt-4 border-t border-white/[0.06]">
+            <button
+              type="button"
+              onClick={() => setProjectOpen()}
+              className="w-full flex items-center gap-1.5 px-2.5 py-1 mb-2 group"
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-70" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-400" />
+                </span>
+                <span className="text-[10px] font-bold text-blue-300 uppercase tracking-[0.14em] group-hover:text-blue-200 transition-colors">
+                  현재 프로젝트
+                </span>
+              </span>
+              <ChevronRight
+                size={11}
+                className={`ml-auto text-slate-500 group-hover:text-slate-300 transition-all ${projectOpen ? 'rotate-90' : ''}`}
+              />
+            </button>
+            {projectOpen && (
+              <div
+                className="relative mx-2 rounded-lg overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05) 40%, transparent 100%)',
+                  border: '1px solid rgba(59, 130, 246, 0.18)',
+                  boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
+                }}
+              >
+                {/* 좌측 accent bar */}
+                <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-blue-400 via-indigo-400 to-blue-500" />
+                <div className="pt-1 pb-2">
+                  <CurrentProjectSection project={currentProject} onNavigate={onClose} />
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           <Section
             label="현재 프로젝트"
@@ -231,10 +260,10 @@ export default function Sidebar({ onClose }: Props) {
             ))}
             <button
               type="button"
-              className="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-[13px] font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 h-9 rounded-md text-[13px] font-medium text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors"
             >
-              <Settings size={16} strokeWidth={1.85} className="flex-shrink-0" />
-              <span className="flex-1 text-left">설정</span>
+              <Settings size={14} strokeWidth={1.75} className="flex-shrink-0" />
+              <span className="flex-1 text-left tracking-[-0.005em]">설정</span>
             </button>
           </NavGroup>
         </Section>
@@ -272,14 +301,17 @@ function SidebarLink({
     <Link
       href={item.href}
       onClick={onNavigate}
-      className={`group flex items-center gap-2.5 px-3 h-9 rounded-lg transition-all no-underline ${
+      className={`group relative flex items-center gap-2.5 px-3 h-9 rounded-md transition-colors duration-150 no-underline ${
         active
-          ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
-          : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+          ? 'text-white bg-white/[0.08]'
+          : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
       }`}
     >
-      <Icon size={16} strokeWidth={active ? 2.25 : 1.85} className="flex-shrink-0" />
-      <span className={`flex-1 text-[13px] leading-none truncate ${active ? 'font-semibold' : 'font-medium'}`}>
+      {active && (
+        <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-gradient-to-b from-blue-400 to-indigo-500" />
+      )}
+      <Icon size={14} strokeWidth={active ? 2 : 1.75} className={`flex-shrink-0 ${active ? 'text-blue-300' : ''}`} />
+      <span className={`flex-1 text-[13px] leading-none truncate tracking-[-0.005em] ${active ? 'font-semibold' : 'font-medium'}`}>
         {item.label}
       </span>
     </Link>
@@ -299,19 +331,22 @@ function CollapsibleItem({
   const Icon = item.icon
   return (
     <div
-      className={`flex items-center gap-0.5 h-9 rounded-lg transition-all overflow-hidden ${
+      className={`relative flex items-center gap-0.5 h-9 rounded-md transition-colors duration-150 overflow-hidden ${
         active
-          ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
-          : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+          ? 'text-white bg-white/[0.08]'
+          : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
       }`}
     >
+      {active && (
+        <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-gradient-to-b from-blue-400 to-indigo-500" />
+      )}
       <Link
         href={item.href}
         onClick={onNavigate}
         className="flex items-center gap-2.5 pl-3 pr-1 h-full flex-1 min-w-0 no-underline"
       >
-        <Icon size={16} strokeWidth={active ? 2.25 : 1.85} className="flex-shrink-0" />
-        <span className={`flex-1 text-[13px] leading-none truncate ${active ? 'font-semibold' : 'font-medium'}`}>
+        <Icon size={14} strokeWidth={active ? 2 : 1.75} className={`flex-shrink-0 ${active ? 'text-blue-300' : ''}`} />
+        <span className={`flex-1 text-[13px] leading-none truncate tracking-[-0.005em] ${active ? 'font-semibold' : 'font-medium'}`}>
           {item.label}
         </span>
       </Link>
