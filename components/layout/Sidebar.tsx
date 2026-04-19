@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
 import CurrentProjectSection from './CurrentProjectSection'
+import ClspLogo from '@/components/brand/ClspLogo'
 
 interface NavItem { href: string; label: string; icon: typeof LayoutDashboard }
 
@@ -94,28 +95,26 @@ export default function Sidebar({ onClose }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* CLSP — 워드마크 타이포그래피 (아이콘 제거, 글자 자체가 로고) */}
+      {/* CLSP 브랜드 — 육각형 큐브 로고 + 워드마크 */}
       <div className="flex items-start justify-between px-5 py-5 border-b border-white/10 flex-shrink-0">
-        <Link href="/" onClick={onClose} className="flex flex-col no-underline group select-none">
-          <h1
-            className="relative text-[44px] font-black leading-none tracking-[-0.04em] bg-gradient-to-br from-white via-blue-100 to-blue-300 bg-clip-text text-transparent group-hover:tracking-[-0.03em] transition-all"
-            style={{ textShadow: '0 2px 24px rgba(59, 130, 246, 0.25)' }}
+        <Link href="/" onClick={onClose} className="flex items-center gap-3 no-underline group select-none">
+          <div
+            className="relative flex-shrink-0 transition-transform duration-300 group-hover:rotate-[4deg]"
+            style={{ filter: 'drop-shadow(0 4px 14px rgba(59, 130, 246, 0.28))' }}
           >
-            CLSP
-            {/* P 우측에 accent dot */}
-            <span
-              aria-hidden
-              className="absolute -right-1 -bottom-0.5 w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-            />
-          </h1>
-          {/* 얇은 그라데이션 언더라인 */}
-          <span
-            aria-hidden
-            className="mt-1.5 block h-px w-16 bg-gradient-to-r from-blue-400 via-indigo-400/60 to-transparent group-hover:w-20 transition-all"
-          />
-          <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-semibold leading-tight mt-2">
-            Construction<br />Lifecycle&nbsp;Solution<br />Platform
-          </p>
+            <ClspLogo size={40} luminous />
+          </div>
+          <div className="flex flex-col">
+            <h1
+              className="relative text-[26px] font-black leading-none tracking-[-0.035em] bg-gradient-to-br from-white via-blue-100 to-blue-300 bg-clip-text text-transparent"
+              style={{ textShadow: '0 2px 14px rgba(59, 130, 246, 0.2)' }}
+            >
+              CLSP
+            </h1>
+            <p className="text-[8px] text-slate-400 uppercase tracking-[0.22em] font-semibold leading-tight mt-1.5">
+              Lifecycle<br />Platform
+            </p>
+          </div>
         </Link>
         <button
           onClick={onClose}
