@@ -61,6 +61,23 @@ interface ApiResponse {
 
 type SortKey = 'frequency' | 'duration' | 'intensity' | 'name' | 'perFloor' | 'perSqm'
 
+interface PlanSize { ground: number; basement: number; bldgArea: number }
+
+// 공종별 예측 계산 — 층수·면적 기반 가중평균 기대 인일 + 기간 + 피크
+function predictForPlan(t: TradeInsight, plan: PlanSize) {
+  const totalFloors = Math.max(0, plan.ground + plan.basement)
+  const area = Math.max(0, plan.bldgArea)
+  const byFloor = t.mandaysPerFloor != null && totalFloors > 0 ? t.mandaysPerFloor * totalFloors : null
+  const bySqm   = t.mandaysPerSqm   != null && area > 0 ? t.mandaysPerSqm * area : null
+  let manDays: number | null = null
+  if (byFloor != null && bySqm != null) manDays = Math.round((byFloor + bySqm) / 2)
+  else if (byFloor != null) manDays = Math.round(byFloor)
+  else if (bySqm   != null) manDays = Math.round(bySqm)
+  if (manDays == null || manDays <= 0 || t.avgDaily <= 0) return null
+  const days = Math.ceil(manDays / t.avgDaily)
+  return { manDays, days, daily: t.avgDaily }
+}
+
 export default function StandardsPage() {
   const [data, setData] = useState<ApiResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -68,6 +85,7 @@ export default function StandardsPage() {
   const [sortKey, setSortKey] = useState<SortKey>('frequency')
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('전체')
   const [selected, setSelected] = useState<TradeInsight | null>(null)
+  const [plan, setPlan] = useState<PlanSize>({ ground: 20, basement: 2, bldgArea: 30000 })
 
   useEffect(() => {
     fetch('/api/analytics')
@@ -124,7 +142,7 @@ export default function StandardsPage() {
       <PageHeader
         icon={Database}
         title="생산성 DB"
-        subtitle="공종별 실전 벤치마크 — 우리 회사 현장 데이터에서 뽑은 평균 기간·투입 규모"
+        subtitle="신규 프로젝트 계획 참고 — 규모를 입력하면 공종별 예상 인일·기간이 자동 계산됩니다"
         accent="blue"
         actions={
           <>
@@ -175,6 +193,42 @@ export default function StandardsPage() {
             icon={<Users size={16} className="text-violet-600" />}
             bg="bg-violet-50"
           />
+        </div>
+
+        {/* 계획 규모 시뮬레이터 — 이 수치 기준으로 아래 모든 카드에 예측값 자동 갱신 */}
+        <div
+          className="relative rounded-xl overflow-hidden bg-white p-4"
+          style={{
+            border: '1px solid rgba(37, 99, 235, 0.2)',
+            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -10px rgba(37, 99, 235, 0.22)',
+          }}
+        >
+          <span
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-16 pointer-events-none"
+            style={{ background: 'linear-gradient(180deg, rgba(37, 99, 235, 0.07) 0%, transparent 100%)' }}
+          />
+          <div className="relative flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ background: 'rgba(37, 99, 235, 0.12)', color: '#2563eb' }}>
+                <Building2 size={15} />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-700">계획 규모</p>
+                <p className="text-[11px] text-slate-500">입력값 기준으로 각 공종의 예상 인일·기간이 갱신됩니다</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 ml-auto flex-wrap">
+              <PlanInput label="지상" unit="층" value={plan.ground}   onChange={v => setPlan(p => ({ ...p, ground: v }))}   />
+              <PlanInput label="지하" unit="층" value={plan.basement} onChange={v => setPlan(p => ({ ...p, basement: v }))} />
+              <PlanInput label="연면적" unit="㎡" value={plan.bldgArea} onChange={v => setPlan(p => ({ ...p, bldgArea: v }))} width={120} />
+              <button
+                onClick={() => setPlan({ ground: 20, basement: 2, bldgArea: 30000 })}
+                className="text-[11px] text-slate-500 hover:text-slate-900 font-medium px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50"
+                title="기본값 (20층/지하2/연면적 30,000㎡)"
+              >초기화</button>
+            </div>
+          </div>
         </div>
 
         {/* 카테고리 필터 탭 */}
@@ -265,6 +319,7 @@ export default function StandardsPage() {
                   <TradeCard
                     key={t.trade}
                     trade={t}
+                    plan={plan}
                     selected={selected?.trade === t.trade}
                     onClick={() => setSelected(selected?.trade === t.trade ? null : t)}
                   />
@@ -310,9 +365,10 @@ export default function StandardsPage() {
 // 공종 카드 — 평균 기간·투입 규모 한눈에
 // ────────────────────────────────────────────────
 function TradeCard({
-  trade: t, selected, onClick,
-}: { trade: TradeInsight; selected: boolean; onClick: () => void }) {
+  trade: t, plan, selected, onClick,
+}: { trade: TradeInsight; plan: PlanSize; selected: boolean; onClick: () => void }) {
   const color = CATEGORY_COLORS[t.category] ?? CATEGORY_COLORS['기타']
+  const pred = predictForPlan(t, plan)
   return (
     <button
       onClick={onClick}
@@ -329,47 +385,49 @@ function TradeCard({
       </div>
       <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 mb-3">{t.trade}</h3>
 
-      {/* 핵심 지표 2개 */}
+      {/* 내 프로젝트 예측 — 핵심 */}
+      {pred ? (
+        <div className="rounded-lg p-3 mb-2" style={{ background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%)', border: '1px solid rgba(37, 99, 235, 0.18)' }}>
+          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-blue-700 mb-1.5">
+            내 프로젝트({plan.ground}+{plan.basement}층 · {plan.bldgArea.toLocaleString()}㎡) 예측
+          </p>
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <div>
+              <span className="text-xl font-bold text-slate-900 font-mono tabular-nums tracking-[-0.01em]">{pred.manDays.toLocaleString()}</span>
+              <span className="text-[10px] text-slate-500 ml-0.5">인일</span>
+            </div>
+            <span className="text-slate-300">·</span>
+            <div>
+              <span className="text-xl font-bold text-slate-900 font-mono tabular-nums tracking-[-0.01em]">{pred.days}</span>
+              <span className="text-[10px] text-slate-500 ml-0.5">일</span>
+            </div>
+            <span className="text-slate-300">·</span>
+            <div className="text-[11px] text-slate-500">
+              하루 <strong className="text-slate-900 font-mono">{pred.daily}</strong>명
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg p-3 mb-2 bg-slate-50 border border-slate-200 text-[11px] text-slate-500">
+          예측 불가 · 층수·면적 기반 샘플이 부족합니다
+        </div>
+      )}
+
+      {/* 과거 실적 참고 (avg) */}
       <div className="grid grid-cols-2 gap-2 mb-2">
-        <div className="bg-blue-50/60 rounded-lg px-2.5 py-2">
-          <p className="text-[10px] text-blue-700 font-semibold mb-0.5">평균 기간</p>
-          <p className="text-lg font-bold text-blue-900 font-mono leading-none">
-            {t.avgDaysPerProject}
-            <span className="text-xs font-normal text-blue-500 ml-0.5">일</span>
+        <div className="rounded-lg px-2.5 py-1.5 bg-slate-50 border border-slate-100">
+          <p className="text-[9px] text-slate-500 font-semibold">과거 평균 기간</p>
+          <p className="text-[13px] font-bold text-slate-900 font-mono leading-tight">
+            {t.avgDaysPerProject}<span className="text-[10px] font-normal text-slate-400 ml-0.5">일/프로젝트</span>
           </p>
         </div>
-        <div className="bg-emerald-50/60 rounded-lg px-2.5 py-2">
-          <p className="text-[10px] text-emerald-700 font-semibold mb-0.5">하루 평균</p>
-          <p className="text-lg font-bold text-emerald-900 font-mono leading-none">
-            {t.avgDaily}
-            <span className="text-xs font-normal text-emerald-500 ml-0.5">명</span>
+        <div className="rounded-lg px-2.5 py-1.5 bg-slate-50 border border-slate-100">
+          <p className="text-[9px] text-slate-500 font-semibold">하루 평균 투입</p>
+          <p className="text-[13px] font-bold text-slate-900 font-mono leading-tight">
+            {t.avgDaily}<span className="text-[10px] font-normal text-slate-400 ml-0.5">명</span>
           </p>
         </div>
       </div>
-
-      {/* 실무 생산성 지표 — 층수·면적 기반 (참여 프로젝트 분모 합 기준 가중평균) */}
-      {(t.mandaysPerFloor != null || t.mandaysPerSqm != null) && (
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          {t.mandaysPerFloor != null && (
-            <div className="bg-amber-50/60 rounded-lg px-2.5 py-2">
-              <p className="text-[10px] text-amber-700 font-semibold mb-0.5">층당 인일</p>
-              <p className="text-lg font-bold text-amber-900 font-mono leading-none">
-                {t.mandaysPerFloor}
-                <span className="text-xs font-normal text-amber-500 ml-0.5">인일/층</span>
-              </p>
-            </div>
-          )}
-          {t.mandaysPerSqm != null && (
-            <div className="bg-violet-50/60 rounded-lg px-2.5 py-2">
-              <p className="text-[10px] text-violet-700 font-semibold mb-0.5">㎡당 인일</p>
-              <p className="text-lg font-bold text-violet-900 font-mono leading-none">
-                {t.mandaysPerSqm}
-                <span className="text-xs font-normal text-violet-500 ml-0.5">인일/㎡</span>
-              </p>
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-gray-100">
         <span className="flex items-center gap-1">
@@ -380,6 +438,32 @@ function TradeCard({
         </span>
       </div>
     </button>
+  )
+}
+
+function PlanInput({
+  label, unit, value, onChange, width = 80,
+}: {
+  label: string
+  unit: string
+  value: number
+  onChange: (n: number) => void
+  width?: number
+}) {
+  return (
+    <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
+      <span className="font-semibold">{label}</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        value={value}
+        onChange={e => onChange(Number(e.target.value) || 0)}
+        onFocus={e => e.target.select()}
+        style={{ width }}
+        className="h-8 px-2 bg-slate-50 border border-slate-300 rounded-md text-sm text-right font-mono tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
+      />
+      <span className="text-[10px] text-slate-400 font-mono">{unit}</span>
+    </label>
   )
 }
 
