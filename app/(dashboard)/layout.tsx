@@ -80,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Menu size={20} />
                 </button>
 
-                <Image src="/tongyang-logo.png" alt="TONGYANG" height={32} width={150} className="object-contain h-6 sm:h-8 w-auto flex-shrink-0" />
+                <Image src="/tongyang-logo.png" alt="TONGYANG" height={32} width={150} className="hidden sm:block object-contain h-8 w-auto flex-shrink-0" />
 
                 <div className="h-7 w-px bg-slate-200 mx-1 hidden sm:block" />
                 <ProjectSwitcher />
