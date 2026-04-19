@@ -149,6 +149,11 @@ export function parseRnoWorkbook(rows2DBySheet: Record<string, unknown[][]>): Pa
       if (!code && !content) continue
       // 내용만 있는 메모 행은 살리되, code 없으면 유효 R&O 아님 → skip (사용자 판단)
       if (!code || /^(CV|RC|ST|FN|IN|PA|MT|ME|EL|FP|LS|LL|TW)-\d+/i.test(code) === false) continue
+      // 샘플 양식 placeholder 제거 (XX-000 이면서 내용에 안내문/지시 텍스트)
+      if (/\-0+$/.test(code)) {
+        if (!content || /(지우지\s*말것|R&O\s*내용\s*입력|예시|샘플|입력\s*양식|TEMPLATE)/i.test(content)) continue
+        if (/입력$/.test(content)) continue  // '제안금액입력', '확정금액 입력' 같은 placeholder
+      }
 
       const proposedCost = toNumberOrNull(r[colIdx.proposedCost])
       const confirmedCost = toNumberOrNull(r[colIdx.confirmedCost])
