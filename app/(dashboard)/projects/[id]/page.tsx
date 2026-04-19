@@ -142,8 +142,8 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
   const cards: {
     stageId: number
     phaseLabel: string
-    color: string
-    bg: string
+    color: string        // hex — 액센트
+    rgb: string          // 'R, G, B' — rgba 합성용
     icon: React.ReactNode
     title: string
     subtitle: string
@@ -155,7 +155,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
       stageId: 2,
       phaseLabel: 'STAGE 01',
       color: '#16a34a',
-      bg: '#f0fdf4',
+      rgb: '16, 185, 129',
       icon: <ShieldCheck size={22} color={stage2Done ? '#16a34a' : '#94a3b8'} />,
       title: '1단계 · 프리콘',
       subtitle: '리스크 · 시나리오 · 프로세스맵',
@@ -175,7 +175,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
       stageId: 3,
       phaseLabel: 'STAGE 02',
       color: '#ea580c',
-      bg: '#fff7ed',
+      rgb: '234, 88, 12',
       icon: <HardHat size={22} color={stage3Done ? '#ea580c' : '#94a3b8'} />,
       title: '2단계 · 시공 관리',
       subtitle: '일보 · 엑셀 임포트 · 사진',
@@ -195,7 +195,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
       stageId: 4,
       phaseLabel: 'STAGE 03',
       color: '#7c3aed',
-      bg: '#faf5ff',
+      rgb: '139, 92, 246',
       icon: <TrendingUp size={22} color={stage4Done ? '#7c3aed' : '#94a3b8'} />,
       title: '3단계 · 분석 & 준공',
       subtitle: '공종·위치 분석 · Lessons Learned',
@@ -318,34 +318,50 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
               {cards.map(card => (
                 <div
                   key={card.stageId}
-                  className="card-elevated relative p-5 cursor-pointer group hover:-translate-y-0.5"
-                  style={{ borderLeftColor: card.color, borderLeftWidth: 4 }}
+                  className="relative rounded-2xl p-5 cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 overflow-hidden"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(${card.rgb}, 0.07), rgba(${card.rgb}, 0.02) 55%, #ffffff 100%)`,
+                    border: `1px solid rgba(${card.rgb}, 0.22)`,
+                    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 10px 24px -10px rgba(${card.rgb}, 0.35), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)` }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 2px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)' }}
                   onClick={() => router.push(`/projects/${id}/stage/${card.stageId}`)}
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: card.bg }}>
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center"
+                      style={{
+                        background: `rgba(${card.rgb}, 0.12)`,
+                        border: `1px solid rgba(${card.rgb}, 0.2)`,
+                      }}
+                    >
                       {card.icon}
                     </div>
                     <div className="flex items-center gap-1.5">
                       {card.done && <CheckCircle2 size={14} color={card.color} />}
                       <span
-                        className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded"
-                        style={{ color: card.color, background: card.bg }}
+                        className="text-[9px] font-bold tracking-[0.18em] px-2 py-1 rounded-md"
+                        style={{
+                          color: card.color,
+                          background: `rgba(${card.rgb}, 0.1)`,
+                          border: `1px solid rgba(${card.rgb}, 0.18)`,
+                        }}
                       >
                         {card.phaseLabel}
                       </span>
                     </div>
                   </div>
 
-                  <h2 className="text-[15px] font-bold text-gray-900 leading-tight">{card.title}</h2>
-                  <p className="text-xs text-gray-400 mb-4 mt-0.5">{card.subtitle}</p>
+                  <h2 className="text-[15px] font-bold text-slate-900 leading-tight tracking-[-0.01em]">{card.title}</h2>
+                  <p className="text-[11px] text-slate-500 mb-4 mt-1 tracking-wide">{card.subtitle}</p>
 
                   <div className="space-y-2 mb-4">
                     {card.rows.map((row, i) => (
                       <div key={i} className="flex items-center justify-between text-xs">
-                        <span className="text-gray-500">{row.label}</span>
+                        <span className="text-slate-500">{row.label}</span>
                         <span
-                          className="font-semibold"
+                          className="font-semibold tabular-nums"
                           style={{
                             color: row.danger ? '#dc2626'
                               : row.muted ? '#94a3b8'
@@ -359,7 +375,10 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                     ))}
                   </div>
 
-                  <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-1 w-full rounded-full overflow-hidden"
+                    style={{ background: `rgba(${card.rgb}, 0.12)` }}
+                  >
                     <div
                       className="h-full rounded-full transition-all"
                       style={{ width: `${card.progress}%`, background: card.color }}
@@ -379,66 +398,92 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
           {/* 우측 요약 */}
           <div className="xl:col-span-4 space-y-4">
             {/* 핵심 지표 3종 */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2.5">
               <MetricTile
                 label="총 공기"
                 value={totalDuration > 0 ? totalDuration : '—'}
                 unit={totalDuration > 0 ? '일' : ''}
                 accent="#2563eb"
+                rgb="37, 99, 235"
+                icon={<Calendar size={11} />}
               />
               <MetricTile
                 label="연면적"
                 value={project.bldgArea ? project.bldgArea.toLocaleString() : '—'}
                 unit={project.bldgArea ? '㎡' : ''}
                 accent="#ea580c"
+                rgb="234, 88, 12"
+                icon={<Building2 size={11} />}
               />
               <MetricTile
                 label="지상 층수"
                 value={project.ground ?? '—'}
                 unit="층"
                 accent="#16a34a"
+                rgb="16, 185, 129"
+                icon={<TrendingUp size={11} />}
               />
             </div>
 
             {/* AI 공사비 추정 — 초기 검토 시 저장된 경우 */}
             {project.aiCostEstimate?.summary && (
-              <div className="card-elevated p-4 bg-gradient-to-br from-violet-50/60 to-blue-50/40">
+              <div
+                className="relative rounded-xl p-4 overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.04) 60%, #ffffff 100%)',
+                  border: '1px solid rgba(139, 92, 246, 0.22)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+                }}
+              >
                 <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-[10px] font-bold text-violet-700 uppercase tracking-wider">
-                    🤖 사업 초기 검토 · AI 추정 공사비
+                  <span
+                    className="flex items-center justify-center w-5 h-5 rounded-md"
+                    style={{ background: 'rgba(139, 92, 246, 0.16)', color: '#7c3aed' }}
+                  >
+                    <TrendingUp size={11} />
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: '#7c3aed' }}>
+                    AI 추정 공사비 · 사업 초기 검토
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-violet-900 font-mono tracking-tight leading-none">
+                <p className="text-[26px] font-bold text-slate-900 leading-none tabular-nums tracking-[-0.02em]">
                   {fmtKRWBillion(project.aiCostEstimate.summary.grandTotalKRW)}
                 </p>
-                <p className="text-[11px] text-violet-700 mt-1.5">
+                <p className="text-[11px] text-slate-500 mt-2">
                   평당 {Math.round((project.aiCostEstimate.summary.pricePerPyongKRW ?? 0) / 10000).toLocaleString()}만원
-                  {' · '}
+                  <span className="mx-1.5 text-slate-300">·</span>
                   ㎡당 {Math.round((project.aiCostEstimate.summary.pricePerSqmKRW ?? 0) / 1000)}천원
                 </p>
                 {project.aiCostEstimate.estimatedAt && (
-                  <p className="text-[10px] text-gray-400 mt-1">
+                  <p className="text-[10px] text-slate-400 mt-1">
                     {new Date(project.aiCostEstimate.estimatedAt).toLocaleDateString('ko-KR')} 추정
                   </p>
                 )}
               </div>
             )}
 
-            {/* 상세 정보 */}
-            <div className="card-elevated overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+            {/* 상세 정보 — 현대화된 틴트 카드 */}
+            <div
+              className="relative rounded-xl overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.035), rgba(15, 23, 42, 0.01) 60%, #ffffff 100%)',
+                border: '1px solid rgba(15, 23, 42, 0.08)',
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+              }}
+            >
+              <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(15, 23, 42, 0.06)' }}>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">프로젝트 개요</h3>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Project Metrics</p>
+                  <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">프로젝트 개요</h3>
+                  <p className="text-[9px] text-slate-400 uppercase tracking-[0.14em] font-semibold mt-1">Project Metrics</p>
                 </div>
                 <Link
                   href={`/projects/${id}/edit`}
-                  className="text-[10px] text-gray-400 hover:text-blue-600 font-semibold no-underline"
+                  className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-slate-500 hover:text-blue-600 no-underline"
                 >
                   수정 →
                 </Link>
               </div>
-              <dl className="divide-y divide-gray-100">
+              <dl className="divide-y divide-slate-100/70">
                 <DetailRow label="발주처" value={project.client} />
                 <DetailRow label="시공사" value={project.contractor} />
                 <DetailRow label="공사 위치" value={project.location} />
@@ -450,12 +495,16 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                 <DetailRow label="착공일" value={project.startDate} />
                 <DetailRow label="준공 예정일" value={finishDate ?? undefined} emphasized={!!finishDate} />
               </dl>
-              <div className="p-3 border-t border-gray-100 bg-gradient-to-br from-gray-50 to-white">
+              <div className="p-3" style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)' }}>
                 <button
                   onClick={() => router.push(`/projects/${id}/stage/4`)}
-                  className="w-full h-9 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full h-10 rounded-lg text-white text-xs font-semibold transition-all flex items-center justify-center gap-1.5 no-underline"
+                  style={{
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                    boxShadow: '0 4px 12px -2px rgba(15, 23, 42, 0.24)',
+                  }}
                 >
-                  <TrendingUp size={12} /> 분석 & 준공 리포트
+                  <TrendingUp size={12} /> 분석 &amp; 준공 리포트
                 </button>
               </div>
             </div>
@@ -476,8 +525,9 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
         {/* 하단 3개 KPI */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <SummaryCard
-            icon={<Activity size={16} color="#2563eb" />}
-            iconBg="bg-blue-50"
+            icon={<Activity size={14} />}
+            accent="#2563eb"
+            rgb="37, 99, 235"
             label="공정 진행률 (계획 대비)"
             value={stage3Done ? `${latestRate.toFixed(1)}%` : '—'}
             extra={stage3Done ? (
@@ -488,15 +538,17 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
             footer={stage3Done ? `계획 ${plannedRate.toFixed(1)}% / 실적 ${latestRate.toFixed(1)}%` : '3단계에서 주간 실적 입력'}
           />
           <SummaryCard
-            icon={<Calendar size={16} color="#7c3aed" />}
-            iconBg="bg-purple-50"
+            icon={<Calendar size={14} />}
+            accent="#7c3aed"
+            rgb="139, 92, 246"
             label="준공까지 남은 기간"
             value={finishDate ? daysUntil(finishDate) : '—'}
             footer={finishDate ? `준공 예정일 ${finishDate}` : '1단계 CPM 실행 후 계산'}
           />
           <SummaryCard
-            icon={<AlertTriangle size={16} color="#ea580c" />}
-            iconBg="bg-orange-50"
+            icon={<AlertTriangle size={14} />}
+            accent="#ea580c"
+            rgb="234, 88, 12"
             label="리스크 & 기회"
             value={`${riskCount + opportunityCount}건`}
             footer={`리스크 ${riskCount}건 · 기회 ${opportunityCount}건`}
@@ -509,9 +561,9 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
 
 function DetailRow({ label, value, emphasized }: { label: string; value?: string; emphasized?: boolean }) {
   return (
-    <div className="flex items-center justify-between px-5 py-2.5 text-sm">
-      <dt className="text-gray-500 text-xs">{label}</dt>
-      <dd className={`font-semibold text-right ${emphasized ? 'text-blue-700' : value ? 'text-gray-900' : 'text-gray-300'}`}>
+    <div className="flex items-center justify-between px-5 py-2.5">
+      <dt className="text-[11px] text-slate-500 font-medium tracking-wide">{label}</dt>
+      <dd className={`text-[13px] font-semibold text-right tabular-nums ${emphasized ? 'text-blue-700' : value ? 'text-slate-900' : 'text-slate-300'}`}>
         {value || '—'}
       </dd>
     </div>
@@ -519,41 +571,76 @@ function DetailRow({ label, value, emphasized }: { label: string; value?: string
 }
 
 function MetricTile({
-  label, value, unit, accent,
-}: { label: string; value: string | number; unit?: string; accent: string }) {
+  label, value, unit, accent, rgb, icon,
+}: { label: string; value: string | number; unit?: string; accent: string; rgb: string; icon?: React.ReactNode }) {
   return (
-    <div className="relative bg-white rounded-xl border border-gray-200 p-3 overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: accent }} />
-      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
-      <p className="text-lg font-bold text-gray-900 mt-1 leading-none">
+    <div
+      className="relative rounded-xl p-3 overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, rgba(${rgb}, 0.08), rgba(${rgb}, 0.02) 60%, #ffffff 100%)`,
+        border: `1px solid rgba(${rgb}, 0.2)`,
+        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+      }}
+    >
+      <div className="flex items-center gap-1.5 mb-2">
+        {icon && (
+          <span
+            className="flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0"
+            style={{ background: `rgba(${rgb}, 0.14)`, color: accent }}
+          >
+            {icon}
+          </span>
+        )}
+        <span className="text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>
+          {label}
+        </span>
+      </div>
+      <p className="text-xl font-bold text-slate-900 leading-none tabular-nums tracking-[-0.02em]">
         {value}
-        {unit && <span className="text-xs font-normal text-gray-400 ml-0.5">{unit}</span>}
+        {unit && <span className="text-[11px] font-medium text-slate-400 ml-0.5">{unit}</span>}
       </p>
     </div>
   )
 }
 
 function SummaryCard({
-  icon, iconBg, label, value, extra, footer,
+  icon, accent, rgb, label, value, extra, footer,
 }: {
   icon: React.ReactNode
-  iconBg: string
+  accent: string
+  rgb: string
   label: string
   value: string
   extra?: React.ReactNode
   footer: string
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <div className={`w-7 h-7 rounded-md ${iconBg} flex items-center justify-center`}>{icon}</div>
-        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
+    <div
+      className="relative rounded-xl p-4 overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, rgba(${rgb}, 0.07), rgba(${rgb}, 0.02) 60%, #ffffff 100%)`,
+        border: `1px solid rgba(${rgb}, 0.2)`,
+        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+      }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center"
+          style={{ background: `rgba(${rgb}, 0.14)`, color: accent }}
+        >
+          {icon}
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>
+          {label}
+        </span>
       </div>
       <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-bold text-gray-900">{value}</span>
+        <span className="text-[26px] font-bold text-slate-900 leading-none tabular-nums tracking-[-0.02em]">
+          {value}
+        </span>
         {extra}
       </div>
-      <div className="text-[11px] text-gray-400 mt-1">{footer}</div>
+      <div className="text-[11px] text-slate-500 mt-2">{footer}</div>
     </div>
   )
 }
