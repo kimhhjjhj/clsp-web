@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
-  ShieldCheck, CheckCircle2, XCircle, Edit3, Loader2, ArrowLeft, TrendingUp,
-  AlertCircle, Archive, Inbox,
+  ShieldCheck, CheckCircle2, XCircle, Edit3, Loader2, TrendingUp,
+  AlertCircle, Archive, Inbox, Building2, Database, Filter,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import MobileNotice from '@/components/common/MobileNotice'
@@ -34,14 +34,67 @@ interface Standard {
   lastUpdated: string
 }
 
+interface CpdbRow {
+  wbsCode: string | null
+  category: string
+  sub: string
+  name: string
+  unit: string
+  cpdbProd: number | null
+  cpdbStdDays: number | null
+  mappedTrades: string[]
+  plannedQty: number
+  plannedDays: number
+  observedManDays: number
+  observedActiveDays: number
+  actualProd: number | null
+  actualStdDays: number | null
+  deviationDays: number | null
+  deviationPct: number | null
+  hasMapping: boolean
+  hasObservation: boolean
+  applicable: boolean
+}
+
+interface ByProjectResponse {
+  project: { id: string; name: string; type: string | null; ground: number | null; basement: number | null; startDate: string | null }
+  totalReports: number
+  firstDate: string | null
+  lastDate: string | null
+  rows: CpdbRow[]
+}
+
+const CPDB_CATEGORIES = ['공사준비', '토목공사', '골조공사', '마감공사']
+const CATEGORY_COLORS: Record<string, { rgb: string; color: string }> = {
+  '공사준비': { rgb: '100, 116, 139', color: '#64748b' },
+  '토목공사': { rgb: '234, 88, 12',   color: '#ea580c' },
+  '골조공사': { rgb: '37, 99, 235',   color: '#2563eb' },
+  '마감공사': { rgb: '16, 185, 129',  color: '#059669' },
+}
+
 export default function AdminProductivityPage() {
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [standards, setStandards] = useState<Standard[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending')
+  const [projectFilter, setProjectFilter] = useState<string>('all')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [editNote, setEditNote] = useState('')
+
+  // CP_DB 공종별 실적 분석
+  const [cpdbProjectId, setCpdbProjectId] = useState<string>('')
+  const [cpdbData, setCpdbData] = useState<ByProjectResponse | null>(null)
+  const [cpdbLoading, setCpdbLoading] = useState(false)
+
+  // 제안에 등장한 프로젝트 목록
+  const projectsInProposals = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const p of proposals) {
+      if (p.project) map.set(p.project.id, p.project.name)
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+  }, [proposals])
 
   async function load() {
     setLoading(true)
@@ -74,12 +127,30 @@ export default function AdminProductivityPage() {
     load()
   }
 
-  const visible = filter === 'all' ? proposals : proposals.filter(p => p.status === filter)
+  const filteredByProject = projectFilter === 'all'
+    ? proposals
+    : projectFilter === 'none'
+      ? proposals.filter(p => p.project === null)
+      : proposals.filter(p => p.project?.id === projectFilter)
+  const visible = filter === 'all' ? filteredByProject : filteredByProject.filter(p => p.status === filter)
   const counts = {
-    pending: proposals.filter(p => p.status === 'pending').length,
-    approved: proposals.filter(p => p.status === 'approved').length,
-    rejected: proposals.filter(p => p.status === 'rejected').length,
+    pending: filteredByProject.filter(p => p.status === 'pending').length,
+    approved: filteredByProject.filter(p => p.status === 'approved').length,
+    rejected: filteredByProject.filter(p => p.status === 'rejected').length,
   }
+
+  // CP_DB 실적: 프로젝트 선택 시 API 호출
+  useEffect(() => {
+    if (!cpdbProjectId) { setCpdbData(null); return }
+    let cancelled = false
+    setCpdbLoading(true)
+    fetch(`/api/admin/productivity/by-project?projectId=${cpdbProjectId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (!cancelled) setCpdbData(d) })
+      .catch(() => { if (!cancelled) setCpdbData(null) })
+      .finally(() => { if (!cancelled) setCpdbLoading(false) })
+    return () => { cancelled = true }
+  }, [cpdbProjectId])
 
   return (
     <div className="min-h-full bg-gray-50">
@@ -112,6 +183,185 @@ export default function AdminProductivityPage() {
             colorClass="text-emerald-700"
             borderClass="border-emerald-100 bg-emerald-50/30"
           />
+        </div>
+
+        {/* CP_DB 공종별 실적 분석 — 프로젝트 선택 시 */}
+        <section
+          className="relative rounded-xl overflow-hidden bg-white mb-6"
+          style={{
+            border: '1px solid rgba(37, 99, 235, 0.2)',
+            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -10px rgba(37, 99, 235, 0.22)',
+          }}
+        >
+          <span aria-hidden className="absolute inset-x-0 top-0 h-16 pointer-events-none"
+            style={{ background: 'linear-gradient(180deg, rgba(37, 99, 235, 0.07) 0%, transparent 100%)' }} />
+          <div className="relative flex items-center gap-3 px-5 py-4 border-b border-slate-100 flex-wrap">
+            <span className="flex items-center justify-center w-9 h-9 rounded-xl" style={{ background: 'rgba(37, 99, 235, 0.12)', color: '#2563eb' }}>
+              <Database size={16} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">CP_DB 공종별 실적 분석</h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">선택한 프로젝트의 일보에서 각 공종의 실제 투입 인일·활동일을 CP_DB 기준과 비교합니다</p>
+            </div>
+            <label className="inline-flex items-center gap-2 text-[11px] text-slate-600">
+              <Building2 size={13} className="text-slate-400" />
+              <select
+                value={cpdbProjectId}
+                onChange={e => setCpdbProjectId(e.target.value)}
+                className="h-9 px-2.5 bg-slate-50 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
+              >
+                <option value="">프로젝트 선택</option>
+                {projectsInProposals.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {cpdbLoading ? (
+            <div className="p-8 flex items-center justify-center"><Loader2 size={18} className="animate-spin text-blue-500" /></div>
+          ) : !cpdbData ? (
+            <div className="p-6 text-center text-[12px] text-slate-500">
+              {cpdbProjectId
+                ? '데이터 로드 실패'
+                : '프로젝트를 선택하면 해당 현장의 일보에서 계산한 공종별 실제 생산성이 여기 표시됩니다'}
+            </div>
+          ) : (
+            <div className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap">
+                <span><strong className="text-slate-900">{cpdbData.project.name}</strong></span>
+                <span>· 지상 {cpdbData.project.ground ?? 0}층 · 지하 {cpdbData.project.basement ?? 0}층</span>
+                <span>· 일보 {cpdbData.totalReports}건</span>
+                {cpdbData.firstDate && cpdbData.lastDate && (
+                  <span>· 기록 {cpdbData.firstDate} ~ {cpdbData.lastDate}</span>
+                )}
+              </div>
+
+              {CPDB_CATEGORIES.map(cat => {
+                const rows = cpdbData.rows.filter(r => r.category === cat && r.hasMapping)
+                if (rows.length === 0) return null
+                const meta = CATEGORY_COLORS[cat]
+                return (
+                  <div key={cat} className="rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border-b border-slate-200">
+                      <span className="w-1.5 h-4 rounded-full" style={{ background: meta.color }} />
+                      <span className="text-[11px] font-bold text-slate-700">{cat}</span>
+                      <span className="text-[10px] text-slate-400">{rows.length}종</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[11px]">
+                        <thead>
+                          <tr className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.1em] bg-white border-b border-slate-100">
+                            <th className="text-left px-3 py-1.5">작업명</th>
+                            <th className="text-center px-2 py-1.5 w-12">단위</th>
+                            <th className="text-right px-2 py-1.5 w-20">계획 물량</th>
+                            <th className="text-right px-2 py-1.5 w-20">계획 기간</th>
+                            <th className="text-right px-2 py-1.5 w-20">실제 활동일</th>
+                            <th className="text-right px-2 py-1.5 w-20">투입 인일</th>
+                            <th className="text-right px-2 py-1.5 w-24">CP_DB 값</th>
+                            <th className="text-right px-2 py-1.5 w-24">실적 값</th>
+                            <th className="text-right px-2 py-1.5 w-20">편차</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {rows.map(r => {
+                            const cpVal = r.cpdbProd != null
+                              ? `${r.cpdbProd} ${r.unit}/일`
+                              : r.cpdbStdDays != null
+                                ? `${r.cpdbStdDays} 일/${r.unit}`
+                                : '—'
+                            const actVal = r.actualProd != null
+                              ? `${r.actualProd} ${r.unit}/일`
+                              : r.actualStdDays != null
+                                ? `${r.actualStdDays} 일/${r.unit}`
+                                : r.hasObservation ? '계산 불가' : '실적 없음'
+                            const devColor = r.deviationPct == null
+                              ? 'text-slate-400'
+                              : r.deviationPct > 10  ? 'text-red-600'
+                              : r.deviationPct < -10 ? 'text-emerald-600'
+                              : 'text-slate-500'
+                            return (
+                              <tr key={r.name} className={r.hasObservation ? 'hover:bg-slate-50/50' : 'opacity-60'}>
+                                <td className="px-3 py-1.5 font-semibold text-slate-900">{r.name}</td>
+                                <td className="px-2 py-1.5 text-center text-slate-500 font-mono">{r.unit}</td>
+                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-700">
+                                  {r.plannedQty > 0 ? Math.round(r.plannedQty * 10) / 10 : '—'}
+                                </td>
+                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-700">
+                                  {r.plannedDays > 0 ? r.plannedDays : '—'}
+                                </td>
+                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-900 font-semibold">
+                                  {r.observedActiveDays > 0 ? r.observedActiveDays : '—'}
+                                </td>
+                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-600">
+                                  {r.observedManDays > 0 ? Math.round(r.observedManDays) : '—'}
+                                </td>
+                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-500">
+                                  {cpVal}
+                                </td>
+                                <td className="px-2 py-1.5 text-right font-mono tabular-nums font-bold" style={{ color: meta.color }}>
+                                  {actVal}
+                                </td>
+                                <td className={`px-2 py-1.5 text-right font-mono tabular-nums font-bold ${devColor}`}>
+                                  {r.deviationPct != null
+                                    ? `${r.deviationPct > 0 ? '+' : ''}${r.deviationPct}%`
+                                    : '—'}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* 매핑 없는 공종 */}
+              {(() => {
+                const unmapped = cpdbData.rows.filter(r => !r.hasMapping && r.applicable)
+                if (unmapped.length === 0) return null
+                return (
+                  <details className="mt-1">
+                    <summary className="text-[11px] text-slate-500 cursor-pointer hover:text-slate-900">
+                      trade 매핑이 없는 공종 {unmapped.length}종 (일보 실적과 매칭 불가) ▾
+                    </summary>
+                    <p className="text-[11px] text-slate-500 mt-1.5">
+                      {unmapped.map(u => u.name).join(', ')}
+                      <br />
+                      <span className="text-slate-400">→ <code className="font-mono text-[10px] bg-slate-100 px-1 rounded">lib/engine/wbs-trade-map.ts</code>에 해당 공종→일보 trade 매핑 추가 필요</span>
+                    </p>
+                  </details>
+                )
+              })()}
+            </div>
+          )}
+        </section>
+
+        {/* 프로젝트 필터 + 탭 */}
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <label className="inline-flex items-center gap-2 text-[11px] text-slate-600">
+            <Filter size={12} className="text-slate-400" />
+            <span className="font-semibold uppercase tracking-[0.1em] text-slate-500">프로젝트</span>
+            <select
+              value={projectFilter}
+              onChange={e => setProjectFilter(e.target.value)}
+              className="h-8 px-2 bg-white border border-slate-300 rounded-md text-[12px] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            >
+              <option value="all">전체 프로젝트</option>
+              <option value="none">프로젝트 미지정</option>
+              {projectsInProposals.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </label>
+          {projectFilter !== 'all' && (
+            <button
+              onClick={() => setProjectFilter('all')}
+              className="text-[10px] text-slate-500 hover:text-slate-900 font-medium"
+            >지우기</button>
+          )}
+          <span className="text-[11px] text-slate-400 ml-auto">{filteredByProject.length}건</span>
         </div>
 
         {/* 탭 */}
