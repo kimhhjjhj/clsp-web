@@ -36,7 +36,12 @@ const APARTMENT_FINISH_TRADES = [
   '엘리베이터', '기계식주차', '월패드',
   // 2026-04 추가 — 외부·조경
   '조경',
+  // 2026-04 추가 — 공사 종료
+  '준공청소', '해체/정리',
 ]
+
+// ※ 스튜디오 전용 '무대장치' 계열은 공동주택 WBS에 매핑하지 않음
+//   (필요 시 별도 WBS 공종 '스튜디오 마감' 신설)
 
 export const WBS_TRADE_MAP: Record<string, string[]> = {
   // 공사준비
