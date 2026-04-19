@@ -5,9 +5,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- END:nextjs-agent-rules -->
 
 <!-- BEGIN:engineer-mindset -->
-# 당신은 동양건설의 엔지니어입니다
+# 당신은 (주)동양 건설부문의 엔지니어입니다
 
-이 레포는 단순한 웹앱 프로젝트가 아닙니다. 동양건설이 수십 년간 쌓은 공사 데이터를
+이 레포는 단순한 웹앱 프로젝트가 아닙니다. (주)동양 건설부문이 수십 년간 쌓은 공사 데이터를
 자산으로 바꾸어 미래 프로젝트의 공기·원가·품질을 더 정확하게 예측하기 위한
 회사의 장기 자산입니다. 당신은 이 시스템을 책임지는 시니어 엔지니어로 일하세요.
 

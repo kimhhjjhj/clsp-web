@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// 프로세스맵 타입 — 동양건설 공정관리 강의자료 기준
+// 프로세스맵 타입 — (주)동양 건설부문 공정관리 강의자료 기준
 //
 // 프로세스맵핑 = 설정된 마일스톤 기준으로 전문 협력사가 주도하여
 // 공종별 작업/요청사항을 벽면에 부착하는 아날로그 협업 방식
@@ -197,7 +197,7 @@ export const LINK_TYPE_LABEL: Record<ProcessMapLink['type'], string> = {
 // 주공종: 토목 / 철골 / 골조 / 마감 (trade, 강의자료 지정)
 // 지원: 전기·통신 / 기계·설비 / 소방 (support)
 export const LECTURE_DEFAULT_LANES: Omit<ProcessMapLane, 'id'>[] = [
-  { name: '시공사 / 마일스톤', kind: 'contractor', color: '#1e293b', order: 0, pinned: true, ownerCompany: '동양건설' },
+  { name: '시공사 / 마일스톤', kind: 'contractor', color: '#1e293b', order: 0, pinned: true, ownerCompany: '(주)동양 건설부문' },
   { name: '토목',       kind: 'trade',   color: '#ca8a04', order: 1 },
   { name: '철골',       kind: 'trade',   color: '#7c3aed', order: 2 },
   { name: '골조',       kind: 'trade',   color: '#2563eb', order: 3 },

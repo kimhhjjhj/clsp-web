@@ -8,7 +8,7 @@
 ## 프로젝트 개요
 
 **QuickPlan (CLSP) — Construction Lifecycle Scheduling Platform**
-- 동양건설산업(TONGYANG E&C) 건설 프로젝트 전주기 공정관리 웹 플랫폼
+- (주)동양 건설부문 건설 프로젝트 전주기 공정관리 웹 플랫폼
 - Python 데스크탑 앱(claude1.py) → Next.js 웹앱 마이그레이션
 - 기술스택: Next.js (App Router) + Prisma + PostgreSQL + Tailwind CSS + shadcn/ui
 

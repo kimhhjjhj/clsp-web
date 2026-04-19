@@ -343,7 +343,7 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
           <button
             onClick={handleExport}
             className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-xs font-semibold hover:border-gray-400"
-            title="현재 R&O를 동양건설 양식 엑셀로 다운로드"
+            title="현재 R&O를 (주)동양 건설부문 양식 엑셀로 다운로드"
           >
             <Download size={12} /> 엑셀 익스포트
           </button>

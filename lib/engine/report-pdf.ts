@@ -78,7 +78,7 @@ export function generateReport(input: ReportInput): jsPDF {
   doc.setFontSize(9)
   doc.setTextColor(100, 116, 139)
   doc.text(`Generated: ${new Date().toLocaleDateString('ko-KR')}`, ML, H - 25)
-  doc.text('TONGYANG E&C', ML, H - 18)
+  doc.text('(주)동양 건설부문', ML, H - 18)
 
   // 총 공기 강조
   doc.setFillColor(37, 99, 235)
@@ -249,7 +249,7 @@ export function generateReport(input: ReportInput): jsPDF {
     doc.setFontSize(8)
     doc.setTextColor(148, 163, 184)
     doc.text(`${i} / ${pageCount}`, W / 2, H - 10, { align: 'center' })
-    doc.text('CLSP Report — TONGYANG E&C', ML, H - 10)
+    doc.text('CLSP Report · (주)동양 건설부문', ML, H - 10)
   }
 
   return doc

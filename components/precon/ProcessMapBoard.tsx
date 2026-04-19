@@ -367,7 +367,7 @@ export default function ProcessMapBoard({ projectId, startDate }: Props) {
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
             viewMode === 'pull' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
           }`}
-          title="동양건설 강의자료 기준 — 주 단위, 협력사 주도, 마일스톤 역산"
+          title="(주)동양 건설부문 강의자료 기준 — 주 단위, 협력사 주도, 마일스톤 역산"
         ><LayoutGrid size={13} /> Pull Planning (협력사 주도)</button>
         <button
           onClick={() => setViewMode('timeline')}
