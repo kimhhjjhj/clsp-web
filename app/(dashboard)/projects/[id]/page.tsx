@@ -318,23 +318,25 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
               {cards.map(card => (
                 <div
                   key={card.stageId}
-                  className="relative rounded-2xl p-5 cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 overflow-hidden"
+                  className="relative rounded-2xl p-5 cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 overflow-hidden bg-white"
                   style={{
-                    background: `linear-gradient(135deg, rgba(${card.rgb}, 0.14), rgba(${card.rgb}, 0.06) 70%, rgba(${card.rgb}, 0.03) 100%)`,
-                    border: `1px solid rgba(${card.rgb}, 0.32)`,
-                    boxShadow: `0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px -4px rgba(${card.rgb}, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5)`,
+                    border: `1px solid rgba(${card.rgb}, 0.18)`,
+                    boxShadow: `0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -8px rgba(${card.rgb}, 0.22)`,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 12px 28px -8px rgba(${card.rgb}, 0.32), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5)` }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = `0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px -4px rgba(${card.rgb}, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5)` }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 32px -10px rgba(${card.rgb}, 0.38)` }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = `0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -8px rgba(${card.rgb}, 0.22)` }}
                   onClick={() => router.push(`/projects/${id}/stage/${card.stageId}`)}
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  {/* 상단에만 얕은 컬러 워시 */}
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-0 top-0 h-20 pointer-events-none"
+                    style={{ background: `linear-gradient(180deg, rgba(${card.rgb}, 0.07) 0%, transparent 100%)` }}
+                  />
+                  <div className="relative flex items-start justify-between mb-4">
                     <div
                       className="w-11 h-11 rounded-xl flex items-center justify-center"
-                      style={{
-                        background: `rgba(${card.rgb}, 0.18)`,
-                        border: `1px solid rgba(${card.rgb}, 0.3)`,
-                      }}
+                      style={{ background: `rgba(${card.rgb}, 0.11)` }}
                     >
                       {card.icon}
                     </div>
@@ -344,8 +346,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                         className="text-[9px] font-bold tracking-[0.18em] px-2 py-1 rounded-md"
                         style={{
                           color: card.color,
-                          background: `rgba(${card.rgb}, 0.14)`,
-                          border: `1px solid rgba(${card.rgb}, 0.28)`,
+                          background: `rgba(${card.rgb}, 0.09)`,
                         }}
                       >
                         {card.phaseLabel}
@@ -376,8 +377,8 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                   </div>
 
                   <div
-                    className="h-1 w-full rounded-full overflow-hidden"
-                    style={{ background: `rgba(${card.rgb}, 0.18)` }}
+                    className="relative h-1 w-full rounded-full overflow-hidden"
+                    style={{ background: `rgba(${card.rgb}, 0.1)` }}
                   >
                     <div
                       className="h-full rounded-full transition-all"
@@ -428,17 +429,21 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
             {/* AI 공사비 추정 — 초기 검토 시 저장된 경우 */}
             {project.aiCostEstimate?.summary && (
               <div
-                className="relative rounded-xl p-4 overflow-hidden"
+                className="relative rounded-xl p-4 overflow-hidden bg-white"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(99, 102, 241, 0.07) 70%, rgba(139, 92, 246, 0.035) 100%)',
-                  border: '1px solid rgba(139, 92, 246, 0.34)',
-                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 14px -4px rgba(139, 92, 246, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+                  border: '1px solid rgba(139, 92, 246, 0.2)',
+                  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03), 0 8px 22px -8px rgba(139, 92, 246, 0.26)',
                 }}
               >
-                <div className="flex items-center gap-1.5 mb-2">
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 top-0 h-20 pointer-events-none"
+                  style={{ background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.07) 0%, transparent 100%)' }}
+                />
+                <div className="relative flex items-center gap-1.5 mb-2">
                   <span
                     className="flex items-center justify-center w-5 h-5 rounded-md"
-                    style={{ background: 'rgba(139, 92, 246, 0.22)', color: '#7c3aed' }}
+                    style={{ background: 'rgba(139, 92, 246, 0.13)', color: '#7c3aed' }}
                   >
                     <TrendingUp size={11} />
                   </span>
@@ -462,16 +467,15 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
               </div>
             )}
 
-            {/* 상세 정보 — 현대화된 틴트 카드 */}
+            {/* 상세 정보 — 깔끔한 흰 카드 */}
             <div
-              className="relative rounded-xl overflow-hidden"
+              className="relative rounded-xl overflow-hidden bg-white"
               style={{
-                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.06), rgba(15, 23, 42, 0.025) 70%, rgba(15, 23, 42, 0.015) 100%)',
-                border: '1px solid rgba(15, 23, 42, 0.12)',
-                boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+                border: '1px solid rgba(15, 23, 42, 0.08)',
+                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03), 0 6px 16px -8px rgba(15, 23, 42, 0.12)',
               }}
             >
-              <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(15, 23, 42, 0.1)' }}>
+              <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(15, 23, 42, 0.06)' }}>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">프로젝트 개요</h3>
                   <p className="text-[9px] text-slate-400 uppercase tracking-[0.14em] font-semibold mt-1">Project Metrics</p>
@@ -495,7 +499,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                 <DetailRow label="착공일" value={project.startDate} />
                 <DetailRow label="준공 예정일" value={finishDate ?? undefined} emphasized={!!finishDate} />
               </dl>
-              <div className="p-3" style={{ borderTop: '1px solid rgba(15, 23, 42, 0.1)' }}>
+              <div className="p-3" style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)' }}>
                 <button
                   onClick={() => router.push(`/projects/${id}/stage/4`)}
                   className="w-full h-10 rounded-lg text-white text-xs font-semibold transition-all flex items-center justify-center gap-1.5 no-underline"
@@ -575,18 +579,22 @@ function MetricTile({
 }: { label: string; value: string | number; unit?: string; accent: string; rgb: string; icon?: React.ReactNode }) {
   return (
     <div
-      className="relative rounded-xl p-3 overflow-hidden"
+      className="relative rounded-xl p-3 overflow-hidden bg-white"
       style={{
-        background: `linear-gradient(135deg, rgba(${rgb}, 0.15), rgba(${rgb}, 0.06) 70%, rgba(${rgb}, 0.03) 100%)`,
-        border: `1px solid rgba(${rgb}, 0.32)`,
-        boxShadow: `0 1px 2px rgba(${rgb}, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)`,
+        border: `1px solid rgba(${rgb}, 0.18)`,
+        boxShadow: `0 1px 2px rgba(15, 23, 42, 0.03), 0 4px 12px -6px rgba(${rgb}, 0.2)`,
       }}
     >
-      <div className="flex items-center gap-1.5 mb-2">
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-10 pointer-events-none"
+        style={{ background: `linear-gradient(180deg, rgba(${rgb}, 0.06) 0%, transparent 100%)` }}
+      />
+      <div className="relative flex items-center gap-1.5 mb-2">
         {icon && (
           <span
             className="flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0"
-            style={{ background: `rgba(${rgb}, 0.2)`, color: accent }}
+            style={{ background: `rgba(${rgb}, 0.12)`, color: accent }}
           >
             {icon}
           </span>
@@ -616,17 +624,21 @@ function SummaryCard({
 }) {
   return (
     <div
-      className="relative rounded-xl p-4 overflow-hidden"
+      className="relative rounded-xl p-4 overflow-hidden bg-white"
       style={{
-        background: `linear-gradient(135deg, rgba(${rgb}, 0.14), rgba(${rgb}, 0.06) 70%, rgba(${rgb}, 0.03) 100%)`,
-        border: `1px solid rgba(${rgb}, 0.32)`,
-        boxShadow: `0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px -4px rgba(${rgb}, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5)`,
+        border: `1px solid rgba(${rgb}, 0.18)`,
+        boxShadow: `0 1px 2px rgba(15, 23, 42, 0.03), 0 6px 18px -8px rgba(${rgb}, 0.22)`,
       }}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-16 pointer-events-none"
+        style={{ background: `linear-gradient(180deg, rgba(${rgb}, 0.06) 0%, transparent 100%)` }}
+      />
+      <div className="relative flex items-center gap-2 mb-3">
         <div
           className="w-7 h-7 rounded-lg flex items-center justify-center"
-          style={{ background: `rgba(${rgb}, 0.2)`, color: accent }}
+          style={{ background: `rgba(${rgb}, 0.12)`, color: accent }}
         >
           {icon}
         </div>
