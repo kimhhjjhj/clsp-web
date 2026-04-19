@@ -273,14 +273,37 @@ export default function AnalyticsPage() {
 function Kpi({
   icon, bg, label, value, unit,
 }: { icon: React.ReactNode; bg: string; label: string; value: number | string; unit: string }) {
+  const rgbMap: Record<string, string> = {
+    'bg-blue-50': '37, 99, 235',
+    'bg-emerald-50': '16, 185, 129',
+    'bg-amber-50': '245, 158, 11',
+    'bg-orange-50': '234, 88, 12',
+    'bg-violet-50': '139, 92, 246',
+    'bg-red-50': '225, 29, 72',
+    'bg-slate-50': '15, 23, 42',
+    'bg-indigo-50': '99, 102, 241',
+    'bg-purple-50': '139, 92, 246',
+  }
+  const rgb = rgbMap[bg] ?? '15, 23, 42'
   return (
-    <div className="card-elevated p-5">
-      <div className="flex items-center justify-between mb-1.5">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+    <div
+      className="relative rounded-xl overflow-hidden bg-white p-5"
+      style={{
+        border: `1px solid rgba(${rgb}, 0.18)`,
+        boxShadow: `0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px -10px rgba(${rgb}, 0.22)`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-14 pointer-events-none"
+        style={{ background: `linear-gradient(180deg, rgba(${rgb}, 0.06) 0%, transparent 100%)` }}
+      />
+      <div className="relative flex items-center justify-between mb-1.5">
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.14em]">{label}</p>
         <div className={`w-7 h-7 rounded-md ${bg} flex items-center justify-center`}>{icon}</div>
       </div>
-      <p className="text-2xl font-bold text-gray-900">
-        {value}<span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>
+      <p className="relative text-2xl font-bold text-slate-900 tabular-nums tracking-[-0.02em]">
+        {value}<span className="text-sm font-normal text-slate-400 ml-1">{unit}</span>
       </p>
     </div>
   )

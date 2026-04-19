@@ -375,15 +375,38 @@ function MiniMetric({
 function Stat({
   label, value, unit, icon, bg,
 }: { label: string; value: number | string; unit: string; icon: React.ReactNode; bg: string }) {
+  const rgbMap: Record<string, string> = {
+    'bg-blue-50': '37, 99, 235',
+    'bg-emerald-50': '16, 185, 129',
+    'bg-amber-50': '245, 158, 11',
+    'bg-orange-50': '234, 88, 12',
+    'bg-violet-50': '139, 92, 246',
+    'bg-red-50': '225, 29, 72',
+    'bg-slate-50': '15, 23, 42',
+    'bg-indigo-50': '99, 102, 241',
+    'bg-purple-50': '139, 92, 246',
+  }
+  const rgb = rgbMap[bg] ?? '15, 23, 42'
   return (
-    <div className="card-elevated relative p-5 overflow-hidden">
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${bg} ring-1 ring-inset ring-black/5`}>
+    <div
+      className="relative rounded-xl overflow-hidden bg-white p-5"
+      style={{
+        border: `1px solid rgba(${rgb}, 0.18)`,
+        boxShadow: `0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px -10px rgba(${rgb}, 0.22)`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-14 pointer-events-none"
+        style={{ background: `linear-gradient(180deg, rgba(${rgb}, 0.06) 0%, transparent 100%)` }}
+      />
+      <div className="relative flex items-start justify-between gap-2 mb-3">
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.14em]">{label}</p>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${bg}`}>
           {icon}
         </div>
       </div>
-      <p className="text-3xl font-bold text-slate-900 tracking-tight leading-none">
+      <p className="relative text-3xl font-bold text-slate-900 tracking-[-0.02em] leading-none tabular-nums">
         {value}
         <span className="text-base font-medium text-slate-400 ml-1.5">{unit}</span>
       </p>
