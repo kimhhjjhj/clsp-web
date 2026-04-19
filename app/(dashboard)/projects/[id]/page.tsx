@@ -320,20 +320,20 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                   key={card.stageId}
                   className="relative rounded-2xl p-5 cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 overflow-hidden"
                   style={{
-                    background: `linear-gradient(135deg, rgba(${card.rgb}, 0.07), rgba(${card.rgb}, 0.02) 55%, #ffffff 100%)`,
-                    border: `1px solid rgba(${card.rgb}, 0.22)`,
-                    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+                    background: `linear-gradient(135deg, rgba(${card.rgb}, 0.045), rgba(${card.rgb}, 0.012) 55%, #ffffff 100%)`,
+                    border: `1px solid rgba(${card.rgb}, 0.14)`,
+                    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 10px 24px -10px rgba(${card.rgb}, 0.35), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)` }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 2px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)' }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 10px 24px -10px rgba(${card.rgb}, 0.25), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)` }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 2px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.6)' }}
                   onClick={() => router.push(`/projects/${id}/stage/${card.stageId}`)}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div
                       className="w-11 h-11 rounded-xl flex items-center justify-center"
                       style={{
-                        background: `rgba(${card.rgb}, 0.12)`,
-                        border: `1px solid rgba(${card.rgb}, 0.2)`,
+                        background: `rgba(${card.rgb}, 0.08)`,
+                        border: `1px solid rgba(${card.rgb}, 0.14)`,
                       }}
                     >
                       {card.icon}
@@ -344,8 +344,8 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                         className="text-[9px] font-bold tracking-[0.18em] px-2 py-1 rounded-md"
                         style={{
                           color: card.color,
-                          background: `rgba(${card.rgb}, 0.1)`,
-                          border: `1px solid rgba(${card.rgb}, 0.18)`,
+                          background: `rgba(${card.rgb}, 0.07)`,
+                          border: `1px solid rgba(${card.rgb}, 0.12)`,
                         }}
                       >
                         {card.phaseLabel}
@@ -377,7 +377,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
 
                   <div
                     className="h-1 w-full rounded-full overflow-hidden"
-                    style={{ background: `rgba(${card.rgb}, 0.12)` }}
+                    style={{ background: `rgba(${card.rgb}, 0.08)` }}
                   >
                     <div
                       className="h-full rounded-full transition-all"
@@ -430,15 +430,15 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
               <div
                 className="relative rounded-xl p-4 overflow-hidden"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.04) 60%, #ffffff 100%)',
-                  border: '1px solid rgba(139, 92, 246, 0.22)',
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.06), rgba(99, 102, 241, 0.02) 60%, #ffffff 100%)',
+                  border: '1px solid rgba(139, 92, 246, 0.14)',
                   boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
                 }}
               >
                 <div className="flex items-center gap-1.5 mb-2">
                   <span
                     className="flex items-center justify-center w-5 h-5 rounded-md"
-                    style={{ background: 'rgba(139, 92, 246, 0.16)', color: '#7c3aed' }}
+                    style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#7c3aed' }}
                   >
                     <TrendingUp size={11} />
                   </span>
@@ -466,12 +466,12 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
             <div
               className="relative rounded-xl overflow-hidden"
               style={{
-                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.035), rgba(15, 23, 42, 0.01) 60%, #ffffff 100%)',
-                border: '1px solid rgba(15, 23, 42, 0.08)',
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.022), rgba(15, 23, 42, 0.006) 60%, #ffffff 100%)',
+                border: '1px solid rgba(15, 23, 42, 0.06)',
                 boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
               }}
             >
-              <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(15, 23, 42, 0.06)' }}>
+              <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(15, 23, 42, 0.05)' }}>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">프로젝트 개요</h3>
                   <p className="text-[9px] text-slate-400 uppercase tracking-[0.14em] font-semibold mt-1">Project Metrics</p>
@@ -495,7 +495,7 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                 <DetailRow label="착공일" value={project.startDate} />
                 <DetailRow label="준공 예정일" value={finishDate ?? undefined} emphasized={!!finishDate} />
               </dl>
-              <div className="p-3" style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)' }}>
+              <div className="p-3" style={{ borderTop: '1px solid rgba(15, 23, 42, 0.05)' }}>
                 <button
                   onClick={() => router.push(`/projects/${id}/stage/4`)}
                   className="w-full h-10 rounded-lg text-white text-xs font-semibold transition-all flex items-center justify-center gap-1.5 no-underline"
@@ -577,8 +577,8 @@ function MetricTile({
     <div
       className="relative rounded-xl p-3 overflow-hidden"
       style={{
-        background: `linear-gradient(135deg, rgba(${rgb}, 0.08), rgba(${rgb}, 0.02) 60%, #ffffff 100%)`,
-        border: `1px solid rgba(${rgb}, 0.2)`,
+        background: `linear-gradient(135deg, rgba(${rgb}, 0.05), rgba(${rgb}, 0.012) 60%, #ffffff 100%)`,
+        border: `1px solid rgba(${rgb}, 0.13)`,
         boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
       }}
     >
@@ -586,7 +586,7 @@ function MetricTile({
         {icon && (
           <span
             className="flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0"
-            style={{ background: `rgba(${rgb}, 0.14)`, color: accent }}
+            style={{ background: `rgba(${rgb}, 0.09)`, color: accent }}
           >
             {icon}
           </span>
@@ -618,15 +618,15 @@ function SummaryCard({
     <div
       className="relative rounded-xl p-4 overflow-hidden"
       style={{
-        background: `linear-gradient(135deg, rgba(${rgb}, 0.07), rgba(${rgb}, 0.02) 60%, #ffffff 100%)`,
-        border: `1px solid rgba(${rgb}, 0.2)`,
+        background: `linear-gradient(135deg, rgba(${rgb}, 0.045), rgba(${rgb}, 0.012) 60%, #ffffff 100%)`,
+        border: `1px solid rgba(${rgb}, 0.13)`,
         boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
       }}
     >
       <div className="flex items-center gap-2 mb-3">
         <div
           className="w-7 h-7 rounded-lg flex items-center justify-center"
-          style={{ background: `rgba(${rgb}, 0.14)`, color: accent }}
+          style={{ background: `rgba(${rgb}, 0.09)`, color: accent }}
         >
           {icon}
         </div>
