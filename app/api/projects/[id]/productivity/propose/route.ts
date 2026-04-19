@@ -63,15 +63,46 @@ export async function POST(_req: NextRequest, { params }: Params) {
     }
   }
 
+  // 프로젝트 분모 (면적·층수) — 단위 물량당 지표 계산용
+  const bldgArea = project.bldgArea ?? 0
+  const totalFloors = (project.ground ?? 0) + (project.basement ?? 0) + (project.lowrise ?? 0)
+
   const created: { id: string; trade: string; value: number; unit: string }[] = []
+
+  async function upsertProposal(params: {
+    trade: string
+    value: number
+    unit: string
+    sampleSize: number
+    source: unknown
+  }) {
+    const existing = await prisma.productivityProposal.findFirst({
+      where: { projectId: id, trade: params.trade, unit: params.unit, status: 'pending' },
+      select: { id: true },
+    })
+    const row = existing
+      ? await prisma.productivityProposal.update({
+          where: { id: existing.id },
+          data: { value: params.value, sampleSize: params.sampleSize, source: params.source as any },
+        })
+      : await prisma.productivityProposal.create({
+          data: {
+            projectId: id,
+            trade: params.trade,
+            value: params.value,
+            unit: params.unit,
+            sampleSize: params.sampleSize,
+            source: params.source as any,
+          },
+        })
+    created.push({ id: row.id, trade: params.trade, value: params.value, unit: params.unit })
+  }
 
   for (const [trade, s] of tradeStats.entries()) {
     const activeDays = s.activeDays.size
     if (activeDays === 0) continue
 
-    // 1) 일평균 투입 (항상)
-    const avgDaily = Math.round((s.totalManDays / activeDays) * 100) / 100
-    const source = {
+    const baseSource = {
       totalManDays: s.totalManDays,
       activeDays,
       firstDate: s.firstDate,
@@ -79,56 +110,62 @@ export async function POST(_req: NextRequest, { params }: Params) {
       projectName: project.name,
     }
 
-    const existingAvg = await prisma.productivityProposal.findFirst({
-      where: { projectId: id, trade, unit: 'man/day', status: 'pending' },
-      select: { id: true },
+    // 1) man/day — 일평균 투입 (규모 감)
+    await upsertProposal({
+      trade,
+      value: Math.round((s.totalManDays / activeDays) * 100) / 100,
+      unit: 'man/day',
+      sampleSize: activeDays,
+      source: baseSource,
     })
-    const avgProposal = existingAvg
-      ? await prisma.productivityProposal.update({
-          where: { id: existingAvg.id },
-          data: { value: avgDaily, sampleSize: activeDays, source },
-        })
-      : await prisma.productivityProposal.create({
-          data: {
-            projectId: id,
-            trade,
-            value: avgDaily,
-            unit: 'man/day',
-            sampleSize: activeDays,
-            source,
-          },
-        })
-    created.push({ id: avgProposal.id, trade, value: avgDaily, unit: 'man/day' })
 
-    // 2) 물량당 인일 (매칭 자재 있을 때)
+    // 2) 자재 물량당 인일 (철근·레미콘 등 매핑 자재 입력된 경우만)
     const mapping = TRADE_MATERIAL_MAP[trade]
     if (mapping) {
       const qty = materialTotals.get(mapping.matName)
       if (qty && qty > 0) {
-        const perUnit = Math.round((s.totalManDays / qty) * 100) / 100
-        const mSource = { ...source, totalMaterial: qty, matName: mapping.matName }
-
-        const existing = await prisma.productivityProposal.findFirst({
-          where: { projectId: id, trade, unit: mapping.unit, status: 'pending' },
-          select: { id: true },
+        await upsertProposal({
+          trade,
+          value: Math.round((s.totalManDays / qty) * 100) / 100,
+          unit: mapping.unit,
+          sampleSize: activeDays,
+          source: { ...baseSource, totalMaterial: qty, matName: mapping.matName },
         })
-        const p = existing
-          ? await prisma.productivityProposal.update({
-              where: { id: existing.id },
-              data: { value: perUnit, sampleSize: activeDays, source: mSource },
-            })
-          : await prisma.productivityProposal.create({
-              data: {
-                projectId: id,
-                trade,
-                value: perUnit,
-                unit: mapping.unit,
-                sampleSize: activeDays,
-                source: mSource,
-              },
-            })
-        created.push({ id: p.id, trade, value: perUnit, unit: mapping.unit })
       }
+    }
+
+    // 3) 연면적당 인일 — bldgArea 있을 때 (자재 매핑 안 되는 공종도 유효)
+    //    예: 내장 4106인일 / 30000㎡ = 0.137 인일/㎡
+    if (bldgArea > 0) {
+      await upsertProposal({
+        trade,
+        value: Math.round((s.totalManDays / bldgArea) * 10000) / 10000,  // 소수 4자리 (작은 값)
+        unit: 'mandays/m2',
+        sampleSize: activeDays,
+        source: { ...baseSource, bldgArea },
+      })
+    }
+
+    // 4) 층당 인일 — 총층수 있을 때
+    //    예: 철콘(형틀) 1700인일 / 24층 = 70.8 인일/층
+    if (totalFloors > 0) {
+      await upsertProposal({
+        trade,
+        value: Math.round((s.totalManDays / totalFloors) * 100) / 100,
+        unit: 'mandays/floor',
+        sampleSize: activeDays,
+        source: { ...baseSource, totalFloors },
+      })
+
+    // 5) 층당 활동일수 — 공기 감 (현장 체감)
+    //    예: 미장 308일 / 24층 = 12.8 일/층
+      await upsertProposal({
+        trade,
+        value: Math.round((activeDays / totalFloors) * 100) / 100,
+        unit: 'days/floor',
+        sampleSize: activeDays,
+        source: { ...baseSource, totalFloors },
+      })
     }
   }
 
