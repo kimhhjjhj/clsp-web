@@ -125,15 +125,50 @@ export default function Sidebar({ onClose }: Props) {
 
       {/* 본문 — 스크롤 */}
       <nav className="sidebar-scroll flex-1 px-2 py-3 overflow-y-auto overscroll-contain">
-        {/* 전역 메뉴 — 대시보드 / 사업 초기 검토(토글) / 프로젝트 */}
-        <NavGroup>
-          <SidebarLink
-            item={DASH_ITEM}
-            active={pathname === '/'}
-            onNavigate={onClose}
-          />
+        {/* 대시보드 — 포인트 홈 버튼 (다른 링크보다 도드라지게) */}
+        <Link
+          href="/"
+          onClick={onClose}
+          aria-current={pathname === '/' ? 'page' : undefined}
+          className={`group relative flex items-center gap-3 px-3 h-11 rounded-xl no-underline overflow-hidden mb-3 transition-all ${
+            pathname === '/' ? 'shadow-lg shadow-blue-900/30' : 'hover:shadow-md hover:shadow-blue-900/20'
+          }`}
+          style={{
+            background: pathname === '/'
+              ? 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)'
+              : 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(99, 102, 241, 0.08))',
+            border: pathname === '/'
+              ? '1px solid rgba(255, 255, 255, 0.15)'
+              : '1px solid rgba(59, 130, 246, 0.18)',
+          }}
+        >
+          <span
+            className={`flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-colors ${
+              pathname === '/' ? 'bg-white/15' : 'bg-white/[0.06] group-hover:bg-white/10'
+            }`}
+          >
+            <LayoutDashboard size={15} strokeWidth={2} className={pathname === '/' ? 'text-white' : 'text-blue-200'} />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className={`block text-[13px] font-bold leading-none tracking-[-0.01em] ${
+              pathname === '/' ? 'text-white' : 'text-slate-100 group-hover:text-white'
+            }`}>
+              대시보드
+            </span>
+            <span className={`block text-[9.5px] uppercase tracking-[0.14em] font-semibold mt-1 ${
+              pathname === '/' ? 'text-blue-100/80' : 'text-slate-400 group-hover:text-blue-200'
+            }`}>
+              Home
+            </span>
+          </span>
+          <ChevronRight size={13} className={`flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${
+            pathname === '/' ? 'text-white/70' : 'text-slate-500'
+          }`} />
+        </Link>
 
-          {/* 사업 초기 검토 — 토글 서브메뉴, 대시보드 바로 아래 */}
+        {/* 전역 메뉴 — 사업 초기 검토(토글) / 프로젝트 */}
+        <NavGroup>
+          {/* 사업 초기 검토 — 토글 서브메뉴 */}
           <CollapsibleItem
             item={BID_ITEM}
             active={isBid}
