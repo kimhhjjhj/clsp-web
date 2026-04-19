@@ -12,6 +12,7 @@ import { useToast } from '@/components/common/Toast'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 import AiCostEstimate, { type AiResult } from '@/components/bid/AiCostEstimate'
 import AiScheduleEstimate, { type AiScheduleResult } from '@/components/bid/AiScheduleEstimate'
+import { computeGuidelineSchedule, compareWithCpm } from '@/lib/engine/guideline'
 import { assessCriticalPath, CP_LEVEL_COLORS } from '@/lib/engine/cp-assessment'
 import { computeBenchmark, BENCHMARK_COLORS, type BenchmarkResult, type BenchmarkSample } from '@/lib/engine/benchmark'
 import { detectAbnormal } from '@/lib/engine/abnormal-detection'
@@ -841,6 +842,61 @@ function BidPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* 국토부 2026 적정 공사기간 가이드라인 참고값 */}
+                      {(() => {
+                        const gl = computeGuidelineSchedule({
+                          type: input.type,
+                          ground: Number(input.ground) || 0,
+                          basement: Number(input.basement) || 0,
+                          lowrise: Number(input.lowrise) || 0,
+                          hasTransfer: input.hasTransfer,
+                        })
+                        const cmp = compareWithCpm(result.cpm.totalDuration, gl.total)
+                        return (
+                          <div className="mx-5 mb-5 relative overflow-hidden rounded-xl bg-white" style={{
+                            border: `1px solid ${cmp.color}33`,
+                            boxShadow: `0 1px 2px rgba(15,23,42,0.04), 0 4px 14px -8px ${cmp.color}40`,
+                          }}>
+                            <span aria-hidden className="absolute inset-x-0 top-0 h-10 pointer-events-none"
+                              style={{ background: `linear-gradient(180deg, ${cmp.color}0F, transparent)` }} />
+                            <div className="relative px-4 py-3 flex items-start gap-3 flex-wrap">
+                              <div className="flex-1 min-w-[260px]">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: cmp.color }}>
+                                    국토부 2026 가이드라인 참고
+                                  </span>
+                                  <span className="text-[9px] text-slate-400">p.11~24</span>
+                                </div>
+                                <p className="text-sm">
+                                  공식 산정: <span className="font-bold font-mono tabular-nums" style={{ color: cmp.color }}>{gl.total}일</span>
+                                  <span className="text-slate-400 mx-1.5">/</span>
+                                  현재 CPM: <span className="font-bold font-mono tabular-nums text-slate-900">{result.cpm.totalDuration}일</span>
+                                  <span className="ml-2 text-[11px] font-semibold" style={{ color: cmp.color }}>{cmp.label}</span>
+                                </p>
+                                <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                                  준비 {gl.preparationDays} + CP 작업 {gl.criticalWorkDays} + 비작업 {gl.nonWorkDays} + 정리 {gl.cleanupDays}
+                                </p>
+                              </div>
+                              <details className="w-full mt-2">
+                                <summary className="text-[11px] text-slate-500 hover:text-slate-900 cursor-pointer">산정 내역·가정 ▾</summary>
+                                <div className="mt-2 text-[11px] text-slate-600 leading-relaxed space-y-1 pl-3 border-l-2 border-slate-200">
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                                    {gl.phases.map(ph => (
+                                      <div key={ph.name} className="font-mono">
+                                        <span className="text-slate-400">{ph.name}</span> <span className="font-bold text-slate-800">{ph.days}일</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <ul className="list-disc ml-4 text-slate-500 mt-2">
+                                    {gl.notes.map((n, i) => <li key={i}>{n}</li>)}
+                                  </ul>
+                                </div>
+                              </details>
+                            </div>
+                          </div>
+                        )
+                      })()}
 
                       {/* 공기 서브탭 */}
                       <div className="flex items-center gap-1 px-4 pt-3 border-b border-gray-200 bg-gray-50 overflow-x-auto">
