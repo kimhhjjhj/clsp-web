@@ -52,3 +52,10 @@ public/data/layers.csv
 
 # R&O 첨부파일 (도면·사진·PDF)
 /data/uploads/
+
+# 강의·참고자료 (용량)
+*.pdf
+/lecture.txt
+
+# 자동 루프 스케줄러 상태
+/.claude/scheduled_tasks.lock
