@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useCallback, useState } from 'react'
-import { Sparkles, Loader2, ChevronDown, ChevronUp, AlertCircle, Info } from 'lucide-react'
+import { Sparkles, Loader2, ChevronDown, ChevronUp, AlertCircle, Info, ClipboardPaste, Copy, Check } from 'lucide-react'
 import type { CPMResult } from '@/lib/types'
 
 interface Item {
@@ -78,6 +78,11 @@ export default function AiCostEstimate(props: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandedCat, setExpandedCat] = useState<Set<string>>(new Set())
+  // 수동 붙여넣기 모드
+  const [showManual, setShowManual] = useState(false)
+  const [manualJson, setManualJson] = useState('')
+  const [manualErr, setManualErr] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const run = useCallback(async () => {
     setLoading(true)
@@ -116,6 +121,71 @@ export default function AiCostEstimate(props: Props) {
     }
   }, [props])
 
+  // 수동 JSON 파싱 & 저장
+  function applyManual() {
+    setManualErr(null)
+    try {
+      const parsed = JSON.parse(manualJson.trim()) as AiResult
+      if (!parsed.summary?.grandTotalKRW || !Array.isArray(parsed.trades)) {
+        setManualErr("형식 오류: summary.grandTotalKRW 와 trades 배열이 필요합니다")
+        return
+      }
+      if (!parsed.notes) parsed.notes = '수동 입력 (외부 AI 생성)'
+      setResult(parsed)
+      setExpandedCat(new Set(parsed.trades.map(t => t.category)))
+      setShowManual(false)
+      setManualJson('')
+      props.onResult?.(parsed)
+    } catch (e: unknown) {
+      setManualErr(`JSON 파싱 실패: ${(e as Error).message}`)
+    }
+  }
+
+  // Claude.ai 에 붙여넣을 프롬프트 생성 (현재 프로젝트 정보 포함)
+  function buildPrompt() {
+    const tasksLine = props.tasks.map(t =>
+      `- ${t.category} > ${t.name}: ${t.quantity ?? '—'} ${t.unit ?? ''} / 기간 ${t.duration}일`
+    ).join('\n')
+    return `당신은 한국 건설업계 30년차 적산사입니다. 아래 프로젝트의 개략 공사비를 추정하세요.
+
+프로젝트:
+- 유형: ${props.type ?? '공동주택'}
+- 지상 ${props.ground ?? 0}층 / 지하 ${props.basement ?? 0}층
+- 연면적: ${props.bldgArea?.toLocaleString() ?? '—'} ㎡
+- 건축면적: ${props.buildingArea?.toLocaleString() ?? '—'} ㎡
+- 대지: ${props.siteArea?.toLocaleString() ?? '—'} ㎡
+- 총공기: ${props.totalDuration}일
+
+CPM 공종별 물량:
+${tasksLine}
+
+2025년 한국 건설시세(시중노임단가·표준품셈)로 공종별 아이템 단가를 산출하세요.
+간접비 10%, 일반관리비 5.5%, 이윤 10%, 부가세 10% 기본 적용.
+
+결과는 반드시 아래 JSON 스키마로만 응답하세요 (설명 없이 JSON만):
+{
+  "trades": [{
+    "category": "골조공사",
+    "items": [{"name":"철근 콘크리트","qty":1000,"unit":"㎥","unitPriceKRW":380000,"subtotalKRW":380000000}],
+    "categorySubtotalKRW": 380000000
+  }],
+  "summary": {
+    "directCostKRW": 0, "indirectCostKRW": 0, "generalAdminKRW": 0,
+    "profitKRW": 0, "vatKRW": 0, "grandTotalKRW": 0,
+    "pricePerSqmKRW": 0, "pricePerPyongKRW": 0
+  },
+  "notes": "주요 가정·근거 3-5줄"
+}`
+  }
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(buildPrompt())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* ignore */ }
+  }
+
   function toggleCat(cat: string) {
     setExpandedCat(prev => {
       const next = new Set(prev)
@@ -127,29 +197,106 @@ export default function AiCostEstimate(props: Props) {
 
   if (!result && !loading) {
     return (
-      <div className="bg-gradient-to-br from-violet-50 to-blue-50 border border-violet-200 rounded-xl p-6 text-center">
-        <div className="w-12 h-12 mx-auto bg-white rounded-xl flex items-center justify-center mb-3 shadow-sm">
-          <Sparkles size={22} className="text-violet-600" />
+      <>
+        <div className="bg-gradient-to-br from-violet-50 to-blue-50 border border-violet-200 rounded-xl p-6 text-center">
+          <div className="w-12 h-12 mx-auto bg-white rounded-xl flex items-center justify-center mb-3 shadow-sm">
+            <Sparkles size={22} className="text-violet-600" />
+          </div>
+          <h3 className="text-sm font-bold text-gray-900 mb-1">AI 개략 공사비 추정</h3>
+          <p className="text-xs text-gray-600 leading-relaxed mb-4 max-w-md mx-auto">
+            CPM이 계산한 <strong>공종별 물량</strong>에 Claude가 2025년 한국 건설 시세로
+            <strong> 단가</strong>를 입혀 공종별 세부 아이템·합계를 산출합니다.
+            <br />
+            <span className="text-gray-500">(물량×단가 방식 · 직접공사비 + 간접비 + 관리비 + 이윤 + 부가세)</span>
+          </p>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <button
+              onClick={run}
+              className="inline-flex items-center gap-1.5 h-10 px-5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-semibold"
+            >
+              <Sparkles size={14} /> AI로 자동 추정
+            </button>
+            <button
+              onClick={() => setShowManual(true)}
+              className="inline-flex items-center gap-1.5 h-10 px-5 bg-white border border-violet-300 text-violet-700 hover:bg-violet-50 rounded-lg text-sm font-semibold"
+              title="API 키 없이 외부 AI(Claude.ai 등)로 받은 JSON 붙여넣기"
+            >
+              <ClipboardPaste size={14} /> 수동 붙여넣기
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-3">
+            ANTHROPIC_API_KEY 미설정 시 자동 추정 실패 → 수동 모드 이용
+          </p>
+          {error && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 text-left">
+              <AlertCircle size={12} className="inline mr-1" /> {error}
+            </div>
+          )}
         </div>
-        <h3 className="text-sm font-bold text-gray-900 mb-1">AI 개략 공사비 추정</h3>
-        <p className="text-xs text-gray-600 leading-relaxed mb-4 max-w-md mx-auto">
-          CPM이 계산한 <strong>공종별 물량</strong>에 Claude가 2025년 한국 건설 시세로
-          <strong> 단가</strong>를 입혀 공종별 세부 아이템·합계를 산출합니다.
-          <br />
-          <span className="text-gray-500">(물량×단가 방식 · 직접공사비 + 간접비 + 관리비 + 이윤 + 부가세)</span>
-        </p>
-        <button
-          onClick={run}
-          className="inline-flex items-center gap-1.5 h-10 px-5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-semibold"
-        >
-          <Sparkles size={14} /> AI로 공사비 추정
-        </button>
-        {error && (
-          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 text-left">
-            <AlertCircle size={12} className="inline mr-1" /> {error}
+
+        {/* 수동 붙여넣기 모달 */}
+        {showManual && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-auto"
+            onClick={() => setShowManual(false)}>
+            <div onClick={e => e.stopPropagation()}
+              className="bg-white rounded-xl shadow-2xl w-full max-w-3xl my-4 flex flex-col max-h-[calc(100vh-2rem)]">
+              <div className="flex items-start justify-between px-5 py-4 border-b border-gray-200">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">외부 AI 결과 붙여넣기</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Claude.ai · ChatGPT 등에서 받은 JSON을 그대로 붙여넣으세요</p>
+                </div>
+                <button onClick={() => setShowManual(false)} className="text-gray-400 hover:text-gray-900 p-1">✕</button>
+              </div>
+              <div className="flex-1 overflow-auto px-5 py-4 space-y-3">
+                {/* 1단계: 프롬프트 복사 */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] text-gray-500 font-semibold">
+                      ① 이 프롬프트를 복사해서 Claude.ai 에 붙여넣으세요
+                    </label>
+                    <button onClick={copyPrompt}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800">
+                      {copied ? <><Check size={11} /> 복사됨</> : <><Copy size={11} /> 프롬프트 복사</>}
+                    </button>
+                  </div>
+                  <pre className="text-[10px] bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-40 overflow-auto font-mono text-gray-700 whitespace-pre-wrap">
+{buildPrompt()}
+                  </pre>
+                </div>
+
+                {/* 2단계: 응답 붙여넣기 */}
+                <div>
+                  <label className="text-[11px] text-gray-500 font-semibold block mb-1.5">
+                    ② AI가 응답한 JSON 전체를 여기에 붙여넣으세요
+                  </label>
+                  <textarea
+                    value={manualJson}
+                    onChange={e => setManualJson(e.target.value)}
+                    rows={12}
+                    placeholder='{"trades":[...], "summary":{"grandTotalKRW":..., ...}, "notes":"..."}'
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500"
+                  />
+                  {manualErr && (
+                    <div className="mt-2 bg-red-50 border border-red-200 rounded p-2 text-xs text-red-700">
+                      <AlertCircle size={12} className="inline mr-1" /> {manualErr}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                <button onClick={() => setShowManual(false)}
+                  className="text-sm text-gray-600 px-4 py-2 border border-gray-300 bg-white rounded-lg hover:bg-gray-100">
+                  취소
+                </button>
+                <button onClick={applyManual} disabled={!manualJson.trim()}
+                  className="text-sm font-semibold px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-40">
+                  적용
+                </button>
+              </div>
+            </div>
           </div>
         )}
-      </div>
+      </>
     )
   }
 
