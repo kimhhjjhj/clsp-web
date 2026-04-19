@@ -9,6 +9,7 @@ import {
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import { SkeletonList } from '@/components/common/Skeleton'
+import { FullscreenToggle, fullscreenClass, useFullscreen } from '@/components/common/Fullscreen'
 
 interface RiskItem {
   id: string
@@ -51,6 +52,7 @@ export default function RisksLibraryPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'risk' | 'opportunity'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [projectTypeFilter, setProjectTypeFilter] = useState<string>('all')
+  const { fullscreen: listFS, toggle: toggleListFS } = useFullscreen()
 
   useEffect(() => {
     const params = new URLSearchParams()
@@ -234,7 +236,10 @@ export default function RisksLibraryPage() {
             />
           </div>
         ) : (
-          <div className="card-elevated divide-y divide-gray-100">
+          <div className={`relative card-elevated divide-y divide-gray-100 ${fullscreenClass(listFS)}`}>
+            <div className="absolute top-2 right-2 z-30">
+              <FullscreenToggle fullscreen={listFS} onToggle={toggleListFS} />
+            </div>
             {filtered.map(i => (
               <div key={i.id} className="p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between gap-3">

@@ -6,6 +6,7 @@ import { buildAbnormalIndex } from '@/lib/engine/abnormal-detection'
 import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
 import type { CPMResult } from '@/lib/types'
 import { ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react'
+import { FullscreenToggle, fullscreenClass, useFullscreen } from '@/components/common/Fullscreen'
 
 export interface CompanyStandardSummary {
   trade: string
@@ -45,6 +46,7 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
   const [colWidths, setColWidths] = useState(DEFAULT_WIDTHS)
   const [expanded, setExpanded] = useState<Set<string>>(new Set(Object.keys(byCategory)))
   const resizing = useRef<{ col: number; startX: number; startW: number } | null>(null)
+  const { fullscreen, toggle: toggleFullscreen } = useFullscreen()
 
   // trade → { value, approved, sampleCount } lookup (man/day만)
   const stdLookup = new Map<string, CompanyStandardSummary>()
@@ -125,7 +127,11 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
   const totalW = colWidths.reduce((a, b) => a + b, 0)
 
   return (
-    <div className="overflow-auto w-full">
+    <div className={`relative ${fullscreenClass(fullscreen, 'bg-white')}`}>
+      <div className="absolute top-2 right-2 z-30">
+        <FullscreenToggle fullscreen={fullscreen} onToggle={toggleFullscreen} />
+      </div>
+      <div className={`overflow-auto w-full ${fullscreen ? 'max-h-[calc(100vh-80px)]' : ''}`}>
       <table style={{ width: totalW, tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 13 }}>
         <colgroup>
           {colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
@@ -357,6 +363,7 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
           })}
         </tbody>
       </table>
+      </div>
     </div>
   )
 })

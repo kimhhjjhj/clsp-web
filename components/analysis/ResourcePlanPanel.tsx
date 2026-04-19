@@ -5,6 +5,7 @@ import { Users, TrendingUp, Calendar, AlertTriangle, BarChart3, Info } from 'luc
 import type { CPMResult } from '@/lib/types'
 import { buildResourcePlan, type StandardLookup } from '@/lib/engine/resource-plan'
 import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
+import { FullscreenToggle, fullscreenClass, useFullscreen } from '@/components/common/Fullscreen'
 
 interface Props {
   cpmTasks: CPMResult[] | null
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function ResourcePlanPanel({ cpmTasks, startDate, standards }: Props) {
+  const { fullscreen, toggle: toggleFullscreen } = useFullscreen()
   const plan = useMemo(() => {
     if (!cpmTasks || cpmTasks.length === 0) return null
     return buildResourcePlan(cpmTasks, standards, startDate)
@@ -34,7 +36,10 @@ export default function ResourcePlanPanel({ cpmTasks, startDate, standards }: Pr
     : 0
 
   return (
-    <div className="space-y-5">
+    <div className={`relative space-y-5 ${fullscreenClass(fullscreen)}`}>
+      <div className="absolute top-2 right-2 z-30">
+        <FullscreenToggle fullscreen={fullscreen} onToggle={toggleFullscreen} />
+      </div>
       {/* 안내 */}
       <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-xs text-purple-900 flex items-start gap-2">
         <Info size={14} className="text-purple-600 mt-0.5 flex-shrink-0" />

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Database, CheckCircle2, Clock, Building2, TrendingUp, Filter } from 'lucide-react'
 import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
+import { FullscreenToggle, fullscreenClass, useFullscreen } from '@/components/common/Fullscreen'
 
 interface Standard {
   id: string
@@ -39,6 +40,7 @@ export default function CompanyStandardsPanel({ cpmTasks }: Props) {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
   const [unitFilter, setUnitFilter] = useState<'all' | 'man/day' | 'mandays/ton' | 'mandays/m3'>('all')
+  const { fullscreen, toggle: toggleFullscreen } = useFullscreen()
 
   useEffect(() => {
     setLoading(true)
@@ -99,7 +101,10 @@ export default function CompanyStandardsPanel({ cpmTasks }: Props) {
   const pendingCount = candidates.length - standards.length
 
   return (
-    <div className="space-y-5">
+    <div className={`relative space-y-5 ${fullscreenClass(fullscreen)}`}>
+      <div className="absolute top-2 right-2 z-30">
+        <FullscreenToggle fullscreen={fullscreen} onToggle={toggleFullscreen} />
+      </div>
       {/* 요약 카드 */}
       <div className="grid grid-cols-4 gap-3">
         <div className="bg-white border border-gray-200 rounded-xl p-4">
