@@ -6,7 +6,7 @@
 // - 물량 × 단가 방식 (정석). AI는 단가만 추정
 // ═══════════════════════════════════════════════════════════
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Sparkles, Loader2, ChevronDown, ChevronUp, AlertCircle, Info, ClipboardPaste, Copy, Check } from 'lucide-react'
 import type { CPMResult } from '@/lib/types'
 
@@ -54,7 +54,13 @@ interface Props {
   tasks: CPMResult[]
   /** 추정 완료 시 부모에 결과 전달 (프로젝트 저장에 포함) */
   onResult?: (result: AiResult | null) => void
+  /** localStorage에 추정 결과를 persist할 때 쓰는 키 (예: 'bid-draft', 'project:{id}') */
+  storageKey?: string
+  /** DB 등에서 미리 로드한 초기 추정값 (localStorage가 비어있을 때만 사용) */
+  initialResult?: AiResult | null
 }
+
+export type { AiResult }
 
 function isDataCenter(type?: string) {
   return type === '데이터센터'
@@ -78,7 +84,16 @@ function fmtKRW(n: number) {
 }
 
 export default function AiCostEstimate(props: Props) {
-  const [result, setResult] = useState<AiResult | null>(null)
+  const [result, setResult] = useState<AiResult | null>(() => {
+    // 마운트 시: localStorage → initialResult 순으로 복원
+    if (props.storageKey && typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(`ai-cost-estimate:${props.storageKey}`)
+        if (raw) return JSON.parse(raw) as AiResult
+      } catch { /* 파싱 실패 시 무시 */ }
+    }
+    return props.initialResult ?? null
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandedCat, setExpandedCat] = useState<Set<string>>(new Set())
@@ -129,6 +144,22 @@ export default function AiCostEstimate(props: Props) {
       setLoading(false)
     }
   }, [props, mwCapacity])
+
+  // result 변화 시 localStorage에 persist
+  useEffect(() => {
+    if (!props.storageKey || typeof window === 'undefined') return
+    try {
+      if (result) window.localStorage.setItem(`ai-cost-estimate:${props.storageKey}`, JSON.stringify(result))
+      else window.localStorage.removeItem(`ai-cost-estimate:${props.storageKey}`)
+    } catch { /* quota 등 실패 무시 */ }
+  }, [result, props.storageKey])
+
+  // 편집 모드에서 DB 로드가 뒤늦게 끝나 initialResult가 늦게 들어오는 경우 동기화
+  // (단, 이미 localStorage로 복원된 값이 있으면 유지)
+  useEffect(() => {
+    if (!props.initialResult) return
+    setResult(prev => prev ?? props.initialResult ?? null)
+  }, [props.initialResult])
 
   // 수동 JSON 파싱 & 저장
   function applyManual() {

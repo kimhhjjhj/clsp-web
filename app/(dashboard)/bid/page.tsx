@@ -10,7 +10,7 @@ import {
 import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
-import AiCostEstimate from '@/components/bid/AiCostEstimate'
+import AiCostEstimate, { type AiResult } from '@/components/bid/AiCostEstimate'
 import { assessCriticalPath, CP_LEVEL_COLORS } from '@/lib/engine/cp-assessment'
 import { computeBenchmark, BENCHMARK_COLORS, type BenchmarkResult, type BenchmarkSample } from '@/lib/engine/benchmark'
 import { detectAbnormal } from '@/lib/engine/abnormal-detection'
@@ -422,7 +422,10 @@ function BidPage() {
       if (!res.ok) throw new Error(data.error ?? '저장 실패')
       // 신규 저장 시에만 bid-draft 정리 (PUT은 프로젝트 키 유지 → 이어 편집 가능)
       if (!isUpdate) {
-        try { window.localStorage.removeItem('productivity:bid-draft:cp') } catch { /* ignore */ }
+        try {
+          window.localStorage.removeItem('productivity:bid-draft:cp')
+          window.localStorage.removeItem('ai-cost-estimate:bid-draft')
+        } catch { /* ignore */ }
       }
       toast.success(isUpdate ? '프로젝트 업데이트됨' : '프로젝트로 저장됨', input.name)
       if (!isUpdate) router.push(`/projects/${data.id}`)
@@ -718,6 +721,8 @@ function BidPage() {
                         siteArea={Number(input.siteArea) || undefined}
                         totalDuration={result.cpm.totalDuration}
                         tasks={result.cpm.tasks}
+                        storageKey={storeKey}
+                        initialResult={aiEstimate as AiResult | null}
                         onResult={setAiEstimate}
                       />
                     </div>
