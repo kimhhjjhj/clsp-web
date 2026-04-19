@@ -3,108 +3,90 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ══════════════════════════════════════════════════
-   CLSP · Design System v2 (2026-04)
-   Linear + Ramp 하이브리드 — 뉴트럴 stone/zinc 베이스 + 지점 강조
-   ══════════════════════════════════════════════════ */
-
 :root {
-  /* ── 색 토큰 ──────────────────────────────────── */
-  /* Surface — 배경 계층 */
-  --surface-base:     #FAFAF9;   /* 앱 본문 배경 (warm off-white, stone-50) */
-  --surface-1:        #FFFFFF;   /* 1차 카드 */
-  --surface-2:        #F8F8F7;   /* 2차 구역 (인라인 컨테이너) */
-  --surface-sunken:   #F4F4F5;   /* 들어간 영역 (input bg 등) */
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.2 0.02 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.02 250);
+  --primary: oklch(0.2 0.02 250);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.2 0.02 250);
+  --muted: oklch(0.96 0.005 250);
+  --muted-foreground: oklch(0.5 0.01 250);
+  --accent: oklch(0.7 0.15 55);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.92 0.005 250);
+  --input: oklch(0.92 0.005 250);
+  --ring: oklch(0.7 0.15 55);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.5rem;
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.2 0.02 250);
+  --sidebar-primary: oklch(0.2 0.02 250);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.96 0.005 250);
+  --sidebar-accent-foreground: oklch(0.2 0.02 250);
+  --sidebar-border: oklch(0.92 0.005 250);
+  --sidebar-ring: oklch(0.7 0.15 55);
 
-  /* Border — semi-transparent (Linear 스타일) */
-  --border-subtle:    rgba(9, 9, 11, 0.06);   /* 가장 약한 구분 */
-  --border-default:   rgba(9, 9, 11, 0.08);   /* 기본 카드 보더 */
-  --border-strong:    rgba(9, 9, 11, 0.12);   /* 강조 */
-  --border-interactive: rgba(9, 9, 11, 0.16); /* hover·focus */
+  /* CLSP Custom Colors */
+  --clsp-navy: oklch(0.2 0.02 250);
+  --clsp-orange: oklch(0.7 0.15 55);
+  --clsp-orange-light: oklch(0.85 0.1 55);
+  --clsp-gray: oklch(0.5 0.01 250);
+  --clsp-gray-light: oklch(0.96 0.005 250);
+  --clsp-success: oklch(0.6 0.15 145);
+  --clsp-warning: oklch(0.75 0.15 80);
+  --clsp-critical: oklch(0.7 0.15 55);
+}
 
-  /* Text — 명확한 3단계 */
-  --text-primary:     #09090B;   /* 본문 제목·수치 (zinc-950) */
-  --text-secondary:   #52525B;   /* 설명·서브 (zinc-600) */
-  --text-tertiary:    #A1A1AA;   /* 약한 메타·placeholder (zinc-400) */
-
-  /* Accent — 인터랙티브 브랜드 */
-  --accent:           #18181B;   /* primary 버튼·이모지 (zinc-900) */
-  --accent-hover:     #27272A;
-  --accent-brand:     #2563EB;   /* 액티브 링크·info (blue-600) */
-  --accent-brand-hover: #1D4ED8;
-
-  /* Semantic — 상태 컬러 (뱃지·알림 전용, 과하게 쓰지 말 것) */
-  --success:          #059669;
-  --success-soft:     rgba(5, 150, 105, 0.1);
-  --warning:          #D97706;
-  --warning-soft:     rgba(217, 119, 6, 0.1);
-  --danger:           #DC2626;
-  --danger-soft:      rgba(220, 38, 38, 0.1);
-  --info:             #2563EB;
-  --info-soft:        rgba(37, 99, 235, 0.1);
-
-  /* ── 스페이싱 — 4px 그리드 ────────────────────── */
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
-  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
-  --space-12: 48px; --space-16: 64px; --space-20: 80px;
-
-  /* ── Radius ──────────────────────────────────── */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius:    8px;    /* 기본 (버튼·input) */
-  --radius-md: 10px;
-  --radius-lg: 12px;   /* 카드 기본 */
-  --radius-xl: 16px;   /* 큰 카드·히어로 */
-  --radius-2xl: 20px;
-  --radius-full: 999px;
-
-  /* ── Shadow — Linear 스타일, 저대비 ───────────── */
-  --shadow-xs: 0 1px 2px rgba(9, 9, 11, 0.04);
-  --shadow-sm: 0 1px 3px rgba(9, 9, 11, 0.06), 0 1px 2px rgba(9, 9, 11, 0.03);
-  --shadow:    0 2px 8px rgba(9, 9, 11, 0.06), 0 1px 3px rgba(9, 9, 11, 0.04);
-  --shadow-md: 0 4px 12px rgba(9, 9, 11, 0.08), 0 2px 4px rgba(9, 9, 11, 0.04);
-  --shadow-lg: 0 8px 24px -4px rgba(9, 9, 11, 0.1), 0 4px 8px -2px rgba(9, 9, 11, 0.04);
-  --shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.15);
-  --shadow-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-
-  /* ── 모션 ────────────────────────────────────── */
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-out: cubic-bezier(0.0, 0, 0.2, 1);
-  --dur-1: 120ms;
-  --dur-2: 180ms;
-  --dur-3: 280ms;
-
-  /* ── Tailwind variable 맵핑 (기존 호환) ───────── */
-  --background: var(--surface-base);
-  --foreground: var(--text-primary);
-  --card: var(--surface-1);
-  --card-foreground: var(--text-primary);
-  --popover: var(--surface-1);
-  --popover-foreground: var(--text-primary);
-  --primary: var(--accent);
-  --primary-foreground: #FFFFFF;
-  --secondary: var(--surface-sunken);
-  --secondary-foreground: var(--text-primary);
-  --muted: var(--surface-sunken);
-  --muted-foreground: var(--text-secondary);
-  --accent-foreground: #FFFFFF;
-  --destructive: var(--danger);
-  --destructive-foreground: #FFFFFF;
-  --border: var(--border-default);
-  --input: var(--border-default);
-  --ring: rgba(37, 99, 235, 0.35);
-  --radius: 8px;
-  --sidebar: #0A0A0A;
-  --sidebar-foreground: #FAFAFA;
-  --sidebar-primary: #FAFAFA;
-  --sidebar-primary-foreground: #09090B;
-  --sidebar-accent: rgba(255, 255, 255, 0.06);
-  --sidebar-accent-foreground: #FAFAFA;
-  --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: rgba(255, 255, 255, 0.2);
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
 }
 
 @theme inline {
+  --font-sans: var(--font-geist-sans), 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), 'Geist Mono', ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -124,6 +106,15 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -132,318 +123,161 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* CLSP Custom Theme Colors */
+  --color-clsp-navy: var(--clsp-navy);
+  --color-clsp-orange: var(--clsp-orange);
+  --color-clsp-orange-light: var(--clsp-orange-light);
+  --color-clsp-gray: var(--clsp-gray);
+  --color-clsp-gray-light: var(--clsp-gray-light);
+  --color-clsp-success: var(--clsp-success);
+  --color-clsp-warning: var(--clsp-warning);
+  --color-clsp-critical: var(--clsp-critical);
 }
 
 @layer base {
   * {
-    border-color: var(--border-default);
+    @apply border-border outline-ring/50;
   }
   html {
     color-scheme: light;
   }
   body {
-    background: var(--surface-base);
-    color: var(--text-primary);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard', 'Noto Sans KR', sans-serif;
-    font-feature-settings: 'ss01', 'cv11', 'cv02';
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    @apply text-slate-900;
+    /* 본문 배경 — 밝은 오프화이트 + 은은한 블루 틴트 */
+    background:
+      radial-gradient(1200px 600px at 20% -10%, rgba(99, 102, 241, 0.06), transparent 60%),
+      radial-gradient(1000px 500px at 100% 110%, rgba(236, 72, 153, 0.04), transparent 60%),
+      #f6f7fb;
+    background-attachment: fixed;
+    font-feature-settings: 'ss01', 'cv11';
   }
-
-  /* 타이포 스케일 — Linear식 대비 강조 */
-  h1 { font-size: 24px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); }
-  h2 { font-size: 18px; line-height: 26px; font-weight: 600; letter-spacing: -0.015em; color: var(--text-primary); }
-  h3 { font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-primary); }
-
   input, textarea, select {
-    caret-color: var(--text-primary);
+    caret-color: #0f172a;
     color: inherit;
   }
   input:-webkit-autofill {
-    -webkit-text-fill-color: var(--text-primary) !important;
-    -webkit-box-shadow: 0 0 0 1000px var(--surface-1) inset;
+    -webkit-text-fill-color: #0f172a !important;
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
   }
 
-  button:focus-visible, a:focus-visible {
-    outline: none;
-    box-shadow: var(--shadow-focus);
-    border-radius: var(--radius);
+  /* 타이포 스케일 통일 */
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
   }
+  h1 { @apply font-black; }
+  h2 { @apply font-bold; }
+  h3 { @apply font-bold; }
 
-  /* 스크롤바 — 얇고 은은하게 (Linear 스타일) */
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.12);
-    border-radius: 10px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
+  /* 버튼 기본 focus ring */
+  button:focus-visible,
+  a:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+    border-radius: 6px;
   }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.2); background-clip: padding-box; border: 2px solid transparent; }
 }
 
-/* ══════════════════════════════════════════════════
-   공용 유틸 — DS 컴포넌트에서 호출
-   ══════════════════════════════════════════════════ */
-
-/* ── 앱 캔버스 ───────────────────────────────────── */
-.app-canvas {
-  background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(37, 99, 235, 0.03), transparent 50%),
-    radial-gradient(1000px 500px at 90% 10%, rgba(147, 51, 234, 0.02), transparent 50%),
-    var(--surface-base);
-}
-.app-main { background: transparent; }
-
-/* ── 카드 3단계 ───────────────────────────────────
-   ds-card:       기본 surface-1, 보더만
-   ds-card-elev:  hover 가능한 액션 카드 (shadow-sm + hover 살짝 lift)
-   ds-card-hero:  히어로·주요 정보 (gradient tint + shadow-lg)
+/* ──────────────────────────────────────────────
+   카드 엘리베이션 — Linear/Stripe 풍 프리미엄 느낌
+   배경(#e8ecf1)과 명확한 대비로 떠있는 카드
    ─────────────────────────────────────────────── */
-.ds-card {
-  background: var(--surface-1);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
+.card-elevated {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow:
+    0 1px 3px 0 rgba(15, 23, 42, 0.06),
+    0 8px 24px -4px rgba(15, 23, 42, 0.12);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
-.ds-card-elev {
-  background: var(--surface-1);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
+.card-elevated:hover {
+  border-color: #cbd5e1;
+  box-shadow:
+    0 2px 6px 0 rgba(15, 23, 42, 0.08),
+    0 16px 32px -8px rgba(15, 23, 42, 0.18);
 }
-.ds-card-elev:hover {
-  border-color: var(--border-interactive);
-  box-shadow: var(--shadow);
+
+/* ──────────────────────────────────────────────
+   2026 모던 카드 — Stripe · Linear 하이브리드
+   ─────────────────────────────────────────────── */
+.card-modern {
+  position: relative;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow:
+    0 1px 2px 0 rgba(15, 23, 42, 0.04),
+    0 6px 18px -6px rgba(15, 23, 42, 0.08);
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.card-modern::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.25), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.card-modern:hover {
+  border-color: rgba(148, 163, 184, 0.6);
   transform: translateY(-1px);
+  box-shadow:
+    0 4px 12px 0 rgba(15, 23, 42, 0.06),
+    0 20px 48px -12px rgba(15, 23, 42, 0.18);
 }
-.ds-card-hero {
-  background:
-    linear-gradient(180deg, rgba(37, 99, 235, 0.02), transparent 40%),
-    var(--surface-1);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+.card-modern:hover::before { opacity: 1; }
+
+/* 히어로 강조 — 그라데이션 + glow */
+.card-hero {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #fef3f2 100%);
+  border: 1px solid rgba(199, 210, 254, 0.5);
+  border-radius: 24px;
   position: relative;
   overflow: hidden;
 }
-.ds-card-hero::before {
+.card-hero::before {
   content: '';
   position: absolute;
-  inset: 0;
+  top: -50%; right: -20%;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 60%);
   pointer-events: none;
-  background:
-    radial-gradient(600px 300px at 100% 0%, rgba(37, 99, 235, 0.05), transparent 60%);
+}
+.card-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -40%; left: -10%;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, transparent 60%);
+  pointer-events: none;
 }
 
-/* ── 버튼 ───────────────────────────────────────── */
-.ds-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 20px;
-  padding: 6px 12px;
-  border-radius: var(--radius);
-  border: 1px solid transparent;
-  transition: background-color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
-  cursor: pointer;
-  white-space: nowrap;
-  user-select: none;
-}
-.ds-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.ds-btn:active:not(:disabled) { transform: translateY(0.5px); }
-
-.ds-btn-primary {
-  background: var(--accent);
-  color: var(--primary-foreground);
-  box-shadow: var(--shadow-inset-highlight), var(--shadow-xs);
-}
-.ds-btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
-
-.ds-btn-secondary {
-  background: var(--surface-1);
-  border-color: var(--border-default);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-xs);
-}
-.ds-btn-secondary:hover:not(:disabled) { background: var(--surface-sunken); border-color: var(--border-interactive); }
-
-.ds-btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-}
-.ds-btn-ghost:hover:not(:disabled) { background: var(--surface-sunken); color: var(--text-primary); }
-
-.ds-btn-brand {
-  background: var(--accent-brand);
-  color: #FFFFFF;
-  box-shadow: var(--shadow-inset-highlight), 0 1px 3px rgba(37, 99, 235, 0.3);
-}
-.ds-btn-brand:hover:not(:disabled) { background: var(--accent-brand-hover); }
-
-.ds-btn-sm { font-size: 12px; padding: 4px 10px; line-height: 18px; }
-.ds-btn-lg { font-size: 14px; padding: 8px 16px; line-height: 22px; }
-
-/* ── 입력 ───────────────────────────────────────── */
-.ds-input {
-  width: 100%;
-  height: 36px;
-  padding: 0 12px;
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--text-primary);
-  background: var(--surface-1);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius);
-  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
-}
-.ds-input:hover { border-color: var(--border-interactive); }
-.ds-input:focus { outline: none; border-color: var(--accent-brand); box-shadow: var(--shadow-focus); }
-.ds-input::placeholder { color: var(--text-tertiary); }
-textarea.ds-input { height: auto; padding: 8px 12px; min-height: 64px; }
-
-/* ── 뱃지 / 칩 ──────────────────────────────────── */
-.ds-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 20px;
-  padding: 0 8px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  border-radius: var(--radius-full);
-  border: 1px solid transparent;
-  color: var(--text-secondary);
-  background: var(--surface-sunken);
-}
-.ds-chip-neutral { background: var(--surface-sunken); color: var(--text-secondary); border-color: var(--border-default); }
-.ds-chip-success { background: var(--success-soft); color: var(--success); }
-.ds-chip-warning { background: var(--warning-soft); color: var(--warning); }
-.ds-chip-danger  { background: var(--danger-soft);  color: var(--danger);  }
-.ds-chip-info    { background: var(--info-soft);    color: var(--info);    }
-
-/* dot 뱃지 (크기 작은 점형) */
-.ds-dot {
-  display: inline-block;
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* ── 구분자 ──────────────────────────────────────── */
-.ds-divider { height: 1px; background: var(--border-default); border: 0; }
-
-/* ── 표 ─────────────────────────────────────────── */
-.ds-table {
-  width: 100%;
-  font-size: 13px;
-}
-.ds-table thead th {
-  padding: 8px 12px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border-default);
-}
-.ds-table tbody td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-}
-.ds-table tbody tr:hover td { background: var(--surface-sunken); }
-
-/* ── Stat (KPI용) ─────────────────────────────── */
-.ds-stat-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-.ds-stat-value {
-  font-size: 32px;
-  line-height: 36px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-.ds-stat-sub {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-/* ── Section Header ──────────────────────────── */
-.ds-section-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-/* ── 사이드바 네비 ─────────────────────────────── */
-.nav-item-active {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #FAFAFA !important;
-  box-shadow: inset 2px 0 0 #FAFAFA, var(--shadow-inset-highlight);
-}
-
-/* ── 레거시 호환 클래스 (점진 이관) ─────────── */
-.card-elevated {
-  background: var(--surface-1);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
-}
-.card-elevated:hover {
-  border-color: var(--border-interactive);
-  box-shadow: var(--shadow);
-  transform: translateY(-1px);
-}
-.card-modern { composes: ds-card-elev; }
-.card-hero { composes: ds-card-hero; }
-.surface-1 { composes: ds-card; }
-.surface-2 { composes: ds-card; }
-.surface-3 { composes: ds-card-hero; }
-.btn-primary { composes: ds-btn ds-btn-brand; }
-.btn-ghost { composes: ds-btn ds-btn-secondary; }
-.chip { composes: ds-chip; }
-.chip-blue    { composes: ds-chip ds-chip-info; }
-.chip-emerald { composes: ds-chip ds-chip-success; }
-.chip-amber   { composes: ds-chip ds-chip-warning; }
-.chip-rose    { composes: ds-chip ds-chip-danger; }
-.chip-violet  { composes: ds-chip ds-chip-info; }
-.chip-slate   { composes: ds-chip ds-chip-neutral; }
-
-/* stat-value 기존 명칭도 매핑 */
+/* stat 값 강조 — 큰 숫자 + tabular */
 .stat-value {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1;
 }
+
+/* accent 도트 — 카드 좌측 상단 포인트 */
 .accent-dot {
   position: absolute;
   top: 14px; right: 14px;
   width: 6px; height: 6px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 0 3px currentColor;
-  opacity: 0.18;
+  box-shadow: 0 0 0 3px currentColor, 0 0 12px currentColor;
+  opacity: 0.25;
 }
+
+/* 얇은 진행 바 */
 .progress-slim {
   height: 3px;
   border-radius: 999px;
-  background: rgba(9, 9, 11, 0.06);
+  background: rgba(148, 163, 184, 0.15);
   overflow: hidden;
   position: relative;
 }
@@ -451,27 +285,170 @@ textarea.ds-input { height: auto; padding: 8px 12px; min-height: 64px; }
   position: absolute;
   top: 0; left: 0; bottom: 0;
   border-radius: 999px;
-  background: currentColor;
-  transition: width 0.6s var(--ease-out);
+  background: linear-gradient(90deg, currentColor, currentColor);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* sidebar-scroll / thin-scroll 유지 */
+/* ══════════════════════════════════════════════════
+   앱 전역 캔버스·메인 배경 — 2026 밝은 톤 + 파스텔 틴트
+   ══════════════════════════════════════════════════ */
+.app-canvas {
+  background:
+    radial-gradient(900px 500px at 12% -5%, rgba(99, 102, 241, 0.08), transparent 60%),
+    radial-gradient(700px 400px at 100% 0%, rgba(14, 165, 233, 0.06), transparent 60%),
+    radial-gradient(600px 400px at 50% 110%, rgba(236, 72, 153, 0.04), transparent 60%),
+    #f6f7fb;
+}
+.app-main {
+  background: transparent;
+}
+
+/* ══════════════════════════════════════════════════
+   Surface 3단계 — 2026 톤 공통 카드
+   ══════════════════════════════════════════════════ */
+.surface-1 {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+.surface-2 {
+  background: linear-gradient(180deg, #ffffff, #fafbff);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 20px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px -8px rgba(15, 23, 42, 0.08);
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.surface-2:hover {
+  border-color: rgba(148, 163, 184, 0.6);
+  transform: translateY(-2px);
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.06),
+    0 24px 48px -16px rgba(15, 23, 42, 0.16);
+}
+.surface-3 {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #eef2ff 100%);
+  border: 1px solid rgba(199, 210, 254, 0.5);
+  border-radius: 24px;
+  box-shadow:
+    0 2px 8px rgba(99, 102, 241, 0.06),
+    0 24px 60px -16px rgba(99, 102, 241, 0.14);
+}
+
+/* ══════════════════════════════════════════════════
+   버튼 — pill 스타일
+   ══════════════════════════════════════════════════ */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #6366f1, #4f46e5);
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1), 0 4px 12px -4px rgba(99, 102, 241, 0.5);
+  transition: all 0.2s ease;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(15, 23, 42, 0.1), 0 8px 20px -4px rgba(99, 102, 241, 0.55); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  color: #334155;
+  font-weight: 600;
+  font-size: 13px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.9); border-color: rgba(148, 163, 184, 0.8); }
+
+/* ══════════════════════════════════════════════════
+   뱃지 — 컬러 키별 pill
+   ══════════════════════════════════════════════════ */
+.chip {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.125rem 0.625rem;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+.chip-blue    { background: rgba(59, 130, 246, 0.1); color: #1d4ed8; border-color: rgba(59, 130, 246, 0.18); }
+.chip-emerald { background: rgba(16, 185, 129, 0.1); color: #047857; border-color: rgba(16, 185, 129, 0.18); }
+.chip-amber   { background: rgba(245, 158, 11, 0.12); color: #b45309; border-color: rgba(245, 158, 11, 0.2); }
+.chip-rose    { background: rgba(244, 63, 94, 0.1); color: #be123c; border-color: rgba(244, 63, 94, 0.2); }
+.chip-violet  { background: rgba(139, 92, 246, 0.1); color: #6d28d9; border-color: rgba(139, 92, 246, 0.2); }
+.chip-slate   { background: rgba(100, 116, 139, 0.1); color: #334155; border-color: rgba(100, 116, 139, 0.18); }
+
+/* ══════════════════════════════════════════════════
+   사이드바 내부 네비 링크 — 호버 glow + active 그라데이션
+   ══════════════════════════════════════════════════ */
+.nav-item-active {
+  background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.2),
+    0 8px 16px -6px rgba(99, 102, 241, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 커스텀 스크롤바 — 거의 안 보이는 오버레이, 호버 시에만 실루엣 */
 .sidebar-scroll {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.25s ease;
 }
-.sidebar-scroll:hover { scrollbar-color: rgba(255, 255, 255, 0.15) transparent; }
-.sidebar-scroll::-webkit-scrollbar { width: 3px; }
-.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-.sidebar-scroll::-webkit-scrollbar-thumb { background: transparent; }
-.sidebar-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); }
-.sidebar-scroll::-webkit-scrollbar-button { display: none; }
+.sidebar-scroll:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.25s ease;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+/* 화살표 버튼 숨김 */
+.sidebar-scroll::-webkit-scrollbar-button {
+  display: none;
+}
 
+/* 일반 밝은 영역용 얇은 스크롤바 */
 .thin-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
 }
-.thin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-.thin-scroll::-webkit-scrollbar-track { background: transparent; }
-
-/* 레거시: card-modern 레거시 CSS 유지 (기존 페이지에서 여전히 쓰는 중) */
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+}
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+.thin-scroll::-webkit-scrollbar-button {
+  display: none;
+}

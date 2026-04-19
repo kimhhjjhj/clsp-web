@@ -64,8 +64,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               transition-transform duration-200 shadow-xl shadow-black/20
               ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `} style={{
-              background: '#0A0A0A',
-              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              background: `
+                radial-gradient(600px 400px at 100% 0%, rgba(99, 102, 241, 0.12), transparent 60%),
+                linear-gradient(180deg, #0b1020 0%, #0f172a 40%, #0b1020 100%)
+              `,
             }}>
               <Suspense fallback={null}>
                 <Sidebar onClose={() => setMobileSidebarOpen(false)} />
@@ -75,34 +77,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* 본문 */}
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* 상단 네비 */}
-              <header className="h-[60px] bg-white/80 backdrop-blur border-b border-[var(--border-default)] flex items-center px-3 sm:px-5 gap-3 flex-shrink-0 relative z-10">
+              <header className="h-16 bg-white border-b border-slate-200 flex items-center px-3 sm:px-6 gap-3 sm:gap-5 flex-shrink-0">
                 {/* 모바일 햄버거 */}
                 <button
                   onClick={() => setMobileSidebarOpen(true)}
-                  className="lg:hidden p-1.5 -ml-1 rounded-md hover:bg-black/[0.04] text-[var(--text-secondary)]"
+                  className="lg:hidden p-2 -ml-1 rounded-md hover:bg-slate-100 text-slate-600"
                   aria-label="메뉴 열기"
                 >
-                  <Menu size={18} />
+                  <Menu size={20} />
                 </button>
 
-                <Image src="/tongyang-logo.png" alt="TONGYANG" height={28} width={120} className="hidden sm:block object-contain h-7 w-auto flex-shrink-0 opacity-75" />
+                <Image src="/tongyang-logo.png" alt="TONGYANG" height={32} width={150} className="hidden sm:block object-contain h-8 w-auto flex-shrink-0" />
 
-                <div className="h-5 w-px bg-[var(--border-default)] mx-1 hidden sm:block" />
+                <div className="h-7 w-px bg-slate-200 mx-1 hidden sm:block" />
                 <ProjectSwitcher />
 
-                {/* 중앙 검색 */}
+                {/* 중앙 검색 — flex로 가운데 정렬 */}
                 <div className="flex-1 flex justify-center">
                   <TopBarSearch />
                 </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                   <MobileSearchButton />
-                  <button
-                    className="flex items-center gap-2 h-8 pl-0.5 pr-2 rounded-md hover:bg-black/[0.04] transition-colors"
-                    aria-label="계정"
-                  >
-                    <div className="w-7 h-7 rounded-md bg-[var(--text-primary)] flex items-center justify-center text-white text-[11px] font-semibold">K</div>
-                    <span className="text-[13px] font-medium text-[var(--text-primary)] hidden lg:block">관리자</span>
+                  <div className="w-px h-6 bg-slate-200 mx-1 hidden sm:block" />
+                  <button className="flex items-center gap-2 h-9 pl-1 pr-2 sm:pr-3 rounded-full hover:bg-slate-100 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-xs font-bold shadow-sm ring-2 ring-white">K</div>
+                    <span className="text-sm font-medium text-slate-700 hidden lg:block">관리자</span>
                   </button>
                 </div>
               </header>

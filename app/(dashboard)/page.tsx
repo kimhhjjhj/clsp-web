@@ -99,56 +99,72 @@ export default function DashboardPage() {
       <PageHeader
         icon={LayoutGrid}
         title="대시보드"
-        subtitle="Construction Lifecycle Platform"
-        accent="slate"
+        subtitle="동양건설산업 · 통합 공정관리 플랫폼"
+        accent="blue"
         actions={
           <>
-            <Link href="/import" className="ds-btn ds-btn-secondary hidden sm:inline-flex">
-              <Upload size={13} /> 임포트
+            <Link
+              href="/import"
+              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <Upload size={14} /> 임포트
             </Link>
-            <Link href="/projects/new" className="ds-btn ds-btn-primary">
-              <Plus size={13} /><span className="hidden sm:inline">새 프로젝트</span><span className="sm:hidden">추가</span>
+            <Link
+              href="/projects/new"
+              className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
+            >
+              <Plus size={14} /><span className="hidden sm:inline">새 프로젝트</span><span className="sm:hidden">추가</span>
             </Link>
           </>
         }
       />
 
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-8 py-6 sm:py-10 space-y-10">
-          {/* Hero — Ramp 스타일, 아주 큰 수치 + 컨텍스트 */}
-          <section>
-            <p className="ds-section-label mb-3">
-              {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
-            </p>
-            <h1 className="text-[40px] sm:text-[48px] font-semibold tracking-[-0.03em] leading-[1.05] text-[var(--text-primary)]">
-              안녕하세요.
-              <br />
-              <span className="text-[var(--text-tertiary)]">오늘 관리할 프로젝트는</span>{' '}
-              <span className="tabular-nums">{loading ? '—' : statusGroups.active.length}개</span>
-              <span className="text-[var(--text-tertiary)]">입니다.</span>
-            </h1>
-            {!loading && statusGroups.paused.length > 0 && (
-              <p className="mt-4 text-[13px] text-[var(--warning)] font-medium">
-                • 일시중단 {statusGroups.paused.length}건 확인 필요
+      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6">
+        {/* Hero — 오늘의 핵심 한 줄 */}
+        {!loading && projects.length > 0 && (
+          <section className="card-hero p-6 sm:p-8 relative">
+            <div className="relative">
+              <p className="text-[11px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-2">
+                {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
               </p>
-            )}
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <h1 className="stat-value text-4xl sm:text-5xl font-black text-slate-900">
+                  {statusGroups.active.length}<span className="text-2xl font-semibold text-slate-400">개</span>
+                  <span className="text-slate-300 mx-3">·</span>
+                  {kpi.totalReports.toLocaleString()}<span className="text-2xl font-semibold text-slate-400">일보</span>
+                </h1>
+              </div>
+              <p className="text-sm text-slate-600 mt-3 font-medium">
+                진행 중 현장 {statusGroups.active.length}곳, 누적 일보 {kpi.totalReports.toLocaleString()}건.
+                {statusGroups.paused.length > 0 && ` 일시중단 ${statusGroups.paused.length}건 확인 필요.`}
+              </p>
+            </div>
           </section>
+        )}
 
-          {/* Stat Grid — 4열, 저대비 라인만 */}
-          <section>
-            <div className="flex items-baseline justify-between mb-4">
-              <h2 className="ds-section-label">전사 현황</h2>
-              <Link href="/projects" className="text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] no-underline flex items-center gap-1">
-                전체 보기 <ChevronRight size={12} />
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-[var(--radius-lg)] overflow-hidden bg-[var(--border-default)] border border-[var(--border-default)]">
-              <StatTile loading={loading} label="진행중" value={statusGroups.active.length} unit="개" sub={statusGroups.paused.length > 0 ? `일시중단 ${statusGroups.paused.length}건` : '정상 가동'} trend="emerald" href="/projects?status=active" />
-              <StatTile loading={loading} label="계획중" value={statusGroups.planning.length} unit="개" sub="착공 전·검토 중" href="/projects?status=planning" />
-              <StatTile loading={loading} label="준공 자산" value={statusGroups.completed.length} unit="개" sub={`실적 ${kpi.totalReports.toLocaleString()}건`} href="/projects?status=completed" />
-              <StatTile loading={loading} label="전사 합계" value={kpi.projectCount} unit="개" sub={`공종 ${kpi.totalTasks} · 평균 ${kpi.avgArea ? kpi.avgArea.toLocaleString() + '㎡' : '—'}`} href="/projects" />
-            </div>
-          </section>
+        {/* KPI — 상태 중심 */}
+        <section>
+          <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3">전사 현황</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <KpiCard loading={loading} icon={Activity} iconBg="bg-emerald-50" iconColor="text-emerald-600"
+              label="진행중" value={statusGroups.active.length} unit="개"
+              sub={statusGroups.paused.length > 0 ? `일시중단 ${statusGroups.paused.length}개 포함 주의` : '모두 정상 가동'}
+              href="/projects?status=active"
+              accent="#16a34a" />
+            <KpiCard loading={loading} icon={ClipboardCheck} iconBg="bg-blue-50" iconColor="text-blue-600"
+              label="계획중" value={statusGroups.planning.length} unit="개"
+              sub="착공 전·검토 중"
+              href="/projects?status=planning" />
+            <KpiCard loading={loading} icon={CheckCircle2} iconBg="bg-slate-50" iconColor="text-slate-600"
+              label="준공 자산" value={statusGroups.completed.length} unit="개"
+              sub={`실적 ${kpi.totalReports.toLocaleString()}건 축적`}
+              href="/projects?status=completed" />
+            <KpiCard loading={loading} icon={FolderKanban} iconBg="bg-violet-50" iconColor="text-violet-600"
+              label="전사 합계" value={kpi.projectCount} unit="개"
+              sub={`공종 ${kpi.totalTasks} · 평균 ${kpi.avgArea ? kpi.avgArea.toLocaleString() + '㎡' : '—'}`}
+              href="/projects" />
+          </div>
+        </section>
 
         {/* 오늘 할 일 — 진행중 프로젝트 중 이틀 이상 일보 없는 현장 */}
         {todayTasks.length > 0 && (
@@ -315,7 +331,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </section>
-        </div>
       </div>
     </div>
   )
@@ -362,41 +377,6 @@ function KpiCard({
     </div>
   )
   return href ? <Link href={href} className="no-underline">{inner}</Link> : inner
-}
-
-// 2026 DS — StatTile: 4열 연속 타일, gap-px 보더 선
-function StatTile({
-  loading, label, value, unit, sub, trend, href,
-}: {
-  loading: boolean
-  label: string
-  value: number | string
-  unit?: string
-  sub?: string
-  trend?: 'emerald' | 'amber' | 'danger'
-  href?: string
-}) {
-  const trendDot = trend === 'emerald' ? 'bg-emerald-500'
-    : trend === 'amber' ? 'bg-amber-500'
-    : trend === 'danger' ? 'bg-red-500'
-    : null
-  const inner = (
-    <div className="bg-[var(--surface-1)] px-5 py-6 transition-colors duration-150 hover:bg-[var(--surface-sunken)] cursor-pointer h-full group">
-      <div className="flex items-center gap-1.5 mb-4">
-        {trendDot && <span className={`ds-dot ${trendDot}`} />}
-        <span className="ds-stat-label">{label}</span>
-      </div>
-      {loading ? (
-        <Skeleton className="h-8 w-20" />
-      ) : (
-        <p className="ds-stat-value">
-          {value}{unit && <span className="text-[16px] font-medium text-[var(--text-tertiary)] ml-1">{unit}</span>}
-        </p>
-      )}
-      {sub && <p className="ds-stat-sub mt-2">{sub}</p>}
-    </div>
-  )
-  return href ? <Link href={href} className="no-underline block h-full">{inner}</Link> : inner
 }
 
 interface KpiData {

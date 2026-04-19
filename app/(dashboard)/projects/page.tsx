@@ -132,63 +132,68 @@ function ProjectsPage() {
       <PageHeader
         icon={FolderKanban}
         title="프로젝트"
-        subtitle={`${projects.length}개 · 진행 ${statusCounts.active} · 준공 ${statusCounts.completed}`}
-        accent="slate"
+        subtitle={`${projects.length}개 프로젝트 · 진행 ${statusCounts.active} · 준공 ${statusCounts.completed}`}
+        accent="emerald"
         actions={
           <>
-            <Link href="/import" className="ds-btn ds-btn-secondary hidden sm:inline-flex">
-              <Upload size={13} /> 임포트
+            <Link
+              href="/import"
+              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <Upload size={14} /> 엑셀 임포트
             </Link>
-            <Link href="/projects/new" className="ds-btn ds-btn-primary">
-              <Plus size={13} /><span className="hidden sm:inline">새 프로젝트</span><span className="sm:hidden">추가</span>
+            <Link
+              href="/projects/new"
+              className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
+            >
+              <Plus size={14} /><span className="hidden sm:inline">새 프로젝트</span><span className="sm:hidden">추가</span>
             </Link>
           </>
         }
       />
 
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-8 py-6 space-y-5">
-          {/* 상태 탭 — 인라인 pill */}
-          <div className="flex items-center gap-1 overflow-x-auto -mx-1 px-1">
-            {STATUS_TABS.map(t => {
-              const active = statusFilter === t.key
-              const count = statusCounts[t.key]
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => setStatusFilter(t.key)}
-                  className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors ${
-                    active
-                      ? 'bg-[var(--text-primary)] text-white'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-sunken)]'
-                  }`}
-                >
-                  {t.dot && <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />}
-                  {t.label}
-                  <span className={`text-[10px] font-mono tabular-nums ${
-                    active ? 'text-white/60' : 'text-[var(--text-tertiary)]'
-                  }`}>{count}</span>
-                </button>
-              )
-            })}
-          </div>
+      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-4">
+        {/* 상태 탭 */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin -mx-1 px-1">
+          {STATUS_TABS.map(t => {
+            const active = statusFilter === t.key
+            const count = statusCounts[t.key]
+            return (
+              <button
+                key={t.key}
+                onClick={() => setStatusFilter(t.key)}
+                className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  active
+                    ? 'bg-gray-900 text-white shadow-sm'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                {t.dot && <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />}
+                {t.label}
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                  active ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
+                }`}>{count}</span>
+              </button>
+            )
+          })}
+        </div>
 
-          {/* 검색 + 필터 */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative flex-1 min-w-[200px] max-w-md">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="프로젝트·발주처·위치 검색"
-                className="ds-input pl-9 pr-8"
-              />
-              {query && (
-                <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">
-                  <X size={12} />
-                </button>
-              )}
-            </div>
+        {/* 검색 + 유형 필터 + 정렬 */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="프로젝트명·발주처·시공사·위치·유형 검색"
+              className="w-full pl-9 pr-8 h-9 bg-white border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+            {query && (
+              <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
+                <X size={12} />
+              </button>
+            )}
+          </div>
 
           {types.length > 0 && (
             <div className="inline-flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5">
@@ -210,54 +215,53 @@ function ProjectsPage() {
             </div>
           )}
 
-            <div className="inline-flex items-center gap-1 text-xs text-[var(--text-tertiary)] ml-auto">
-              <SortAsc size={12} />
-              <select
-                value={sortKey}
-                onChange={e => setSortKey(e.target.value as SortKey)}
-                className="ds-input !h-8 !w-auto text-[12px] pr-7"
-              >
-                <option value="recent">최근 활동순</option>
-                <option value="startDate">착공일 최신순</option>
-                <option value="name">이름순</option>
-              </select>
-            </div>
+          <div className="inline-flex items-center gap-1 text-xs text-gray-500 ml-auto">
+            <SortAsc size={12} className="text-gray-400" />
+            <select
+              value={sortKey}
+              onChange={e => setSortKey(e.target.value as SortKey)}
+              className="h-8 px-2 bg-white border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-500"
+            >
+              <option value="recent">최근 활동순</option>
+              <option value="startDate">착공일 최신순</option>
+              <option value="name">이름순</option>
+            </select>
           </div>
-
-          {/* 콘텐츠 */}
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="ds-card">
-              <EmptyState
-                icon={FolderKanban}
-                title="아직 등록된 프로젝트가 없습니다"
-                description="신규 프로젝트를 만들어 개략공기 산정부터 시작하거나 과거 엑셀 일보를 일괄 임포트해 데이터 자산화를 시작하세요."
-                actions={[
-                  { label: '첫 프로젝트 만들기', href: '/projects/new', icon: <Plus size={14} />, variant: 'primary' },
-                  { label: '엑셀 임포트', href: '/import', icon: <Upload size={14} />, variant: 'secondary' },
-                ]}
-              />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="ds-card">
-              <EmptyState
-                icon={Search}
-                title="검색 결과가 없습니다"
-                description="조건을 변경하거나 필터를 해제해보세요."
-                actions={[
-                  { label: '조건 초기화', onClick: () => { setQuery(''); setTypeFilter('all'); setStatusFilter('all') }, variant: 'secondary' },
-                ]}
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map(p => <ProjectCard key={p.id} project={p} onDelete={deleteProject} />)}
-            </div>
-          )}
         </div>
+
+        {/* 콘텐츠 */}
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200">
+            <EmptyState
+              icon={FolderKanban}
+              title="아직 등록된 프로젝트가 없습니다"
+              description="신규 프로젝트를 만들어 개략공기 산정부터 시작하거나 과거 엑셀 일보를 일괄 임포트해 데이터 자산화를 시작하세요."
+              actions={[
+                { label: '첫 프로젝트 만들기', href: '/projects/new', icon: <Plus size={14} />, variant: 'primary' },
+                { label: '엑셀 임포트', href: '/import', icon: <Upload size={14} />, variant: 'secondary' },
+              ]}
+            />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200">
+            <EmptyState
+              icon={Search}
+              title="검색 결과가 없습니다"
+              description="조건을 변경하거나 필터를 해제해보세요."
+              actions={[
+                { label: '조건 초기화', onClick: () => { setQuery(''); setTypeFilter('all'); setStatusFilter('all') }, variant: 'secondary' },
+              ]}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map(p => <ProjectCard key={p.id} project={p} onDelete={deleteProject} />)}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -270,68 +274,104 @@ function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id
   const isCompleted = status === 'completed'
 
   return (
-    <div className="group ds-card-elev relative flex flex-col overflow-hidden">
-      <Link href={`/projects/${p.id}`} className="block p-5 flex-1 no-underline">
-        <div className="flex items-center gap-2 mb-3">
-          <span className={`ds-chip ${status === 'active' ? 'ds-chip-success' : status === 'paused' ? 'ds-chip-warning' : status === 'completed' ? 'ds-chip-neutral' : status === 'planning' ? 'ds-chip-info' : 'ds-chip-neutral'}`}>
-            <span className={`ds-dot`} style={{ background: 'currentColor' }} />
-            {info.label}
-          </span>
-          {p.type && (
-            <span className="text-[11px] font-medium text-[var(--text-tertiary)]">{p.type}</span>
-          )}
+    <div
+      className={`group card-elevated relative overflow-hidden flex flex-col ${
+        isCompleted ? 'opacity-90 hover:opacity-100' : 'hover:-translate-y-0.5'
+      }`}
+    >
+      {/* 상단 컬러 띠 — 상태 시각화 */}
+      <div className="h-1 w-full" style={{ background: info.color }} />
+
+      {/* 진행중: 우상단 pulse 도트 */}
+      {status === 'active' && (
+        <span className="absolute top-3 right-3 flex h-2 w-2 z-10">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        </span>
+      )}
+
+      <Link href={`/projects/${p.id}`} className="block p-4 flex-1 no-underline">
+        <div className="flex items-start justify-between mb-3 gap-2">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm flex-shrink-0"
+              style={{ background: `linear-gradient(135deg, ${info.color}, ${info.color}dd)` }}>
+              <Building2 size={16} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${info.bg} ${info.text} border ${info.border}`}>
+                  <span className={`w-1 h-1 rounded-full ${info.dot}`} />
+                  {info.label}
+                </span>
+                {p.type && (
+                  <span className="text-[10px] font-medium text-gray-500">{p.type}</span>
+                )}
+              </div>
+              <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 group-hover:text-blue-700 transition-colors">
+                {p.name}
+              </h3>
+            </div>
+          </div>
         </div>
 
-        <h3 className="text-[15px] font-semibold text-[var(--text-primary)] leading-snug line-clamp-2 group-hover:text-[var(--accent-brand)] transition-colors tracking-[-0.01em]">
-          {p.name}
-        </h3>
         {p.client && (
-          <p className="text-[12px] text-[var(--text-secondary)] mt-1">{p.client}</p>
+          <p className="text-[11px] text-gray-500 mb-2.5 -mt-1">{p.client}</p>
         )}
 
-        <div className="space-y-1.5 mt-4 text-[12px] text-[var(--text-secondary)]">
+        <div className="space-y-1 text-xs text-gray-600">
           {p.location && (
             <div className="flex items-center gap-1.5">
-              <MapPin size={11} className="text-[var(--text-tertiary)]" />
+              <MapPin size={11} className="text-gray-400 flex-shrink-0" />
               <span className="truncate">{p.location}</span>
             </div>
           )}
+          {startDate && (
+            <div className="flex items-center gap-1.5">
+              <Calendar size={11} className="text-gray-400 flex-shrink-0" />
+              <span>착공 {startDate}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
-            <Layers size={11} className="text-[var(--text-tertiary)]" />
-            <span className="tabular-nums">
-              지상 {p.ground}층{p.basement > 0 ? ` · 지하 ${p.basement}층` : ''}{p.bldgArea ? ` · ${p.bldgArea.toLocaleString()}㎡` : ''}
-            </span>
+            <Layers size={11} className="text-gray-400 flex-shrink-0" />
+            <span>지상 {p.ground}층{p.basement > 0 ? ` · 지하 ${p.basement}층` : ''}{p.bldgArea ? ` · ${p.bldgArea.toLocaleString()} ㎡` : ''}</span>
           </div>
           {p.latestReportDate && (
             <div className="flex items-center gap-1.5">
-              <Clock size={11} className={status === 'active' ? 'text-[var(--success)]' : 'text-[var(--text-tertiary)]'} />
-              <span className={status === 'active' ? 'text-[var(--success)] font-medium' : ''}>
-                {formatRelative(p.latestReportDate)}
+              {status === 'active' ? (
+                <Clock size={11} className="text-emerald-500 flex-shrink-0" />
+              ) : status === 'completed' ? (
+                <CheckCircle2 size={11} className="text-slate-400 flex-shrink-0" />
+              ) : (
+                <Clock size={11} className="text-gray-400 flex-shrink-0" />
+              )}
+              <span className={status === 'active' ? 'text-emerald-700 font-medium' : 'text-gray-500'}>
+                마지막 일보 {formatRelative(p.latestReportDate)}
               </span>
             </div>
           )}
         </div>
       </Link>
 
-      <div className="border-t border-[var(--border-subtle)] px-5 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-3 text-[11px] text-[var(--text-tertiary)]">
-          <span className="tabular-nums"><strong className="text-[var(--text-secondary)] font-semibold">{p._count.tasks}</strong> 공종</span>
+      <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-3 text-[10px] text-gray-500">
+          <span><strong className="text-gray-700 font-mono">{p._count.tasks}</strong> 공종</span>
           {typeof p._count.dailyReports === 'number' && p._count.dailyReports > 0 && (
-            <span className="tabular-nums"><strong className="text-[var(--text-secondary)] font-semibold">{p._count.dailyReports}</strong> 일보</span>
+            <span><strong className="text-gray-700 font-mono">{p._count.dailyReports}</strong> 일보</span>
           )}
           {p.lastCpmDuration && (
-            <span className="tabular-nums"><strong className="text-[var(--accent-brand)] font-semibold">{p.lastCpmDuration}</strong>일</span>
+            <span><strong className="text-blue-700 font-mono">{p.lastCpmDuration}</strong>일</span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={e => { e.preventDefault(); onDelete(p.id, p.name) }}
-            className="p-1 text-[var(--text-tertiary)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 transition-opacity"
-            title="삭제"
+            className="p-1 text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+            title="프로젝트 삭제"
           ><Trash2 size={12} /></button>
           <Link
             href={`/bid?projectId=${p.id}`}
-            className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-1.5 no-underline"
+            className="text-[10px] text-gray-500 font-semibold no-underline hover:text-gray-900 px-1"
+            title="개략공기·조정값을 /bid에서 다시 편집"
           >재검토</Link>
           <Link href={`/projects/${p.id}`} className="text-[10px] text-blue-600 font-semibold no-underline hover:underline flex items-center gap-0.5">
             열기 <ChevronRight size={10} />
