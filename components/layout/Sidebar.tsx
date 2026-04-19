@@ -17,7 +17,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, BarChart3, Database, ShieldAlert, Users2,
-  Upload, ShieldCheck, Settings, X, DollarSign, ChevronRight, PawPrint, Plus,
+  Upload, ShieldCheck, Settings, X, DollarSign, ChevronRight, Layers, Plus,
 } from 'lucide-react'
 import { useProjectContext } from '@/lib/project-context/ProjectContext'
 import CurrentProjectSection from './CurrentProjectSection'
@@ -99,7 +99,7 @@ export default function Sidebar({ onClose }: Props) {
         <Link href="/" onClick={onClose} className="flex items-center gap-3 no-underline group">
           {/* 로고 아이콘 — 계층 쌓인 블록 느낌 */}
           <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-900/40 ring-1 ring-white/10 group-hover:shadow-blue-800/60 group-hover:scale-105 transition-all">
-            <PawPrint size={20} className="text-white drop-shadow-sm" strokeWidth={2.5} />
+            <Layers size={20} className="text-white drop-shadow-sm" strokeWidth={2.5} />
             {/* 빛나는 하이라이트 */}
             <span className="absolute top-0.5 left-0.5 right-0.5 h-1/2 rounded-t-xl bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
           </div>
