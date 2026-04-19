@@ -87,7 +87,18 @@ export default function AdminProductivityPage() {
   const [cpdbData, setCpdbData] = useState<ByProjectResponse | null>(null)
   const [cpdbLoading, setCpdbLoading] = useState(false)
 
-  // 제안에 등장한 프로젝트 목록
+  // 전체 프로젝트 목록 (CP_DB 실적 + 제안 필터 공용)
+  const [allProjects, setAllProjects] = useState<{ id: string; name: string }[]>([])
+  useEffect(() => {
+    fetch('/api/projects')
+      .then(r => r.ok ? r.json() : [])
+      .then((list: Array<{ id: string; name: string }>) => {
+        setAllProjects(list.map(p => ({ id: p.id, name: p.name })).sort((a, b) => a.name.localeCompare(b.name, 'ko')))
+      })
+      .catch(() => {})
+  }, [])
+
+  // 제안에 등장한 프로젝트 목록 (필터용 — 실제 제안 있는 프로젝트만 좁혀볼 수 있게)
   const projectsInProposals = useMemo(() => {
     const map = new Map<string, string>()
     for (const p of proposals) {
@@ -203,15 +214,16 @@ export default function AdminProductivityPage() {
               <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">CP_DB 공종별 실적 분석</h3>
               <p className="text-[11px] text-slate-500 mt-0.5">선택한 프로젝트의 일보에서 각 공종의 실제 투입 인일·활동일을 CP_DB 기준과 비교합니다</p>
             </div>
-            <label className="inline-flex items-center gap-2 text-[11px] text-slate-600">
-              <Building2 size={13} className="text-slate-400" />
+            <label className="inline-flex items-center gap-2 px-3 h-10 rounded-lg bg-blue-50 border border-blue-200">
+              <Building2 size={14} className="text-blue-600" />
+              <span className="text-[11px] font-bold text-blue-700 uppercase tracking-[0.12em]">프로젝트</span>
               <select
                 value={cpdbProjectId}
                 onChange={e => setCpdbProjectId(e.target.value)}
-                className="h-9 px-2.5 bg-slate-50 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
+                className="h-7 px-2 bg-white border border-blue-300 rounded-md text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 min-w-[180px]"
               >
-                <option value="">프로젝트 선택</option>
-                {projectsInProposals.map(p => (
+                <option value="">— 프로젝트 선택 —</option>
+                {allProjects.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
