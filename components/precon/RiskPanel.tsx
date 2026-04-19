@@ -86,6 +86,37 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
   // 카테고리 옵션 목록 (현재 items 기반 자동 생성)
   const categories = Array.from(new Set(items.map(i => i.category).filter(Boolean))).sort()
 
+  // 시계열 집계 — 월별 제안·확정 누적 (R&O proposedAt/confirmedAt 기준)
+  const timeSeries = (() => {
+    // 월 키 생성기
+    const monthKey = (d: string | null | undefined) => d ? d.slice(0, 7) : null
+    // 모든 월 수집
+    const months = new Set<string>()
+    for (const i of items) {
+      const mp = monthKey(i.proposedAt); if (mp) months.add(mp)
+      const mc = monthKey(i.confirmedAt); if (mc) months.add(mc)
+    }
+    if (months.size === 0) return null
+    const sorted = Array.from(months).sort()
+    // 월별 제안·확정 합산
+    const proposedByMonth = new Map<string, number>()
+    const confirmedByMonth = new Map<string, number>()
+    for (const i of items) {
+      const mp = monthKey(i.proposedAt)
+      if (mp && i.proposedCost != null) proposedByMonth.set(mp, (proposedByMonth.get(mp) ?? 0) + i.proposedCost)
+      const mc = monthKey(i.confirmedAt)
+      if (mc && i.confirmedCost != null) confirmedByMonth.set(mc, (confirmedByMonth.get(mc) ?? 0) + i.confirmedCost)
+    }
+    // 누적 계산
+    let propCum = 0, confCum = 0
+    const points = sorted.map(m => {
+      propCum += proposedByMonth.get(m) ?? 0
+      confCum += confirmedByMonth.get(m) ?? 0
+      return { month: m, proposed: propCum, confirmed: confCum, propMonth: proposedByMonth.get(m) ?? 0, confMonth: confirmedByMonth.get(m) ?? 0 }
+    })
+    return points
+  })()
+
   // 공종별 집계 (그래프용) — 제안·확정 합 + 건수
   const byCategory = (() => {
     const m = new Map<string, { count: number; proposed: number; confirmed: number; confirmedCount: number }>()
@@ -204,6 +235,11 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
           <p className="text-xs text-gray-400 mt-0.5">공기영향 +{riskDays.toFixed(1)}일</p>
         </div>
       </div>
+
+      {/* 시계열 누적 차트 — 월별 제안·확정 진행 추이 */}
+      {timeSeries && timeSeries.length > 0 && (
+        <RnoTimeChart points={timeSeries} />
+      )}
 
       {/* 공종별 절감 차트 — 엑셀 '3.공종별절감' 재현 */}
       {byCategory.length > 0 && (
@@ -554,6 +590,141 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
           onDeleted={async () => { setDetailItem(null); await load(); onUpdate?.() }}
         />
       )}
+    </div>
+  )
+}
+
+// ─────────────────────────── 시계열 차트 (경량 SVG) ───────────────────────────
+interface TimePoint {
+  month: string      // YYYY-MM
+  proposed: number   // 제안 누적 (백만, 음수 정상)
+  confirmed: number  // 확정 누적
+  propMonth: number  // 해당 월 제안
+  confMonth: number  // 해당 월 확정
+}
+
+function RnoTimeChart({ points }: { points: TimePoint[] }) {
+  const [hover, setHover] = useState<number | null>(null)
+
+  // 보정 — 1개월뿐이면 앞에 더미 0점 추가해 라인 보이게
+  const data = points.length === 1
+    ? [{ month: '시작', proposed: 0, confirmed: 0, propMonth: 0, confMonth: 0 }, ...points]
+    : points
+
+  const W = 720, H = 220
+  const PAD = { l: 60, r: 20, t: 20, b: 36 }
+  const chartW = W - PAD.l - PAD.r
+  const chartH = H - PAD.t - PAD.b
+
+  // Y: 음수 범위 — abs 최대값 기준 (절감은 음수로 저장됨)
+  const absMax = Math.max(1, ...data.flatMap(p => [Math.abs(p.proposed), Math.abs(p.confirmed)]))
+  // y(0) 상단, y(-absMax) 하단 (절감이 내려가는 느낌)
+  const yOf = (v: number) => PAD.t + ((-v) / absMax) * chartH  // v가 음수면 positive y
+
+  const xOf = (i: number) => PAD.l + (data.length === 1 ? chartW / 2 : (i / (data.length - 1)) * chartW)
+
+  const pathProposed = data.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xOf(i)} ${yOf(p.proposed)}`).join(' ')
+  const pathConfirmed = data.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xOf(i)} ${yOf(p.confirmed)}`).join(' ')
+  const areaProposed = `${pathProposed} L ${xOf(data.length - 1)} ${PAD.t} L ${xOf(0)} ${PAD.t} Z`
+
+  const yTicks = 4
+  const tickVals = Array.from({ length: yTicks + 1 }, (_, i) => -(absMax * i / yTicks))
+
+  const last = data[data.length - 1]
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="flex items-start justify-between flex-wrap gap-2 mb-3">
+        <div>
+          <h3 className="text-sm font-bold text-gray-800">절감 진행 추이</h3>
+          <p className="text-[11px] text-gray-500 mt-0.5">R&O 제안일·확정일 기준 · 월별 누적 (단위 백만원)</p>
+        </div>
+        <div className="flex items-center gap-3 text-[10px] text-gray-500">
+          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-emerald-400" /> 제안 누적 {Math.round(last.proposed).toLocaleString()}</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-emerald-700" /> 확정 누적 {Math.round(last.confirmed).toLocaleString()}</span>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          width="100%"
+          style={{ minWidth: 480 }}
+          className="block"
+          onMouseLeave={() => setHover(null)}
+        >
+          {/* Y 그리드 */}
+          {tickVals.map((v, i) => (
+            <g key={i}>
+              <line x1={PAD.l} x2={W - PAD.r} y1={yOf(v)} y2={yOf(v)} stroke="#f1f5f9" strokeWidth={1} />
+              <text x={PAD.l - 6} y={yOf(v) + 3} fontSize={10} textAnchor="end" fill="#94a3b8">
+                {Math.round(v).toLocaleString()}
+              </text>
+            </g>
+          ))}
+
+          {/* X 라벨 */}
+          {data.map((p, i) => (
+            <g key={i}>
+              {/* 일부만 렌더 (겹침 방지) — 4개 이하는 전부, 이상은 샘플링 */}
+              {(data.length <= 6 || i % Math.ceil(data.length / 6) === 0 || i === data.length - 1) && (
+                <text x={xOf(i)} y={H - PAD.b + 14} fontSize={10} textAnchor="middle" fill="#94a3b8">
+                  {p.month}
+                </text>
+              )}
+            </g>
+          ))}
+
+          {/* 제안 영역(연한) */}
+          <path d={areaProposed} fill="#6ee7b7" fillOpacity="0.15" />
+          {/* 제안 라인 */}
+          <path d={pathProposed} fill="none" stroke="#34d399" strokeWidth={2} />
+          {/* 확정 라인 */}
+          <path d={pathConfirmed} fill="none" stroke="#047857" strokeWidth={2.5} />
+
+          {/* 포인트 + 호버 영역 */}
+          {data.map((p, i) => (
+            <g key={`pt-${i}`}>
+              <circle cx={xOf(i)} cy={yOf(p.proposed)} r={3} fill="#34d399" />
+              <circle cx={xOf(i)} cy={yOf(p.confirmed)} r={3.5} fill="#047857" />
+              <rect
+                x={xOf(i) - 16}
+                y={PAD.t}
+                width={32}
+                height={chartH}
+                fill="transparent"
+                onMouseEnter={() => setHover(i)}
+                style={{ cursor: 'default' }}
+              />
+            </g>
+          ))}
+
+          {/* 호버 툴팁 */}
+          {hover != null && data[hover] && (
+            <g pointerEvents="none">
+              <line x1={xOf(hover)} x2={xOf(hover)} y1={PAD.t} y2={H - PAD.b} stroke="#cbd5e1" strokeDasharray="2 2" />
+              {(() => {
+                const p = data[hover]
+                const tx = Math.min(W - 130, Math.max(PAD.l, xOf(hover) + 8))
+                return (
+                  <g transform={`translate(${tx}, ${PAD.t + 8})`}>
+                    <rect width={128} height={60} rx={6} fill="#0f172a" fillOpacity={0.92} />
+                    <text x={8} y={15} fontSize={10} fill="#e2e8f0" fontWeight={600}>{p.month}</text>
+                    <text x={8} y={30} fontSize={10} fill="#6ee7b7">
+                      제안 누적 {Math.round(p.proposed).toLocaleString()}
+                    </text>
+                    <text x={8} y={44} fontSize={10} fill="#34d399">
+                      확정 누적 {Math.round(p.confirmed).toLocaleString()}
+                    </text>
+                    <text x={8} y={56} fontSize={9} fill="#94a3b8">
+                      (월 +제안 {Math.round(p.propMonth)} / 확정 {Math.round(p.confMonth)})
+                    </text>
+                  </g>
+                )
+              })()}
+            </g>
+          )}
+        </svg>
+      </div>
     </div>
   )
 }
