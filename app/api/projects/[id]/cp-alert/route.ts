@@ -13,6 +13,7 @@ import { generateWBS } from '@/lib/engine/wbs'
 import { calculateCPM } from '@/lib/engine/cpm'
 import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
 import { normalizeTrade } from '@/lib/normalizers/aliases'
+import { getProjectStatus } from '@/lib/project-status'
 import type { ProjectInput } from '@/lib/types'
 
 interface ManpowerEntry { trade: string; today: number }
@@ -39,6 +40,30 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (!project.startDate) {
     return NextResponse.json({ alerts: [], summary: { hasStartDate: false } })
+  }
+
+  // 준공/보관 프로젝트는 CP 경보 무의미 — 모든 CP 공종이 과거 날짜라 전부 경보로 잡힘
+  const [dailyReportCount, latestReport] = await Promise.all([
+    prisma.dailyReport.count({ where: { projectId: id } }),
+    prisma.dailyReport.findFirst({
+      where: { projectId: id },
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    }),
+  ])
+  const projectStatus = getProjectStatus({
+    latestReportDate: latestReport?.date ?? null,
+    _count: { dailyReports: dailyReportCount },
+  })
+  if (projectStatus === 'completed' || projectStatus === 'archived') {
+    return NextResponse.json({
+      alerts: [],
+      summary: {
+        hasStartDate: true,
+        projectStart: project.startDate,
+        projectStatus,
+      },
+    })
   }
 
   // WBS + CPM 재계산

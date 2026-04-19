@@ -244,8 +244,10 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-5">
-        {/* CP 공종 조기 경보 (alert 있을 때만 렌더) */}
-        <CpAlertBanner projectId={id} />
+        {/* CP 공종 조기 경보 (alert 있을 때만 렌더) — 준공·보관은 의미 없어 숨김 */}
+        {lifecycle !== 'completed' && lifecycle !== 'archived' && (
+          <CpAlertBanner projectId={id} />
+        )}
 
         {/* 상태 배너 — 라이프사이클 상태 + 현재 진행 단계 통합 */}
         {(() => {
