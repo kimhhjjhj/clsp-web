@@ -48,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ProjectProvider>
         <CommandPaletteProvider>
           <GlobalShortcuts />
-          <div className="flex h-full relative" style={{ background: '#d9dfe8' }}>
+          <div className="flex h-full relative app-canvas">
             {/* 모바일 사이드바 오버레이 */}
             {mobileSidebarOpen && (
               <div
@@ -63,7 +63,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               fixed lg:static inset-y-0 left-0 z-50
               transition-transform duration-200 shadow-xl shadow-black/20
               ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-            `} style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #172133 100%)' }}>
+            `} style={{
+              background: `
+                radial-gradient(600px 400px at 100% 0%, rgba(99, 102, 241, 0.12), transparent 60%),
+                linear-gradient(180deg, #0b1020 0%, #0f172a 40%, #0b1020 100%)
+              `,
+            }}>
               <Suspense fallback={null}>
                 <Sidebar onClose={() => setMobileSidebarOpen(false)} />
               </Suspense>
@@ -106,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Breadcrumb />
 
               {/* 메인 콘텐츠 */}
-              <main className="flex-1 overflow-auto" style={{ background: '#d9dfe8' }}>
+              <main className="flex-1 overflow-auto app-main">
                 {children}
               </main>
             </div>

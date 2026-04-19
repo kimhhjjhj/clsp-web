@@ -64,7 +64,7 @@ export default function StagePage({
             key={s}
             href={`/projects/${id}/stage/${s}`}
             className={`relative flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-bold no-underline transition-colors ${
-              active ? '' : 'text-slate-400 hover:text-white hover:bg-white/5 font-semibold'
+              active ? '' : 'text-slate-400 hover:text-white hover:bg-white font-semibold'
             }`}
             style={active ? { color: info.color } : undefined}
           >
@@ -105,7 +105,7 @@ export default function StagePage({
             {hasPrev && (
               <Link
                 href={`/projects/${id}/stage/${prevStage}`}
-                className="hidden sm:inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-white/15 bg-white/5 text-xs font-semibold text-slate-200 hover:bg-white/10"
+                className="hidden sm:inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
                 <ChevronLeft size={12} /> 이전
               </Link>

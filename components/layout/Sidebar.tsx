@@ -273,10 +273,10 @@ function SidebarLink({
     <Link
       href={item.href}
       onClick={onNavigate}
-      className={`group flex items-center gap-2.5 px-3 h-9 rounded-lg transition-all no-underline ${
+      className={`group relative flex items-center gap-2.5 px-3 h-9 rounded-lg transition-all no-underline ${
         active
-          ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
-          : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+          ? 'nav-item-active text-white'
+          : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
       }`}
     >
       <Icon size={16} strokeWidth={active ? 2.25 : 1.85} className="flex-shrink-0" />
@@ -302,8 +302,8 @@ function CollapsibleItem({
     <div
       className={`flex items-center gap-0.5 h-9 rounded-lg transition-all overflow-hidden ${
         active
-          ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
-          : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+          ? 'nav-item-active text-white'
+          : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
       }`}
     >
       <Link
