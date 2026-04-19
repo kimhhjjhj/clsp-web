@@ -126,8 +126,56 @@ export default function BidPage() {
   // 공종 단위 벤치마크 (과거 Task 집계)
   const [taskDeviations, setTaskDeviations] = useState<TaskBenchDeviation[]>([])
 
-  // 공종별 생산성 조정 (bid-draft 전용, localStorage 영속)
-  const { multipliers, setMult, resetAll: resetMults } = useMultiplierStore('bid-draft', 'cp')
+  // 기존 프로젝트 로드 지원 (?projectId=xxx) — 저장된 adjustments를 재편집
+  const editingProjectId = searchParams?.get('projectId') ?? null
+  const [loadedAdjustments, setLoadedAdjustments] = useState<Array<[string, number]> | null>(null)
+  const [loadingProject, setLoadingProject] = useState(false)
+
+  // 공종별 생산성 조정
+  // - 신규 견적: key='bid-draft' (localStorage만)
+  // - 기존 프로젝트 편집: key='project:{id}' + DB 시드 (최초 로드)
+  const storeKey = editingProjectId ?? 'bid-draft'
+  const { multipliers, setMult, resetAll: resetMults } = useMultiplierStore(storeKey, 'cp', loadedAdjustments)
+
+  // 기존 프로젝트 로드 (최초 1회)
+  useEffect(() => {
+    if (!editingProjectId) return
+    let cancelled = false
+    setLoadingProject(true)
+    fetch(`/api/projects/${editingProjectId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(p => {
+        if (cancelled || !p) return
+        setInput({
+          name: p.name ?? '',
+          type: p.type ?? '공동주택',
+          location: p.location ?? '',
+          ground: String(p.ground ?? 0),
+          basement: String(p.basement ?? 0),
+          lowrise: String(p.lowrise ?? 0),
+          hasTransfer: !!p.hasTransfer,
+          bldgArea: p.bldgArea != null ? String(p.bldgArea) : '',
+          buildingArea: p.buildingArea != null ? String(p.buildingArea) : '',
+          siteArea: p.siteArea != null ? String(p.siteArea) : '',
+          sitePerim: p.sitePerim != null ? String(p.sitePerim) : '',
+          bldgPerim: p.bldgPerim != null ? String(p.bldgPerim) : '',
+          wtBottom: p.wtBottom != null ? String(p.wtBottom) : '',
+          waBottom: p.waBottom != null ? String(p.waBottom) : '',
+          startDate: p.startDate ?? '',
+        })
+        if (Array.isArray(p.productivityAdjustments)) {
+          const seed = p.productivityAdjustments
+            .filter((a: unknown): a is { taskId: string; multiplier: number } =>
+              typeof (a as any)?.taskId === 'string' && typeof (a as any)?.multiplier === 'number')
+            .map((a: { taskId: string; multiplier: number }) => [a.taskId, a.multiplier] as [string, number])
+          setLoadedAdjustments(seed)
+        }
+        toast.success('프로젝트 로드됨', p.name ?? '')
+      })
+      .catch(() => toast.error('프로젝트 로드 실패'))
+      .finally(() => { if (!cancelled) setLoadingProject(false) })
+    return () => { cancelled = true }
+  }, [editingProjectId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!result) { setBenchmark(null); setTaskDeviations([]); return }
@@ -308,8 +356,9 @@ export default function BidPage() {
     if (!input.name.trim()) { toast.warning('프로젝트명을 입력하세요'); return }
     setSaving(true)
     try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
+      const isUpdate = !!editingProjectId
+      const res = await fetch(isUpdate ? `/api/projects/${editingProjectId}` : '/api/projects', {
+        method: isUpdate ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: input.name,
@@ -337,10 +386,12 @@ export default function BidPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? '저장 실패')
-      // bid-draft localStorage 정리 (저장 후 해당 키 삭제 — 중복 표시 방지)
-      try { window.localStorage.removeItem('productivity:bid-draft:cp') } catch { /* ignore */ }
-      toast.success('프로젝트로 저장됨', input.name)
-      router.push(`/projects/${data.id}`)
+      // 신규 저장 시에만 bid-draft 정리 (PUT은 프로젝트 키 유지 → 이어 편집 가능)
+      if (!isUpdate) {
+        try { window.localStorage.removeItem('productivity:bid-draft:cp') } catch { /* ignore */ }
+      }
+      toast.success(isUpdate ? '프로젝트 업데이트됨' : '프로젝트로 저장됨', input.name)
+      if (!isUpdate) router.push(`/projects/${data.id}`)
     } catch (e: any) {
       toast.error('저장 실패', e.message)
     } finally { setSaving(false) }
@@ -582,8 +633,13 @@ export default function BidPage() {
                     className="w-full h-10 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors"
                   >
                     {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                    프로젝트로 저장
+                    {editingProjectId ? '프로젝트 업데이트' : '프로젝트로 저장'}
                   </button>
+                )}
+                {editingProjectId && (
+                  <div className="text-[10px] text-blue-700 bg-blue-50 border border-blue-100 rounded px-2 py-1 text-center">
+                    {loadingProject ? '프로젝트 불러오는 중...' : '기존 프로젝트 편집 중'}
+                  </div>
                 )}
               </div>
             </div>
