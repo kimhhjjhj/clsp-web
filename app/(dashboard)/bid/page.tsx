@@ -479,11 +479,11 @@ function BidPage() {
         accent="violet"
       />
 
-      <div className="flex-1 overflow-auto p-4 sm:p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* 좌측: 입력 폼 */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden lg:sticky lg:top-4">
+      <div className="flex-1 min-h-0 p-4 sm:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:h-full">
+          {/* 좌측: 입력 폼 — 독립 스크롤 */}
+          <div className="lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               {/* 폼 헤더 */}
               <div className="px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex items-center gap-2">
                 <Building2 size={15} className="text-gray-600" />
@@ -679,8 +679,8 @@ function BidPage() {
             </div>
           </div>
 
-          {/* 우측: 결과 */}
-          <div className="lg:col-span-2 space-y-5">
+          {/* 우측: 결과 — 독립 스크롤 */}
+          <div className="lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:pr-1 space-y-5">
             {!result ? (
               <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
                 <ClipboardCheck size={32} className="mx-auto mb-3 text-gray-300" />
@@ -689,17 +689,6 @@ function BidPage() {
               </div>
             ) : (
               <>
-                {/* 유사 프로젝트 벤치마크 */}
-                <BenchmarkPanel
-                  query={{
-                    type: input.type,
-                    ground: Number(input.ground) || undefined,
-                    basement: Number(input.basement) || undefined,
-                    bldgArea: Number(input.bldgArea) || undefined,
-                  }}
-                  limit={5}
-                />
-
                 {/* 최상단 3KPI — 탭 공통 요약 (공사비는 AI 추정이 맡음) */}
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                   <Kpi icon={<Calendar size={14} className="text-blue-600" />} bg="bg-blue-50"
@@ -1000,6 +989,64 @@ function BidPage() {
 
                   {topTab === 'schedule' && (
                     <div>
+                      {/* 공기 히어로 요약 — 공사비 탭 AI 추정 카드와 동일한 시각 계층 */}
+                      <div className="relative overflow-hidden border-b border-gray-100">
+                        <span
+                          aria-hidden
+                          className="absolute inset-0 pointer-events-none"
+                          style={{ background: 'radial-gradient(ellipse 720px 260px at 12% -30%, rgba(37, 99, 235, 0.12), transparent 60%)' }}
+                        />
+                        <div className="relative p-5">
+                          <div className="flex items-center gap-1.5 mb-4">
+                            <span
+                              className="flex items-center justify-center w-5 h-5 rounded-md"
+                              style={{ background: 'rgba(37, 99, 235, 0.13)', color: '#2563eb' }}
+                            >
+                              <Calendar size={11} />
+                            </span>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: '#2563eb' }}>
+                              공기 요약 · Schedule Overview
+                            </span>
+                            {completionDate() && (
+                              <span className="ml-auto text-[11px] text-gray-500">
+                                착공 <span className="font-semibold text-gray-700">{input.startDate || '미지정'}</span>
+                                <span className="mx-1.5 text-gray-300">→</span>
+                                준공 <span className="font-semibold text-gray-900">{completionDate()}</span>
+                              </span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <ScheduleKpi
+                              accent="#2563eb"
+                              rgb="37, 99, 235"
+                              icon={<Calendar size={12} />}
+                              label="총 공기"
+                              value={result.cpm.totalDuration}
+                              unit="일"
+                              sub={`약 ${Math.round(result.cpm.totalDuration / 30)}개월`}
+                            />
+                            <ScheduleKpi
+                              accent="#0f766e"
+                              rgb="15, 118, 110"
+                              icon={<Layers size={12} />}
+                              label="총 공종"
+                              value={result.cpm.taskCount}
+                              unit="개"
+                              sub={`${byCategory ? Object.keys(byCategory).length : 0}개 카테고리`}
+                            />
+                            <ScheduleKpi
+                              accent="#ea580c"
+                              rgb="234, 88, 12"
+                              icon={<AlertTriangle size={12} />}
+                              label="크리티컬 패스"
+                              value={result.cpm.criticalPathCount}
+                              unit="개"
+                              sub={`전체의 ${Math.round((result.cpm.criticalPathCount / Math.max(1, result.cpm.taskCount)) * 100)}% · 지연 시 전체 영향`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
                       {/* 공기 서브탭 */}
                       <div className="flex items-center gap-1 px-4 pt-3 border-b border-gray-200 bg-gray-50 overflow-x-auto">
                         {SUB_TABS.map(t => (
@@ -1234,6 +1281,17 @@ function BidPage() {
                   <strong className="text-gray-600">몬테카를로·생산성 조정</strong>은 프로젝트로 저장 후 사용 가능합니다.
                   저장하면 이 계산 결과가 프로젝트 태스크로 고정되어 시뮬레이션·조정·비교가 가능해집니다.
                 </div>
+
+                {/* 유사 프로젝트 벤치마크 — 참고용, 맨 아래 배치 */}
+                <BenchmarkPanel
+                  query={{
+                    type: input.type,
+                    ground: Number(input.ground) || undefined,
+                    basement: Number(input.basement) || undefined,
+                    bldgArea: Number(input.bldgArea) || undefined,
+                  }}
+                  limit={5}
+                />
               </>
             )}
           </div>
@@ -1324,6 +1382,51 @@ function Kpi({
         {value}<span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>
       </p>
       {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
+    </div>
+  )
+}
+
+// 공기 탭 히어로 KPI — 공사비 탭 AI 추정 카드와 동일한 틴트 박스 언어
+function ScheduleKpi({
+  accent, rgb, icon, label, value, unit, sub,
+}: {
+  accent: string
+  rgb: string
+  icon: React.ReactNode
+  label: string
+  value: number | string
+  unit?: string
+  sub?: string
+}) {
+  return (
+    <div
+      className="relative rounded-xl p-4 overflow-hidden bg-white"
+      style={{
+        border: `1px solid rgba(${rgb}, 0.2)`,
+        boxShadow: `0 1px 2px rgba(15, 23, 42, 0.03), 0 6px 18px -8px rgba(${rgb}, 0.22)`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-14 pointer-events-none"
+        style={{ background: `linear-gradient(180deg, rgba(${rgb}, 0.07) 0%, transparent 100%)` }}
+      />
+      <div className="relative flex items-center gap-2 mb-2.5">
+        <span
+          className="flex items-center justify-center w-6 h-6 rounded-md"
+          style={{ background: `rgba(${rgb}, 0.13)`, color: accent }}
+        >
+          {icon}
+        </span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>
+          {label}
+        </span>
+      </div>
+      <p className="relative text-[26px] font-bold text-slate-900 leading-none tabular-nums tracking-[-0.02em]">
+        {value}
+        {unit && <span className="text-[12px] font-medium text-slate-400 ml-1">{unit}</span>}
+      </p>
+      {sub && <p className="relative text-[11px] text-slate-500 mt-2">{sub}</p>}
     </div>
   )
 }
