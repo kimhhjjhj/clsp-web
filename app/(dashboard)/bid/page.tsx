@@ -390,9 +390,8 @@ export default function BidPage() {
           aiCostEstimate: aiEstimate
             ? { ...aiEstimate, estimatedAt: new Date().toISOString() }
             : null,
-          productivityAdjustments: multipliers.size > 0
-            ? Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier }))
-            : null,
+          // 항상 배열로 전송 (빈 배열 = 명시적 초기화 → DB에서도 반영)
+          productivityAdjustments: Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier })),
           // 조정 결과 총공기는 PUT/POST 모두 갱신 (UI와 DB 일치)
           lastCpmDuration: result?.cpm.totalDuration,
           // 신규 생성 시에만 CPM Task 시드 포함 (업데이트 시 기존 Task 보존)
