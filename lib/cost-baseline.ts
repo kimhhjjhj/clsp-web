@@ -277,12 +277,32 @@ export function estimateFromPreset(input: {
   // CPM tasks → 카테고리별 집계 + 아이템 생성
   const byCategory = new Map<string, CostItem[]>()
   const cpmCategories = new Set<string>()
+  const buildingArea = input.buildingArea ?? (input.bldgArea ? input.bldgArea / Math.max(1, (input.ground ?? 0) + (input.basement ?? 0)) : 0)
+
+  // 골조 공종별 RC 물량(㎥) 계수 — buildingArea(1층 footprint) × 계수 × 층수
+  // 실측 근사: 기초는 매트/기초보 두께 1m 내외, 일반층은 슬래브·기둥·벽 합쳐 0.35~0.45m 환산
+  const STRUCT_CONVERT: Record<string, number> = {
+    '기초':             1.0,   // 1층 footprint × 1m 두께
+    '지하층':           0.5,   // 지하는 벽·보가 두꺼움
+    '지상층(저층부)':   0.4,
+    '전이층(PIT포함)':  0.8,   // 전이보 두꺼움
+    '지상층(세팅층)':   0.4,
+    '지상층(기준층)':   0.35,
+    '지상층(최상층)':   0.4,
+  }
+
   for (const t of input.tasks) {
     const key = mapTaskToPrice(t.name, t.category)
     if (!key) continue
     const u = UNIT_PRICES[key]
-    const qty = t.quantity && t.quantity > 0 ? t.quantity : null
-    if (!qty) continue  // 물량 없는 공종은 skip (뒤에서 연면적 기반 보충)
+    let qty = t.quantity && t.quantity > 0 ? t.quantity : null
+    if (!qty) continue  // 물량 없는 공종은 skip
+    // 골조: WBS가 "층수"를 quantity로 내보내는 경우(unit이 '층') buildingArea 기반 RC 물량으로 환산
+    if (key === 'RC' && (t.unit === '층' || t.unit === '전체')) {
+      const factor = STRUCT_CONVERT[t.name] ?? 0.4
+      if (buildingArea > 0) qty = Math.round(qty * buildingArea * factor)
+      else continue  // buildingArea 없으면 추정 불가 → skip
+    }
     let price = u.price
     if (t.category === '마감공사') price = Math.round(price * preset.finishMultiplier)
     else if (t.category === '설비공사') price = Math.round(price * preset.mepMultiplier)
