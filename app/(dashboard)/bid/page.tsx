@@ -486,20 +486,12 @@ function BidPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:h-full">
           {/* 좌측: 입력 폼 — 독립 스크롤 */}
           <div className="lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              {/* 폼 헤더 */}
-              <div className="px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex items-center gap-2">
-                <Building2 size={15} className="text-gray-600" />
-                <h3 className="text-sm font-bold text-gray-900">입력 정보</h3>
-                <span className="ml-auto text-[10px] text-gray-400">저장 전 반복 시뮬</span>
-              </div>
-
-              <div className="divide-y divide-gray-100">
+            <div className="space-y-3">
                 {/* ── 섹션 1: 기본 정보 (프로젝트명 · 주소 · 착공일) ── */}
-                <Section color="#2563eb" rgb="37, 99, 235" label="기본 정보" icon={<FileText size={12} />}>
+                <Section color="#2563eb" rgb="37, 99, 235" label="기본 정보" icon={<FileText size={14} />} hint="저장 전 반복 시뮬">
                   <Field label="프로젝트명" hint="저장할 때 사용 · 생략 가능">
                     <input value={input.name} onChange={e => set('name', e.target.value)} placeholder="예: 강남 ◯◯ 신축공사"
-                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all" />
                   </Field>
 
                   <Field label="공사 주소" hint="검색 → 좌표 확보 → 지층 섹션에서 시추공 자동 로드">
@@ -509,7 +501,7 @@ function BidPage() {
                         onChange={e => set('location', e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleGeocode() } }}
                         placeholder="예: 서울시 강남구 역삼동 737"
-                        className="flex-1 h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        className="flex-1 h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all"
                       />
                       <button
                         type="button"
@@ -536,15 +528,15 @@ function BidPage() {
 
                   <Field label="착공 예정일" hint="월별 인력 집계 활성 · 선택">
                     <input type="date" value={input.startDate} onChange={e => set('startDate', e.target.value)}
-                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all" />
                   </Field>
                 </Section>
 
                 {/* ── 섹션 2: 건물 유형 · 규모 ── */}
-                <Section color="#16a34a" rgb="22, 163, 74" label="건물 유형 · 규모" icon={<Layers size={12} />}>
+                <Section color="#16a34a" rgb="22, 163, 74" label="건물 유형 · 규모" icon={<Layers size={14} />}>
                   <Field label="건물 유형" required>
                     <select value={input.type} onChange={e => set('type', e.target.value)}
-                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all">
                       <option>공동주택</option>
                       <option>오피스텔</option>
                       <option>업무시설</option>
@@ -611,7 +603,7 @@ function BidPage() {
                 </Section>
 
                 {/* ── 섹션 3: 지층 정보 ── */}
-                <Section color="#d97706" rgb="217, 119, 6" label="지층 정보" icon={<Drill size={12} />}>
+                <Section color="#d97706" rgb="217, 119, 6" label="지층 정보" icon={<Drill size={14} />}>
                   <button
                     type="button"
                     onClick={handleLoadBoreholes}
@@ -650,10 +642,9 @@ function BidPage() {
                     <p className="text-[10px] text-gray-400">지하 층수 1 이상일 때 풍화토·풍화암 입력칸이 표시됩니다.</p>
                   )}
                 </Section>
-              </div>
 
-              {/* 액션 버튼 — 하단 고정 영역 */}
-              <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 space-y-2">
+              {/* 액션 버튼 — 별도 카드 */}
+              <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2">
                 <button
                   onClick={() => estimate()}
                   disabled={loading}
@@ -1039,7 +1030,7 @@ function Section({
   color, rgb, label, icon, hint, children,
 }: {
   color: string
-  /** rgba 합성용 'R, G, B' — 없으면 color 기반 tint 못 만듦 */
+  /** rgba 합성용 'R, G, B' — 없으면 tint 못 만듦 */
   rgb?: string
   label: string
   icon?: React.ReactNode
@@ -1048,26 +1039,34 @@ function Section({
 }) {
   const tintRgb = rgb ?? '148, 163, 184'
   return (
-    <div className="relative px-5 py-4 space-y-3 overflow-hidden">
-      {/* 상단 컬러 워시 — 섹션별 포인트 */}
+    <div
+      className="relative bg-white rounded-xl overflow-hidden"
+      style={{
+        border: '1px solid rgba(15, 23, 42, 0.06)',
+        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)',
+      }}
+    >
+      {/* 상단 얕은 컬러 워시 — 섹션별 포인트 */}
       <span
         aria-hidden
-        className="absolute inset-x-0 top-0 h-14 pointer-events-none"
-        style={{ background: `linear-gradient(180deg, rgba(${tintRgb}, 0.06) 0%, transparent 100%)` }}
+        className="absolute inset-x-0 top-0 h-16 pointer-events-none"
+        style={{ background: `linear-gradient(180deg, rgba(${tintRgb}, 0.05) 0%, transparent 100%)` }}
       />
-      <div className="relative flex items-center gap-2">
+      <div className="relative px-5 pt-4 pb-3 flex items-center gap-2.5">
         <span
-          className="flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0"
-          style={{ background: `rgba(${tintRgb}, 0.12)`, color }}
+          className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0"
+          style={{
+            background: `rgba(${tintRgb}, 0.13)`,
+            color,
+            border: `1px solid rgba(${tintRgb}, 0.2)`,
+          }}
         >
           {icon ?? <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />}
         </span>
-        <h4 className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color }}>
-          {label}
-        </h4>
-        {hint && <span className="text-[10px] text-gray-400 ml-auto">{hint}</span>}
+        <h4 className="text-[14px] font-bold text-slate-900 tracking-[-0.01em]">{label}</h4>
+        {hint && <span className="ml-auto text-[10px] text-slate-400">{hint}</span>}
       </div>
-      <div className="relative space-y-3">
+      <div className="relative px-5 pb-5 space-y-3">
         {children}
       </div>
     </div>
@@ -1086,15 +1085,15 @@ function Field({
 }) {
   return (
     <div className={className}>
-      <div className="flex items-baseline justify-between mb-1">
-        <label className="text-[11px] font-semibold text-gray-700 flex items-center gap-1">
+      <div className="flex items-baseline justify-between mb-1.5">
+        <label className="text-[12px] font-semibold text-slate-800 flex items-center gap-1">
           {label}
           {required && <span className="text-blue-500">*</span>}
         </label>
-        {unit && <span className="text-[10px] text-gray-400 font-mono">{unit}</span>}
+        {unit && <span className="text-[10px] text-slate-400 font-mono">{unit}</span>}
       </div>
       {children}
-      {hint && <p className="text-[10px] text-gray-400 mt-1 leading-tight">{hint}</p>}
+      {hint && <p className="text-[10px] text-slate-400 mt-1 leading-tight">{hint}</p>}
     </div>
   )
 }
@@ -1114,7 +1113,7 @@ function NumInput({
       onChange={e => onChange(e.target.value)}
       onFocus={e => e.target.select()}
       step={step}
-      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono text-right tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-shadow"
+      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono text-right tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all"
     />
   )
 }
