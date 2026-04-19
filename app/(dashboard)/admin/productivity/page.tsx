@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   ShieldCheck, CheckCircle2, XCircle, Edit3, Loader2, TrendingUp,
@@ -288,9 +288,8 @@ export default function AdminProductivityPage() {
                             const expanded = expandedRow === r.name
                             const canExpand = r.hasObservation && r.evidences.length > 0
                             return (
-                              <>
+                              <Fragment key={r.name}>
                                 <tr
-                                  key={r.name}
                                   className={`${r.hasObservation ? 'hover:bg-slate-50/50 cursor-pointer' : 'opacity-50'} ${expanded ? 'bg-slate-50' : ''}`}
                                   onClick={() => canExpand && setExpandedRow(expanded ? null : r.name)}
                                 >
@@ -346,7 +345,7 @@ export default function AdminProductivityPage() {
                                     </td>
                                   </tr>
                                 )}
-                              </>
+                              </Fragment>
                             )
                           })}
                         </tbody>
