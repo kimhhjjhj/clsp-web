@@ -14,6 +14,7 @@ import AiCostEstimate from '@/components/bid/AiCostEstimate'
 import { assessCriticalPath, CP_LEVEL_COLORS } from '@/lib/engine/cp-assessment'
 import { computeBenchmark, BENCHMARK_COLORS, type BenchmarkResult, type BenchmarkSample } from '@/lib/engine/benchmark'
 import { detectAbnormal } from '@/lib/engine/abnormal-detection'
+import { compareTaskBenchmarks, deviantOnly, type TaskStat, type TaskBenchDeviation } from '@/lib/engine/task-benchmark'
 import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/components/wbs/WBSTable'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
@@ -121,38 +122,51 @@ export default function BidPage() {
   // 회사 과거 프로젝트 벤치마크 (CPM 결과 나오면 자동 로드)
   const [benchmark, setBenchmark] = useState<BenchmarkResult | null>(null)
 
+  // 공종 단위 벤치마크 (과거 Task 집계)
+  const [taskDeviations, setTaskDeviations] = useState<TaskBenchDeviation[]>([])
+
   useEffect(() => {
-    if (!result) { setBenchmark(null); return }
+    if (!result) { setBenchmark(null); setTaskDeviations([]); return }
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/api/projects')
-        if (!res.ok) return
-        const projects = await res.json() as Array<{
-          name: string; type: string | null; ground: number | null;
-          basement: number | null; lowrise: number | null; lastCpmDuration: number | null;
-        }>
-        const samples: BenchmarkSample[] = projects
-          .filter(p => p.lastCpmDuration && p.lastCpmDuration > 0)
-          .map(p => ({
-            name: p.name,
-            type: p.type,
-            ground: p.ground,
-            basement: p.basement,
-            lowrise: p.lowrise,
-            duration: p.lastCpmDuration!,
-          }))
-        const b = computeBenchmark(
-          {
-            type: input.type || null,
-            ground: Number(input.ground) || 0,
-            basement: Number(input.basement) || 0,
-            lowrise: Number(input.lowrise) || 0,
-            currentDuration: result.cpm.totalDuration,
-          },
-          samples,
-        )
-        if (!cancelled) setBenchmark(b)
+        const qs = input.type ? `?type=${encodeURIComponent(input.type)}` : ''
+        const [projRes, taskRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch(`/api/benchmark/tasks${qs}`),
+        ])
+        if (projRes.ok) {
+          const projects = await projRes.json() as Array<{
+            name: string; type: string | null; ground: number | null;
+            basement: number | null; lowrise: number | null; lastCpmDuration: number | null;
+          }>
+          const samples: BenchmarkSample[] = projects
+            .filter(p => p.lastCpmDuration && p.lastCpmDuration > 0)
+            .map(p => ({
+              name: p.name, type: p.type,
+              ground: p.ground, basement: p.basement, lowrise: p.lowrise,
+              duration: p.lastCpmDuration!,
+            }))
+          const b = computeBenchmark(
+            {
+              type: input.type || null,
+              ground: Number(input.ground) || 0,
+              basement: Number(input.basement) || 0,
+              lowrise: Number(input.lowrise) || 0,
+              currentDuration: result.cpm.totalDuration,
+            },
+            samples,
+          )
+          if (!cancelled) setBenchmark(b)
+        }
+        if (taskRes.ok) {
+          const { stats } = await taskRes.json() as { stats: TaskStat[] }
+          const devs = compareTaskBenchmarks(
+            result.cpm.tasks.map(t => ({ name: t.name, duration: t.duration })),
+            stats,
+          )
+          if (!cancelled) setTaskDeviations(devs)
+        }
       } catch {
         /* 네트워크 에러 무시 — 뱃지 숨김 */
       }
@@ -731,6 +745,43 @@ export default function BidPage() {
                               </div>
                             )
                           })()}
+                        </div>
+                      )}
+
+                      {/* 공종 단위 벤치마크 편차 — 과거 프로젝트 Task 대비 */}
+                      {taskDeviations.length > 0 && deviantOnly(taskDeviations).length > 0 && (
+                        <div className="border-t border-gray-100 pt-5">
+                          <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
+                            <TrendingUp size={14} className="text-indigo-500" /> 공종별 벤치마크 편차
+                          </h3>
+                          <ul className="space-y-1.5">
+                            {deviantOnly(taskDeviations).slice(0, 5).map(d => {
+                              const isLong = d.level === 'long'
+                              const color = isLong
+                                ? 'border-red-200 bg-red-50 text-red-900'
+                                : 'border-sky-200 bg-sky-50 text-sky-900'
+                              const sign = d.deviationPercent >= 0 ? '+' : ''
+                              return (
+                                <li key={d.name} className={`rounded-lg border ${color} p-2`}>
+                                  <div className="flex items-baseline justify-between gap-2">
+                                    <span className="text-xs font-semibold truncate">{d.name}</span>
+                                    <span className="font-mono text-[11px] whitespace-nowrap">
+                                      {d.current}일 <span className="opacity-60">vs</span> 평균 {d.avg}일
+                                      <span className="ml-1 font-bold">({sign}{d.deviationPercent.toFixed(0)}%)</span>
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] opacity-70 mt-0.5">
+                                    과거 {d.projects}개 프로젝트 범위 {d.min}~{d.max}일
+                                  </p>
+                                </li>
+                              )
+                            })}
+                            {deviantOnly(taskDeviations).length > 5 && (
+                              <li className="text-[10px] text-gray-500 text-center">
+                                +{deviantOnly(taskDeviations).length - 5}개 더
+                              </li>
+                            )}
+                          </ul>
                         </div>
                       )}
 
