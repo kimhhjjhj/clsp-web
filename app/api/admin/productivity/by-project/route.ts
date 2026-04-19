@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { CP_DB, computeQuantities, calcDuration } from '@/lib/engine/wbs'
-import { CPDB_RULES, findMatchDetails, rulesSummary } from '@/lib/engine/wbs-keyword-map'
+import { CPDB_RULES, findMatchDetails, rulesSummary, earlyWindowFor } from '@/lib/engine/wbs-keyword-map'
 import type { ProjectInput } from '@/lib/types'
 
 interface WorkItem { text?: string; title?: string; [k: string]: unknown }
@@ -90,14 +90,27 @@ export async function GET(req: NextRequest) {
   // 2) 일보 텍스트를 미리 추출
   const reportTexts = reports.map(r => ({ date: r.date, text: extractDailyText(r), manpower: r.manpower }))
 
+  // 첫 일보 기준(없으면 프로젝트 startDate) — earlyWindow 필터의 기준일
+  const firstReportDate = reports[0]?.date ?? project.startDate ?? null
+  const firstTs = firstReportDate ? new Date(firstReportDate).getTime() : null
+  function isWithinEarlyWindow(dateIso: string, days: number): boolean {
+    if (firstTs == null) return true
+    const d = new Date(dateIso).getTime()
+    if (Number.isNaN(d)) return true
+    return (d - firstTs) <= days * 86400000
+  }
+
   // 3) CP_DB 각 공종마다 텍스트 매칭 (절 단위 + AND 규칙 조합) + 증거 수집
   const rows = CP_DB.map(row => {
-    const rules = CPDB_RULES[row.name] ?? []
+    const match = CPDB_RULES[row.name]
     const keywords = rulesSummary(row.name) // display용 'A+B' 형태
+    const earlyWindow = earlyWindowFor(row.name)
     const matchedDates: string[] = []
     const evidencesAll: { date: string; clause: string; rule: string }[] = []
     for (const rt of reportTexts) {
       if (!rt.text) continue
+      // 공사 초반 공종은 첫 일보+N일 윈도우 안에서만 인정 (준공 앞둔 잔공사 배제)
+      if (earlyWindow != null && !isWithinEarlyWindow(rt.date, earlyWindow)) continue
       const details = findMatchDetails(rt.text, row.name)
       if (details.length === 0) continue
       matchedDates.push(rt.date)
@@ -109,7 +122,6 @@ export async function GET(req: NextRequest) {
         })
       }
     }
-    void rules
     // 증거 샘플: 처음 3개 + 마지막 3개 (중복 제거)
     const evidenceSample = [
       ...evidencesAll.slice(0, 3),
@@ -153,7 +165,7 @@ export async function GET(req: NextRequest) {
       activeDays,
       deviationDays,
       deviationPct,
-      hasKeywords: rules.length > 0,
+      hasKeywords: !!match,
       hasObservation: matchedDates.length > 0,
       applicable,
       evidenceTotal: evidencesAll.length,
