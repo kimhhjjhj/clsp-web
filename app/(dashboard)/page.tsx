@@ -329,23 +329,31 @@ function KpiCard({
   accent?: string   // hex color — 좌측 상단 컬러 띠 (상태 강조용)
 }) {
   const inner = (
-    <div className={`card-elevated relative p-5 overflow-hidden ${href ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}>
-      {accent && <div className="absolute top-0 left-0 right-0 h-1" style={{ background: accent }} />}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconBg} ring-1 ring-inset ring-black/5`}>
-          <Icon size={16} className={iconColor} strokeWidth={2.25} />
+    <div className={`card-elevated relative p-5 overflow-hidden group ${href ? 'cursor-pointer' : ''}`}>
+      {accent && (
+        <span
+          aria-hidden
+          className="absolute top-0 left-0 h-full w-0.5 opacity-70 group-hover:opacity-100 transition-opacity"
+          style={{ background: accent }}
+        />
+      )}
+      <div className="flex items-start justify-between gap-3 mb-5">
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.12em] leading-none mt-2">
+          {label}
+        </p>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBg}`}>
+          <Icon size={14} className={iconColor} strokeWidth={2} />
         </div>
       </div>
       {loading ? (
         <Skeleton className="h-9 w-1/2" />
       ) : (
-        <p className="text-3xl font-bold text-slate-900 tracking-tight leading-none">
+        <p className="text-[32px] font-semibold text-slate-900 tracking-[-0.03em] leading-none tabular-nums">
           {value}
-          {unit && <span className="text-base font-medium text-slate-400 ml-1.5">{unit}</span>}
+          {unit && <span className="text-base font-normal text-slate-400 ml-1.5">{unit}</span>}
         </p>
       )}
-      {sub && <p className="text-[11px] text-slate-500 mt-2 line-clamp-1">{sub}</p>}
+      {sub && <p className="text-[12px] text-slate-500 mt-3 line-clamp-1">{sub}</p>}
     </div>
   )
   return href ? <Link href={href} className="no-underline">{inner}</Link> : inner
