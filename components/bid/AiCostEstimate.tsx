@@ -56,6 +56,10 @@ interface Props {
   onResult?: (result: AiResult | null) => void
 }
 
+function isDataCenter(type?: string) {
+  return type === '데이터센터'
+}
+
 const CATEGORY_COLORS: Record<string, string> = {
   '공사준비': '#64748b',
   '토목공사': '#ca8a04',
@@ -83,12 +87,15 @@ export default function AiCostEstimate(props: Props) {
   const [manualJson, setManualJson] = useState('')
   const [manualErr, setManualErr] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // 데이터센터: 수전용량 (MW) — 서버에 전달하면 UPS·발전기·수변전 산정 더 정확
+  const [mwCapacity, setMwCapacity] = useState<string>('')
 
   const run = useCallback(async (mode: 'auto' | 'preset' = 'auto') => {
     setLoading(true)
     setError(null)
     try {
       const qs = mode === 'preset' ? '?mode=preset' : ''
+      const mw = mwCapacity.trim() ? Number(mwCapacity) : undefined
       const res = await fetch(`/api/bid/ai-estimate${qs}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,6 +106,7 @@ export default function AiCostEstimate(props: Props) {
           bldgArea: props.bldgArea,
           buildingArea: props.buildingArea,
           siteArea: props.siteArea,
+          mwCapacity: mw && mw > 0 ? mw : undefined,
           totalDuration: props.totalDuration,
           tasks: props.tasks.map(t => ({
             name: t.name,
@@ -120,7 +128,7 @@ export default function AiCostEstimate(props: Props) {
     } finally {
       setLoading(false)
     }
-  }, [props])
+  }, [props, mwCapacity])
 
   // 수동 JSON 파싱 & 저장
   function applyManual() {
@@ -210,6 +218,22 @@ ${tasksLine}
             <br />
             <span className="text-gray-500">(물량×단가 방식 · 직접공사비 + 간접비 + 관리비 + 이윤 + 부가세)</span>
           </p>
+          {/* 데이터센터일 때만 수전용량 input (UPS·발전기·수변전 산정 정확도 향상) */}
+          {isDataCenter(props.type) && (
+            <div className="max-w-sm mx-auto mb-4 bg-white/60 backdrop-blur border border-violet-200 rounded-lg px-3 py-2 flex items-center gap-2">
+              <label className="text-xs font-semibold text-violet-800 whitespace-nowrap">수전용량 (MW)</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                value={mwCapacity}
+                onChange={e => setMwCapacity(e.target.value)}
+                placeholder="예: 10"
+                className="flex-1 h-8 px-2 text-sm text-right font-mono bg-white border border-violet-200 rounded focus:outline-none focus:border-violet-500"
+              />
+              <span className="text-[10px] text-violet-500 whitespace-nowrap">없으면 면적 역산</span>
+            </div>
+          )}
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <button
               onClick={() => run('preset')}
