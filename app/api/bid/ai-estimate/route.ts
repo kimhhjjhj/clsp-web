@@ -18,14 +18,15 @@ interface TaskBrief {
 }
 
 interface Body {
-  type?: string            // 공동주택 / 오피스텔 / 데이터센터 / ...
+  type?: string
   ground?: number
   basement?: number
-  bldgArea?: number        // 연면적
-  buildingArea?: number    // 건축면적(1층 footprint)
+  bldgArea?: number
+  buildingArea?: number
   siteArea?: number
-  totalDuration: number    // CPM 총공기
-  tasks: TaskBrief[]       // CPM 공종 리스트 (물량 포함)
+  mwCapacity?: number | null   // 데이터센터 수전용량 (MW) — industrySpecific에서 전달
+  totalDuration: number
+  tasks: TaskBrief[]
 }
 
 const MODEL = 'claude-sonnet-4-6'  // 가성비. 필요 시 opus-4-7로 업그레이드
@@ -130,6 +131,7 @@ export async function POST(req: NextRequest) {
       ground: body.ground,
       basement: body.basement,
       totalDuration: body.totalDuration,
+      mwCapacity: body.mwCapacity ?? null,
       tasks: body.tasks,
     })
     return NextResponse.json({
