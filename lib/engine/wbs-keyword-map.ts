@@ -94,6 +94,33 @@ export function matchesTask(text: string, taskName: string): boolean {
   return false
 }
 
+/**
+ * 매칭 상세 — 검토·디버깅용.
+ * 어떤 절이 어느 규칙에 걸렸는지 반환.
+ */
+export function findMatchDetails(
+  text: string,
+  taskName: string,
+): { clause: string; rule: Rule }[] {
+  const rules = CPDB_RULES[taskName]
+  if (!rules || rules.length === 0) return []
+  const clauses = splitClauses(text)
+  const out: { clause: string; rule: Rule }[] = []
+  const seen = new Set<string>()
+  for (const c of clauses) {
+    for (const r of rules) {
+      if (clauseMatches(c, r)) {
+        const key = c + '|' + r.join('+')
+        if (!seen.has(key)) {
+          seen.add(key)
+          out.push({ clause: c, rule: r })
+        }
+      }
+    }
+  }
+  return out
+}
+
 /** display용 — 규칙 배열을 'A+B, C+D' 형식 문자열 배열로 */
 export function rulesSummary(taskName: string): string[] {
   const rules = CPDB_RULES[taskName]

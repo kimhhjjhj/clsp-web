@@ -54,6 +54,8 @@ interface CpdbRow {
   hasKeywords: boolean
   hasObservation: boolean
   applicable: boolean
+  evidenceTotal: number
+  evidences: { date: string; clause: string; rule: string }[]
 }
 
 interface ByProjectResponse {
@@ -86,6 +88,7 @@ export default function AdminProductivityPage() {
   const [cpdbProjectId, setCpdbProjectId] = useState<string>('')
   const [cpdbData, setCpdbData] = useState<ByProjectResponse | null>(null)
   const [cpdbLoading, setCpdbLoading] = useState(false)
+  const [expandedRow, setExpandedRow] = useState<string | null>(null)
 
   // 전체 프로젝트 목록 (CP_DB 실적 + 제안 필터 공용)
   const [allProjects, setAllProjects] = useState<{ id: string; name: string }[]>([])
@@ -282,34 +285,68 @@ export default function AdminProductivityPage() {
                               : r.deviationPct > 10  ? 'text-red-600'
                               : r.deviationPct < -10 ? 'text-emerald-600'
                               : 'text-slate-500'
+                            const expanded = expandedRow === r.name
+                            const canExpand = r.hasObservation && r.evidences.length > 0
                             return (
-                              <tr key={r.name} className={r.hasObservation ? 'hover:bg-slate-50/50' : 'opacity-50'}>
-                                <td className="px-3 py-1.5 font-semibold text-slate-900">{r.name}</td>
-                                <td className="px-2 py-1.5 text-center text-slate-500 font-mono">{r.unit}</td>
-                                <td className="px-2 py-1.5 text-[10px] text-slate-500 font-mono truncate max-w-[180px]" title={r.keywords.join(', ')}>
-                                  {r.keywords.slice(0, 3).join(', ')}{r.keywords.length > 3 ? ` +${r.keywords.length - 3}` : ''}
-                                </td>
-                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-700">
-                                  {r.firstDate ?? '—'}
-                                </td>
-                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-700">
-                                  {r.lastDate ?? '—'}
-                                </td>
-                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-900 font-bold" style={{ color: r.spanDays > 0 ? meta.color : undefined }}>
-                                  {r.spanDays > 0 ? `${r.spanDays}일` : '—'}
-                                </td>
-                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-500">
-                                  {r.activeDays > 0 ? `${r.activeDays}회` : '—'}
-                                </td>
-                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-500">
-                                  {r.plannedDays > 0 ? `${r.plannedDays}일` : '—'}
-                                </td>
-                                <td className={`px-2 py-1.5 text-right font-mono tabular-nums font-bold ${devColor}`}>
-                                  {r.deviationPct != null
-                                    ? `${r.deviationPct > 0 ? '+' : ''}${r.deviationPct}%`
-                                    : '—'}
-                                </td>
-                              </tr>
+                              <>
+                                <tr
+                                  key={r.name}
+                                  className={`${r.hasObservation ? 'hover:bg-slate-50/50 cursor-pointer' : 'opacity-50'} ${expanded ? 'bg-slate-50' : ''}`}
+                                  onClick={() => canExpand && setExpandedRow(expanded ? null : r.name)}
+                                >
+                                  <td className="px-3 py-1.5 font-semibold text-slate-900 flex items-center gap-1.5">
+                                    {canExpand && <span className="text-slate-400 text-[9px]">{expanded ? '▼' : '▶'}</span>}
+                                    {r.name}
+                                    {r.evidenceTotal > 0 && (
+                                      <span className="text-[9px] text-slate-400 font-normal">{r.evidenceTotal}건</span>
+                                    )}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-center text-slate-500 font-mono">{r.unit}</td>
+                                  <td className="px-2 py-1.5 text-[10px] text-slate-500 font-mono truncate max-w-[180px]" title={r.keywords.join(', ')}>
+                                    {r.keywords.slice(0, 3).join(', ')}{r.keywords.length > 3 ? ` +${r.keywords.length - 3}` : ''}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-700">
+                                    {r.firstDate ?? '—'}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-700">
+                                    {r.lastDate ?? '—'}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-900 font-bold" style={{ color: r.spanDays > 0 ? meta.color : undefined }}>
+                                    {r.spanDays > 0 ? `${r.spanDays}일` : '—'}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-500">
+                                    {r.activeDays > 0 ? `${r.activeDays}회` : '—'}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-500">
+                                    {r.plannedDays > 0 ? `${r.plannedDays}일` : '—'}
+                                  </td>
+                                  <td className={`px-2 py-1.5 text-right font-mono tabular-nums font-bold ${devColor}`}>
+                                    {r.deviationPct != null
+                                      ? `${r.deviationPct > 0 ? '+' : ''}${r.deviationPct}%`
+                                      : '—'}
+                                  </td>
+                                </tr>
+                                {expanded && r.evidences.length > 0 && (
+                                  <tr className="bg-slate-50">
+                                    <td colSpan={9} className="px-4 py-3">
+                                      <div className="space-y-1.5">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                                          매칭 증거 ({r.evidences.length}건 표시 / 전체 {r.evidenceTotal}건)
+                                        </p>
+                                        <ul className="space-y-1">
+                                          {r.evidences.map((e, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-[11px]">
+                                              <span className="font-mono tabular-nums text-slate-500 w-[80px] flex-shrink-0">{e.date}</span>
+                                              <span className="inline-block px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-mono text-[10px] flex-shrink-0">{e.rule}</span>
+                                              <span className="text-slate-700 flex-1 min-w-0 break-words">{e.clause}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </>
                             )
                           })}
                         </tbody>
