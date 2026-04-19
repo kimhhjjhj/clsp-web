@@ -21,8 +21,11 @@ export async function GET(_req: NextRequest) {
     }),
   ])
 
-  // 공종별 집계
-  const tradeMap = new Map<string, { total: number; days: Set<string>; companies: Set<string>; projects: Set<string>; monthly: Map<string, number> }>()
+  // 공종별 집계 — projectBreakdown 으로 분모별 정확 계산 가능
+  const tradeMap = new Map<string, {
+    total: number; days: Set<string>; companies: Set<string>; projects: Set<string>; monthly: Map<string, number>;
+    byProject: Map<string, { manDays: number; days: Set<string> }>;
+  }>()
   // 월별 집계
   const monthMap = new Map<string, { total: number; days: Set<string> }>()
   // 요일별
@@ -56,13 +59,21 @@ export async function GET(_req: NextRequest) {
       const companyKey = normalizeCompany(m.company)
       if (companyKey) companySet.add(companyKey)
       if (tradeKey) {
-        const cur = tradeMap.get(tradeKey) ?? { total: 0, days: new Set<string>(), companies: new Set<string>(), projects: new Set<string>(), monthly: new Map<string, number>() }
+        const cur = tradeMap.get(tradeKey) ?? {
+          total: 0, days: new Set<string>(), companies: new Set<string>(),
+          projects: new Set<string>(), monthly: new Map<string, number>(),
+          byProject: new Map<string, { manDays: number; days: Set<string> }>(),
+        }
         cur.total += m.today
         cur.days.add(date)
         if (companyKey) cur.companies.add(companyKey)
         cur.projects.add(r.projectId)
         const month = date.slice(0, 7)
         cur.monthly.set(month, (cur.monthly.get(month) ?? 0) + m.today)
+        const pb = cur.byProject.get(r.projectId) ?? { manDays: 0, days: new Set<string>() }
+        pb.manDays += m.today
+        pb.days.add(date)
+        cur.byProject.set(r.projectId, pb)
         tradeMap.set(tradeKey, cur)
       }
     }
@@ -117,14 +128,22 @@ export async function GET(_req: NextRequest) {
   // 공종 상위 50 (생산성 DB 페이지용으로 확장)
   const topTrades = Array.from(tradeMap.entries())
     .map(([trade, v]) => {
-      // 참여 프로젝트의 분모 합 (가중 평균 분모)
-      let totalBldgArea = 0
-      let totalFloorsSum = 0
-      for (const pid of v.projects) {
+      // 분모별 가중 평균 — 분모 있는 프로젝트에 한정해 분자(인일·활동일)도 합산
+      // (상봉·파주처럼 bldgArea null인 프로젝트 인일을 면적 분모에 섞으면 왜곡됨)
+      let sqmManDays = 0, sqmSum = 0
+      let floorManDays = 0, floorDaysSum = 0, floorsSum = 0
+      for (const [pid, pb] of v.byProject) {
         const meta = projectMeta.get(pid)
         if (!meta) continue
-        totalBldgArea += meta.bldgArea
-        totalFloorsSum += meta.totalFloors
+        if (meta.bldgArea > 0) {
+          sqmManDays += pb.manDays
+          sqmSum += meta.bldgArea
+        }
+        if (meta.totalFloors > 0) {
+          floorManDays += pb.manDays
+          floorDaysSum += pb.days.size
+          floorsSum += meta.totalFloors
+        }
       }
       return {
         trade,
@@ -135,15 +154,15 @@ export async function GET(_req: NextRequest) {
         projectCount: v.projects.size,
         avgDaily: v.days.size > 0 ? Math.round((v.total / v.days.size) * 10) / 10 : 0,
         avgDaysPerProject: v.projects.size > 0 ? Math.round(v.days.size / v.projects.size) : 0,
-        // 새 실무 지표 — 분모 있는 프로젝트 참여 시만 계산
-        mandaysPerSqm: totalBldgArea > 0
-          ? Math.round((v.total / totalBldgArea) * 10000) / 10000  // 소수 4자리
+        // 실무 지표 — 분모 있는 프로젝트 기반 가중 평균
+        mandaysPerSqm: sqmSum > 0
+          ? Math.round((sqmManDays / sqmSum) * 10000) / 10000
           : null,
-        mandaysPerFloor: totalFloorsSum > 0
-          ? Math.round((v.total / totalFloorsSum) * 100) / 100
+        mandaysPerFloor: floorsSum > 0
+          ? Math.round((floorManDays / floorsSum) * 100) / 100
           : null,
-        daysPerFloor: totalFloorsSum > 0
-          ? Math.round((v.days.size / totalFloorsSum) * 100) / 100
+        daysPerFloor: floorsSum > 0
+          ? Math.round((floorDaysSum / floorsSum) * 100) / 100
           : null,
         monthlyTrend: Array.from(v.monthly.entries())
           .sort((a, b) => a[0].localeCompare(b[0]))
