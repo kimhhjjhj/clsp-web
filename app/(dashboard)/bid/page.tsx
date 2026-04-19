@@ -389,9 +389,10 @@ export default function BidPage() {
           productivityAdjustments: multipliers.size > 0
             ? Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier }))
             : null,
+          // 조정 결과 총공기는 PUT/POST 모두 갱신 (UI와 DB 일치)
+          lastCpmDuration: result?.cpm.totalDuration,
           // 신규 생성 시에만 CPM Task 시드 포함 (업데이트 시 기존 Task 보존)
           ...(!isUpdate && result ? {
-            lastCpmDuration: result.cpm.totalDuration,
             tasks: result.cpm.tasks.map(t => ({
               name: t.name,
               category: t.category,
