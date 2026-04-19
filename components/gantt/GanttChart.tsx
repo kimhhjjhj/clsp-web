@@ -220,10 +220,10 @@ export function GanttChart({ tasks, totalDuration, startDate, viewMode }: GanttC
     <div ref={containerRef} className={`flex border border-border rounded-xl overflow-hidden bg-background shadow-sm select-none ${fullscreen ? 'flex-1' : 'h-full'}`}>
 
       {/* ── LEFT PANEL ── */}
-      <div className="flex flex-col flex-shrink-0" style={{ width: panelW }}>
+      <div className="flex flex-col flex-shrink-0 overflow-hidden" style={{ width: panelW }}>
 
         {/* Header */}
-        <div className="flex-shrink-0 flex border-b border-r border-border bg-muted/40" style={{ height: HDR_H }}>
+        <div className="flex-shrink-0 flex border-b border-r border-border bg-muted/40 overflow-hidden" style={{ height: HDR_H }}>
           {COL_KEYS.map(col => (
             <div key={col} className="relative flex items-center px-3" style={{ width: colWidths[col], flexShrink: 0 }}>
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide truncate">{COL_LABELS[col]}</span>
