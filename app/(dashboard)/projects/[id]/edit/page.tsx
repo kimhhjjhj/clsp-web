@@ -143,7 +143,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         actions={
           <Link
             href={`/projects/${id}`}
-            className="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-white/15 bg-white/5 text-xs font-semibold text-slate-200 hover:bg-white/10"
           >
             <ArrowLeft size={12} /> 프로젝트로
           </Link>

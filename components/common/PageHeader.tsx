@@ -22,15 +22,15 @@ interface Props {
   accent?: AccentKey
 }
 
-// 2026 라이트 헤더 — 아이콘 박스 그라데이션 배경
-const ACCENT: Record<AccentKey, { bg: string; text: string; ring: string; glow: string }> = {
-  blue:    { bg: 'bg-gradient-to-br from-blue-400 to-indigo-500',    text: 'text-white', ring: 'ring-blue-500/10',    glow: 'shadow-[0_4px_14px_-4px_rgba(59,130,246,0.6)]' },
-  emerald: { bg: 'bg-gradient-to-br from-emerald-400 to-teal-500',   text: 'text-white', ring: 'ring-emerald-500/10', glow: 'shadow-[0_4px_14px_-4px_rgba(16,185,129,0.6)]' },
-  orange:  { bg: 'bg-gradient-to-br from-orange-400 to-rose-500',    text: 'text-white', ring: 'ring-orange-500/10',  glow: 'shadow-[0_4px_14px_-4px_rgba(249,115,22,0.6)]' },
-  violet:  { bg: 'bg-gradient-to-br from-violet-400 to-fuchsia-500', text: 'text-white', ring: 'ring-violet-500/10',  glow: 'shadow-[0_4px_14px_-4px_rgba(139,92,246,0.6)]' },
-  slate:   { bg: 'bg-gradient-to-br from-slate-500 to-slate-700',    text: 'text-white', ring: 'ring-slate-500/10',   glow: 'shadow-[0_4px_14px_-4px_rgba(100,116,139,0.5)]' },
-  amber:   { bg: 'bg-gradient-to-br from-amber-400 to-orange-500',   text: 'text-white', ring: 'ring-amber-500/10',   glow: 'shadow-[0_4px_14px_-4px_rgba(245,158,11,0.6)]' },
-  pink:    { bg: 'bg-gradient-to-br from-pink-400 to-rose-500',      text: 'text-white', ring: 'ring-pink-500/10',    glow: 'shadow-[0_4px_14px_-4px_rgba(236,72,153,0.6)]' },
+// 다크 헤더 전용 accent — 아이콘 박스 배경·글자 색
+const ACCENT: Record<AccentKey, { bg: string; text: string; ring: string }> = {
+  blue:    { bg: 'bg-blue-500/20',    text: 'text-blue-300',    ring: 'ring-blue-400/30' },
+  emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', ring: 'ring-emerald-400/30' },
+  orange:  { bg: 'bg-orange-500/20',  text: 'text-orange-300',  ring: 'ring-orange-400/30' },
+  violet:  { bg: 'bg-violet-500/20',  text: 'text-violet-300',  ring: 'ring-violet-400/30' },
+  slate:   { bg: 'bg-slate-500/20',   text: 'text-slate-200',   ring: 'ring-slate-400/30' },
+  amber:   { bg: 'bg-amber-500/20',   text: 'text-amber-300',   ring: 'ring-amber-400/30' },
+  pink:    { bg: 'bg-pink-500/20',    text: 'text-pink-300',    ring: 'ring-pink-400/30' },
 }
 
 function renderIcon(icon: Props['icon']): React.ReactNode {
@@ -51,14 +51,8 @@ export default function PageHeader({ icon, title, subtitle, actions, tabs, stick
 
   return (
     <div
-      className={`${stickyTop ? 'sticky top-0 z-20' : ''} border-b border-slate-200/60`}
-      style={{
-        background: `
-          linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%)
-        `,
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }}
+      className={`border-b border-slate-700/50 ${stickyTop ? 'sticky top-0 z-20' : ''}`}
+      style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}
     >
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -66,15 +60,15 @@ export default function PageHeader({ icon, title, subtitle, actions, tabs, stick
             isCustomNode ? (
               <div className="flex-shrink-0">{iconNode}</div>
             ) : (
-              <div className={`flex items-center justify-center w-11 h-11 rounded-2xl ${a.bg} ${a.text} flex-shrink-0 ring-1 ${a.ring} ${a.glow}`}>
+              <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${a.bg} ${a.text} flex-shrink-0 ring-1 ${a.ring}`}>
                 {iconNode}
               </div>
             )
           )}
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-black text-slate-900 truncate tracking-tight">{title}</h1>
+            <h1 className="text-base sm:text-lg font-bold text-white truncate tracking-tight">{title}</h1>
             {subtitle && (
-              <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5 font-medium">{subtitle}</p>
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate mt-0.5">{subtitle}</p>
             )}
           </div>
         </div>
@@ -85,7 +79,7 @@ export default function PageHeader({ icon, title, subtitle, actions, tabs, stick
         )}
       </div>
       {tabs && (
-        <div className="px-4 sm:px-6 border-t border-slate-200/60 overflow-x-auto">
+        <div className="px-4 sm:px-6 border-t border-slate-700/50 overflow-x-auto">
           {tabs}
         </div>
       )}
