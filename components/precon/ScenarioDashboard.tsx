@@ -113,8 +113,8 @@ export default function ScenarioDashboard({ cpmResult, risks, accelerations, sta
         </span>
       </div>
 
-      {/* 4가지 시나리오 카드 */}
-      <div className="grid grid-cols-4 gap-3 mb-5">
+      {/* 4가지 시나리오 카드 — 모바일은 가로 스크롤, md 이상은 4등분 */}
+      <div className="flex gap-3 mb-5 overflow-x-auto pb-2 -mx-1 px-1 md:grid md:grid-cols-4 md:overflow-visible md:pb-0 md:mx-0 md:px-0 snap-x snap-mandatory">
         <ScenarioCard
           label="기본 계획"
           value={base}
@@ -193,15 +193,15 @@ function ScenarioCard({
   highlight?: boolean
 }) {
   return (
-    <div className={`border rounded-xl p-3 ${
+    <div className={`flex-shrink-0 w-[180px] md:w-auto snap-start border rounded-xl p-3 ${
       highlight ? 'border-blue-300 bg-blue-50/40' : 'border-gray-200 bg-white'
     }`}>
-      <div className="flex items-center gap-1 text-[10px] font-semibold text-gray-500 uppercase">
+      <div className="flex items-center gap-1 text-[10px] font-semibold text-gray-500 uppercase whitespace-nowrap">
         {icon}
-        {label}
+        <span className="truncate">{label}</span>
       </div>
       <div className="mt-1 flex items-baseline gap-1">
-        <span className="text-2xl font-bold text-gray-900">{value}</span>
+        <span className="text-2xl font-bold text-gray-900 tabular-nums">{value}</span>
         <span className="text-xs text-gray-400">일</span>
         {delta !== undefined && delta !== 0 && (
           <span className={`ml-1 text-[10px] font-semibold ${delta > 0 ? 'text-red-600' : 'text-green-600'}`}>
@@ -209,7 +209,7 @@ function ScenarioCard({
           </span>
         )}
       </div>
-      {endDate && <p className="text-[10px] text-gray-500 mt-0.5">~ {endDate}</p>}
+      {endDate && <p className="text-[10px] text-gray-500 mt-0.5 whitespace-nowrap">~ {endDate}</p>}
       {/* 상대 길이 바 */}
       <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all" style={{ width: `${Math.max(5, barRatio * 100)}%`, background: barColor }} />
