@@ -689,19 +689,6 @@ function BidPage() {
               </div>
             ) : (
               <>
-                {/* 최상단 3KPI — 탭 공통 요약 (공사비는 AI 추정이 맡음) */}
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                  <Kpi icon={<Calendar size={14} className="text-blue-600" />} bg="bg-blue-50"
-                    label="총 공기" value={`${result.cpm.totalDuration}`} unit="일"
-                    sub={completionDate() ? `준공 ${completionDate()}` : `약 ${Math.round(result.cpm.totalDuration / 30)}개월`} />
-                  <Kpi icon={<Users size={14} className="text-orange-600" />} bg="bg-orange-50"
-                    label="피크 투입" value={`${result.resourcePlan.peak.count}`} unit="명"
-                    sub={`${result.resourcePlan.peak.day + 1}일차`} />
-                  <Kpi icon={<TrendingUp size={14} className="text-purple-600" />} bg="bg-purple-50"
-                    label="일평균 투입" value={`${result.resourcePlan.avgDaily}`} unit="명"
-                    sub={`누적 ${result.resourcePlan.totalManDays.toLocaleString()}인일`} />
-                </div>
-
                 {/* 최상단 대탭: 공사비 / 공기 */}
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                   <div className="flex border-b border-gray-200">
@@ -1366,23 +1353,6 @@ function NumInput({
       step={step}
       className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm font-mono text-right tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-shadow"
     />
-  )
-}
-
-function Kpi({
-  icon, bg, label, value, unit, sub,
-}: { icon: React.ReactNode; bg: string; label: string; value: string; unit: string; sub?: string }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <div className="flex items-center justify-between mb-1.5">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
-        <div className={`w-7 h-7 rounded-md ${bg} flex items-center justify-center`}>{icon}</div>
-      </div>
-      <p className="text-2xl font-bold text-gray-900">
-        {value}<span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>
-      </p>
-      {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
-    </div>
   )
 }
 
