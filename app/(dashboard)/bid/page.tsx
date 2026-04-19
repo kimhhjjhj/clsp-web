@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ClipboardCheck, Building2, Ruler, Layers, Play, Save, TrendingUp,
   Calendar, Users, DollarSign, AlertTriangle, Loader2, ArrowRight,
-  BarChart3, ChevronRight, Search, Drill, Check,
+  BarChart3, ChevronRight, Search, Drill, Check, FileText,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
@@ -496,7 +496,7 @@ function BidPage() {
 
               <div className="divide-y divide-gray-100">
                 {/* ── 섹션 1: 기본 정보 (프로젝트명 · 주소 · 착공일) ── */}
-                <Section color="#2563eb" label="기본 정보">
+                <Section color="#2563eb" rgb="37, 99, 235" label="기본 정보" icon={<FileText size={12} />}>
                   <Field label="프로젝트명" hint="저장할 때 사용 · 생략 가능">
                     <input value={input.name} onChange={e => set('name', e.target.value)} placeholder="예: 강남 ◯◯ 신축공사"
                       className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
@@ -541,7 +541,7 @@ function BidPage() {
                 </Section>
 
                 {/* ── 섹션 2: 건물 유형 · 규모 ── */}
-                <Section color="#16a34a" label="건물 유형 · 규모" icon={<Layers size={12} />}>
+                <Section color="#16a34a" rgb="22, 163, 74" label="건물 유형 · 규모" icon={<Layers size={12} />}>
                   <Field label="건물 유형" required>
                     <select value={input.type} onChange={e => set('type', e.target.value)}
                       className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
@@ -611,7 +611,7 @@ function BidPage() {
                 </Section>
 
                 {/* ── 섹션 3: 지층 정보 ── */}
-                <Section color="#a16207" label="지층 정보" icon={<Drill size={12} />}>
+                <Section color="#d97706" rgb="217, 119, 6" label="지층 정보" icon={<Drill size={12} />}>
                   <button
                     type="button"
                     onClick={handleLoadBoreholes}
@@ -1036,24 +1036,40 @@ function BidPage() {
 }
 
 function Section({
-  color, label, icon, hint, children,
+  color, rgb, label, icon, hint, children,
 }: {
   color: string
+  /** rgba 합성용 'R, G, B' — 없으면 color 기반 tint 못 만듦 */
+  rgb?: string
   label: string
   icon?: React.ReactNode
   hint?: string
   children: React.ReactNode
 }) {
+  const tintRgb = rgb ?? '148, 163, 184'
   return (
-    <div className="px-5 py-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="w-1 h-4 rounded-full" style={{ background: color }} />
-        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.1em] flex items-center gap-1">
-          {icon}{label}
+    <div className="relative px-5 py-4 space-y-3 overflow-hidden">
+      {/* 상단 컬러 워시 — 섹션별 포인트 */}
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-14 pointer-events-none"
+        style={{ background: `linear-gradient(180deg, rgba(${tintRgb}, 0.06) 0%, transparent 100%)` }}
+      />
+      <div className="relative flex items-center gap-2">
+        <span
+          className="flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0"
+          style={{ background: `rgba(${tintRgb}, 0.12)`, color }}
+        >
+          {icon ?? <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />}
+        </span>
+        <h4 className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color }}>
+          {label}
         </h4>
         {hint && <span className="text-[10px] text-gray-400 ml-auto">{hint}</span>}
       </div>
-      {children}
+      <div className="relative space-y-3">
+        {children}
+      </div>
     </div>
   )
 }
