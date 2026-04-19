@@ -123,6 +123,49 @@ export default function ProjectSwitcher() {
 
       {open && (
         <div className="absolute left-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+          {/* 현재 프로젝트 빠른 액션 — 선택됐을 때만 */}
+          {currentProject && (
+            <div className="px-2.5 py-2 border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
+              <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                {currentProject.name} · 빠른 이동
+              </div>
+              <div className="grid grid-cols-5 gap-1">
+                <Link
+                  href={`/projects/${currentProject.id}`}
+                  onClick={() => setOpen(false)}
+                  title="프로젝트 개요"
+                  className="flex flex-col items-center gap-0.5 py-1.5 rounded hover:bg-blue-50 no-underline"
+                >
+                  <Building2 size={13} className="text-gray-600" />
+                  <span className="text-[9px] text-gray-600 font-medium">개요</span>
+                </Link>
+                <Link
+                  href={`/bid?projectId=${currentProject.id}`}
+                  onClick={() => setOpen(false)}
+                  title="개략공기 재검토"
+                  className="flex flex-col items-center gap-0.5 py-1.5 rounded hover:bg-amber-50 no-underline"
+                >
+                  <ClipboardCheck size={13} className="text-amber-600" />
+                  <span className="text-[9px] text-amber-700 font-medium">재검토</span>
+                </Link>
+                {[2, 3, 4].map(n => {
+                  const info = stageInfo[n]
+                  return (
+                    <Link
+                      key={n}
+                      href={`/projects/${currentProject.id}/stage/${n}`}
+                      onClick={() => setOpen(false)}
+                      title={`${n}단계 ${info.label}`}
+                      className="flex flex-col items-center gap-0.5 py-1.5 rounded hover:bg-gray-100 no-underline"
+                    >
+                      <span className="w-3 h-3 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: info.color }}>{n}</span>
+                      <span className="text-[9px] text-gray-600 font-medium truncate">{info.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           {/* 검색 */}
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
