@@ -38,14 +38,17 @@ export const CP_DB: DBRow[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════
-// 가동률 (파이썬 WORK_RATES와 동일)
-// 공사준비/토목: 66.6%, 골조: 63.2%, 마감: None(적용 안 함)
+// 가동률 (파이썬 WORK_RATES + Top-down 공법 확장)
+// 공사준비·토목·흙막이: 66.6%, 골조·역타: 63.2%, 마감·PRD: None(raw)
 // ═══════════════════════════════════════════════════════════
 export function getWorkRate(category: string): number | null {
+  if (category === 'PRD') return null           // raw (사용자 1~1.5공/일에 이미 반영)
+  if (category === '흙막이') return 0.666
+  if (category === '역타') return 0.632
   if (category.startsWith('공사준비')) return 0.666
   if (category.startsWith('토목공사')) return 0.666
   if (category.startsWith('골조공사')) return 0.632
-  if (category.startsWith('마감공사')) return null  // 별도 산정 (raw 그대로)
+  if (category.startsWith('마감공사')) return null
   return 1.0
 }
 
