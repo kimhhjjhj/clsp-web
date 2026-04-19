@@ -53,7 +53,14 @@ export interface MaterialRow {
 export interface WorkSection {
   building: string[]
   mep: string[]
+  // 사용자 정의 공종 (골조·토목·전기·통신·소방·가설 등) — 하위호환 위해 옵션
+  custom?: Array<{ name: string; items: string[] }>
 }
+
+// 작업내용 프리셋 공종 (한 번 클릭으로 추가)
+export const CUSTOM_TRADE_PRESETS = [
+  '골조', '토목', '전기', '통신', '소방', '마감', '조경', '가설', '철골',
+] as const
 
 export interface Signers {
   site_manager?: boolean
@@ -483,9 +490,27 @@ function WorkStep({
     upd(which, { ...data[which], [cat]: items })
   }
 
+  // custom 배열 조작 헬퍼
+  function updCustomItems(which: 'workToday' | 'workTomorrow', idx: number, items: string[]) {
+    const list = (data[which].custom ?? []).slice()
+    list[idx] = { ...list[idx], items }
+    upd(which, { ...data[which], custom: list })
+  }
+  function removeCustom(which: 'workToday' | 'workTomorrow', idx: number) {
+    const list = (data[which].custom ?? []).filter((_, i) => i !== idx)
+    upd(which, { ...data[which], custom: list })
+  }
+  function addCustom(which: 'workToday' | 'workTomorrow', name: string) {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const list = data[which].custom ?? []
+    if (list.some(c => c.name === trimmed)) return  // 중복 방지
+    upd(which, { ...data[which], custom: [...list, { name: trimmed, items: [] }] })
+  }
+
   return (
     <>
-      <Section title="금일 작업내용" desc="공종별로 항목을 추가하세요.">
+      <Section title="금일 작업내용" desc="공종별로 항목을 추가하세요. '+공종 추가'로 필요한 공종을 늘릴 수 있습니다.">
         <WorkCategory
           category="건축"
           items={data.workToday.building}
@@ -495,6 +520,20 @@ function WorkStep({
           category="기계·소방설비"
           items={data.workToday.mep}
           onChange={items => updWork('workToday', 'mep', items)}
+        />
+        {(data.workToday.custom ?? []).map((c, i) => (
+          <WorkCategory
+            key={`${c.name}-${i}`}
+            category={c.name}
+            items={c.items}
+            onChange={items => updCustomItems('workToday', i, items)}
+            onRemove={() => removeCustom('workToday', i)}
+          />
+        ))}
+        <AddCustomTrade
+          presets={CUSTOM_TRADE_PRESETS}
+          existing={(data.workToday.custom ?? []).map(c => c.name)}
+          onAdd={n => addCustom('workToday', n)}
         />
       </Section>
 
@@ -508,6 +547,20 @@ function WorkStep({
           category="기계·소방설비"
           items={data.workTomorrow.mep}
           onChange={items => updWork('workTomorrow', 'mep', items)}
+        />
+        {(data.workTomorrow.custom ?? []).map((c, i) => (
+          <WorkCategory
+            key={`${c.name}-${i}`}
+            category={c.name}
+            items={c.items}
+            onChange={items => updCustomItems('workTomorrow', i, items)}
+            onRemove={() => removeCustom('workTomorrow', i)}
+          />
+        ))}
+        <AddCustomTrade
+          presets={CUSTOM_TRADE_PRESETS}
+          existing={(data.workTomorrow.custom ?? []).map(c => c.name)}
+          onAdd={n => addCustom('workTomorrow', n)}
         />
       </Section>
 
@@ -528,10 +581,12 @@ function WorkCategory({
   category,
   items,
   onChange,
+  onRemove,
 }: {
   category: string
   items: string[]
   onChange: (items: string[]) => void
+  onRemove?: () => void  // 사용자 정의 공종일 때만 제공
 }) {
   const [input, setInput] = useState('')
   return (
@@ -540,6 +595,13 @@ function WorkCategory({
         <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
           ▷ {category}
         </span>
+        {onRemove && (
+          <button
+            onClick={onRemove}
+            title="이 공종 제거"
+            className="text-[10px] text-gray-400 hover:text-red-500 px-1"
+          >삭제</button>
+        )}
       </div>
       <div className="space-y-1.5">
         {items.map((item, i) => (
@@ -582,6 +644,54 @@ function WorkCategory({
             <Plus size={12} /> 추가
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// 사용자 정의 공종 추가 UI — 프리셋 버튼 + 자유 입력
+function AddCustomTrade({
+  presets,
+  existing,
+  onAdd,
+}: {
+  presets: readonly string[]
+  existing: string[]
+  onAdd: (name: string) => void
+}) {
+  const [input, setInput] = useState('')
+  const used = new Set(existing)
+  const available = presets.filter(p => !used.has(p))
+  return (
+    <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
+      <p className="text-[11px] text-gray-500 mb-1.5 font-semibold">+ 공종 추가</p>
+      {available.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {available.map(p => (
+            <button
+              key={p}
+              onClick={() => onAdd(p)}
+              className="text-[11px] px-2 py-1 rounded-md border border-gray-200 bg-white text-gray-700 hover:border-blue-400 hover:text-blue-700"
+            >+ {p}</button>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2 items-center">
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && input.trim()) { onAdd(input.trim()); setInput('') }
+          }}
+          placeholder="직접 입력 (예: 방수)"
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
+        />
+        <button
+          onClick={() => { if (input.trim()) { onAdd(input.trim()); setInput('') } }}
+          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-blue-600 font-semibold border border-blue-200 rounded-lg hover:bg-blue-50"
+        >
+          <Plus size={12} /> 추가
+        </button>
       </div>
     </div>
   )
