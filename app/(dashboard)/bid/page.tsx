@@ -15,6 +15,7 @@ import { assessCriticalPath, CP_LEVEL_COLORS } from '@/lib/engine/cp-assessment'
 import { computeBenchmark, BENCHMARK_COLORS, type BenchmarkResult, type BenchmarkSample } from '@/lib/engine/benchmark'
 import { detectAbnormal } from '@/lib/engine/abnormal-detection'
 import { compareTaskBenchmarks, deviantOnly, type TaskStat, type TaskBenchDeviation } from '@/lib/engine/task-benchmark'
+import { useMultiplierStore } from '@/lib/hooks/useMultiplierStore'
 import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/components/wbs/WBSTable'
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
@@ -124,6 +125,9 @@ export default function BidPage() {
 
   // 공종 단위 벤치마크 (과거 Task 집계)
   const [taskDeviations, setTaskDeviations] = useState<TaskBenchDeviation[]>([])
+
+  // 공종별 생산성 조정 (bid-draft 전용, localStorage 영속)
+  const { multipliers, setMult, resetAll: resetMults } = useMultiplierStore('bid-draft', 'cp')
 
   useEffect(() => {
     if (!result) { setBenchmark(null); setTaskDeviations([]); return }
@@ -256,9 +260,10 @@ export default function BidPage() {
       .catch(() => {})
   }, [])
 
-  const estimate = useCallback(async () => {
-    setLoading(true)
+  const estimate = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
+      const adjustments = Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier }))
       const res = await fetch('/api/bid/estimate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -276,16 +281,27 @@ export default function BidPage() {
           wtBottom: Number(input.wtBottom) || undefined,
           waBottom: Number(input.waBottom) || undefined,
           startDate: input.startDate || undefined,
+          adjustments,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? '계산 실패')
       setResult(data)
-      toast.success('견적 산출 완료', `총공기 ${data.cpm.totalDuration}일 · 피크 ${data.resourcePlan.peak.count}명`)
+      if (!silent) toast.success('견적 산출 완료', `총공기 ${data.cpm.totalDuration}일 · 피크 ${data.resourcePlan.peak.count}명`)
     } catch (e: any) {
-      toast.error('계산 실패', e.message)
-    } finally { setLoading(false) }
-  }, [input, toast])
+      if (!silent) toast.error('계산 실패', e.message)
+    } finally { if (!silent) setLoading(false) }
+  }, [input, toast, multipliers])
+
+  // 조정값 변경 시 디바운스 재계산 (결과가 이미 있을 때만)
+  const multKey = useMemo(() => {
+    return Array.from(multipliers.entries()).map(([k, v]) => `${k}:${v}`).sort().join('|')
+  }, [multipliers])
+  useEffect(() => {
+    if (!result) return
+    const t = setTimeout(() => estimate(true), 400)
+    return () => clearTimeout(t)
+  }, [multKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveAsProject() {
     if (!result) return
@@ -546,7 +562,7 @@ export default function BidPage() {
               {/* 액션 버튼 — 하단 고정 영역 */}
               <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 space-y-2">
                 <button
-                  onClick={estimate}
+                  onClick={() => estimate()}
                   disabled={loading}
                   className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm transition-colors"
                 >
@@ -749,10 +765,15 @@ export default function BidPage() {
                       )}
 
                       {/* 공종 단위 벤치마크 편차 — 과거 프로젝트 Task 대비 */}
-                      {taskDeviations.length > 0 && deviantOnly(taskDeviations).length > 0 && (
+                      {taskDeviations.length > 0 && deviantOnly(taskDeviations).length > 0 && (() => {
+                        const taskIdByName = new Map(result.cpm.tasks.map(t => [t.name, t.taskId]))
+                        return (
                         <div className="border-t border-gray-100 pt-5">
                           <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
                             <TrendingUp size={14} className="text-indigo-500" /> 공종별 벤치마크 편차
+                            {multipliers.size > 0 && (
+                              <button onClick={resetMults} className="ml-auto text-[10px] text-gray-500 hover:text-gray-900 font-normal">조정 초기화</button>
+                            )}
                           </h3>
                           <ul className="space-y-1.5">
                             {deviantOnly(taskDeviations).slice(0, 5).map(d => {
@@ -761,6 +782,8 @@ export default function BidPage() {
                                 ? 'border-red-200 bg-red-50 text-red-900'
                                 : 'border-sky-200 bg-sky-50 text-sky-900'
                               const sign = d.deviationPercent >= 0 ? '+' : ''
+                              const tid = taskIdByName.get(d.name)
+                              const currentMult = tid ? (multipliers.get(tid) ?? 1.0) : 1.0
                               return (
                                 <li key={d.name} className={`rounded-lg border ${color} p-2`}>
                                   <div className="flex items-baseline justify-between gap-2">
@@ -773,6 +796,21 @@ export default function BidPage() {
                                   <p className="text-[10px] opacity-70 mt-0.5">
                                     과거 {d.projects}개 프로젝트 범위 {d.min}~{d.max}일
                                   </p>
+                                  {tid && (
+                                    <div className="flex gap-1 mt-1.5">
+                                      {[0.75, 1.0, 1.25, 1.5, 2.0].map(m => (
+                                        <button
+                                          key={m}
+                                          onClick={() => setMult(tid, m)}
+                                          className={`text-[10px] px-1.5 py-0.5 rounded border font-mono ${
+                                            Math.abs(currentMult - m) < 0.001
+                                              ? 'bg-gray-900 text-white border-gray-900'
+                                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-500'
+                                          }`}
+                                        >{m}×</button>
+                                      ))}
+                                    </div>
+                                  )}
                                 </li>
                               )
                             })}
@@ -783,7 +821,8 @@ export default function BidPage() {
                             )}
                           </ul>
                         </div>
-                      )}
+                        )
+                      })()}
 
                       {/* 비정상 공종 요약 — z-score + dominance */}
                       {(() => {
@@ -792,13 +831,17 @@ export default function BidPage() {
                           result.cpm.totalDuration,
                         )
                         if (abnormals.length === 0) return null
+                        const taskIdByName = new Map(result.cpm.tasks.map(t => [t.name, t.taskId]))
                         return (
                           <div className="border-t border-gray-100 pt-5">
                             <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
                               <AlertTriangle size={14} className="text-amber-500" /> 비정상 공종 {abnormals.length}개
                             </h3>
                             <ul className="space-y-1.5">
-                              {abnormals.slice(0, 5).map(a => (
+                              {abnormals.slice(0, 5).map(a => {
+                                const tid = taskIdByName.get(a.name)
+                                const currentMult = tid ? (multipliers.get(tid) ?? 1.0) : 1.0
+                                return (
                                 <li key={a.name} className="rounded-lg border border-amber-200 bg-amber-50 p-2">
                                   <div className="flex items-baseline justify-between gap-2">
                                     <span className="text-xs font-semibold text-amber-900 truncate">{a.name}</span>
@@ -807,8 +850,23 @@ export default function BidPage() {
                                     </span>
                                   </div>
                                   <p className="text-[10px] text-amber-700 mt-0.5">{a.message}</p>
+                                  {tid && (
+                                    <div className="flex gap-1 mt-1.5">
+                                      {[0.75, 1.0, 1.25, 1.5, 2.0].map(m => (
+                                        <button
+                                          key={m}
+                                          onClick={() => setMult(tid, m)}
+                                          className={`text-[10px] px-1.5 py-0.5 rounded border font-mono ${
+                                            Math.abs(currentMult - m) < 0.001
+                                              ? 'bg-gray-900 text-white border-gray-900'
+                                              : 'bg-white border-amber-300 text-amber-800 hover:border-amber-500'
+                                          }`}
+                                        >{m}×</button>
+                                      ))}
+                                    </div>
+                                  )}
                                 </li>
-                              ))}
+                              )})}
                               {abnormals.length > 5 && (
                                 <li className="text-[10px] text-gray-500 text-center">
                                   +{abnormals.length - 5}개 더 (WBS 표에서 ⚠️ 아이콘 확인)

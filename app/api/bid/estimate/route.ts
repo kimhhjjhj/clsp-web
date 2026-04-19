@@ -8,9 +8,12 @@ import { calculateCPM } from '@/lib/engine/cpm'
 import { buildResourcePlan, type StandardLookup } from '@/lib/engine/resource-plan'
 import type { ProjectInput } from '@/lib/types'
 
+interface AdjustmentEntry { taskId: string; multiplier: number }
+
 export async function POST(req: NextRequest) {
   const body = await req.json() as Partial<ProjectInput> & {
-    startDate?: string           // 착공 예정일 (있으면 월별 인력 집계 활성)
+    startDate?: string             // 착공 예정일 (있으면 월별 인력 집계 활성)
+    adjustments?: AdjustmentEntry[]  // 공종별 생산성 조정 (0.5~2.0)
   }
 
   const input: ProjectInput = {
@@ -29,8 +32,21 @@ export async function POST(req: NextRequest) {
     mode: body.mode ?? 'cp',
   }
 
-  // WBS + CPM
-  const wbsTasks = generateWBS(input)
+  // WBS + 사용자 조정값 적용 + CPM
+  const rawWbsTasks = generateWBS(input)
+  const adjMap = new Map<string, number>()
+  for (const a of body.adjustments ?? []) {
+    if (a.multiplier > 0 && Math.abs(a.multiplier - 1.0) > 0.001) {
+      adjMap.set(a.taskId, a.multiplier)
+    }
+  }
+  const wbsTasks = adjMap.size === 0
+    ? rawWbsTasks
+    : rawWbsTasks.map(t => {
+        const mult = adjMap.get(t.id)
+        if (!mult) return t
+        return { ...t, duration: Math.max(1, Math.round((t.duration / mult) * 10) / 10) }
+      })
   const cpmSummary = calculateCPM(wbsTasks)
 
   // 회사 표준 (man/day)
