@@ -128,11 +128,16 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     const m = pathname.match(/^\/projects\/([^/]+)(.*)$/)
     if (m && m[1] !== id && m[1] !== 'new') {
       router.push(`/projects/${id}${m[2]}`)
-    } else if (!pathname.startsWith('/projects/')) {
+      return
+    }
+    // 프로젝트를 이미 참조 중인 다른 라우트(bid?projectId=..., 일보 new 등)면 URL 건드리지 않음
+    // — /bid에서 selectProject 호출 시 자동으로 /projects/:id로 튕기는 회귀 방지
+    const referencesProject = pathname.startsWith('/projects/') || pathname.startsWith('/bid')
+    if (!referencesProject) {
       // 전사 페이지에 있으면 프로젝트 상세로 이동
       router.push(`/projects/${id}`)
     }
-    // 이미 맞는 프로젝트면 아무 것도 안 함
+    // 이미 맞는 프로젝트거나 프로젝트 참조 중이면 아무 것도 안 함
   }, [pathname, router])
 
   const clearProject = useCallback(() => {
