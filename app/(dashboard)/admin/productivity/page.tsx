@@ -42,16 +42,16 @@ interface CpdbRow {
   unit: string
   cpdbProd: number | null
   cpdbStdDays: number | null
-  mappedTrades: string[]
+  keywords: string[]
   plannedQty: number
   plannedDays: number
-  observedManDays: number
-  observedActiveDays: number
-  actualProd: number | null
-  actualStdDays: number | null
+  firstDate: string | null
+  lastDate: string | null
+  spanDays: number
+  activeDays: number
   deviationDays: number | null
   deviationPct: number | null
-  hasMapping: boolean
+  hasKeywords: boolean
   hasObservation: boolean
   applicable: boolean
 }
@@ -250,7 +250,7 @@ export default function AdminProductivityPage() {
               </div>
 
               {CPDB_CATEGORIES.map(cat => {
-                const rows = cpdbData.rows.filter(r => r.category === cat && r.hasMapping)
+                const rows = cpdbData.rows.filter(r => r.category === cat && r.hasKeywords)
                 if (rows.length === 0) return null
                 const meta = CATEGORY_COLORS[cat]
                 return (
@@ -266,53 +266,43 @@ export default function AdminProductivityPage() {
                           <tr className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.1em] bg-white border-b border-slate-100">
                             <th className="text-left px-3 py-1.5">작업명</th>
                             <th className="text-center px-2 py-1.5 w-12">단위</th>
-                            <th className="text-right px-2 py-1.5 w-20">계획 물량</th>
+                            <th className="text-left px-2 py-1.5">검색 키워드</th>
+                            <th className="text-right px-2 py-1.5 w-[90px]">첫 등장</th>
+                            <th className="text-right px-2 py-1.5 w-[90px]">마지막 등장</th>
+                            <th className="text-right px-2 py-1.5 w-20">실제 기간</th>
+                            <th className="text-right px-2 py-1.5 w-20">언급일수</th>
                             <th className="text-right px-2 py-1.5 w-20">계획 기간</th>
-                            <th className="text-right px-2 py-1.5 w-20">실제 활동일</th>
-                            <th className="text-right px-2 py-1.5 w-20">투입 인일</th>
-                            <th className="text-right px-2 py-1.5 w-24">CP_DB 값</th>
-                            <th className="text-right px-2 py-1.5 w-24">실적 값</th>
                             <th className="text-right px-2 py-1.5 w-20">편차</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                           {rows.map(r => {
-                            const cpVal = r.cpdbProd != null
-                              ? `${r.cpdbProd} ${r.unit}/일`
-                              : r.cpdbStdDays != null
-                                ? `${r.cpdbStdDays} 일/${r.unit}`
-                                : '—'
-                            const actVal = r.actualProd != null
-                              ? `${r.actualProd} ${r.unit}/일`
-                              : r.actualStdDays != null
-                                ? `${r.actualStdDays} 일/${r.unit}`
-                                : r.hasObservation ? '계산 불가' : '실적 없음'
                             const devColor = r.deviationPct == null
                               ? 'text-slate-400'
                               : r.deviationPct > 10  ? 'text-red-600'
                               : r.deviationPct < -10 ? 'text-emerald-600'
                               : 'text-slate-500'
                             return (
-                              <tr key={r.name} className={r.hasObservation ? 'hover:bg-slate-50/50' : 'opacity-60'}>
+                              <tr key={r.name} className={r.hasObservation ? 'hover:bg-slate-50/50' : 'opacity-50'}>
                                 <td className="px-3 py-1.5 font-semibold text-slate-900">{r.name}</td>
                                 <td className="px-2 py-1.5 text-center text-slate-500 font-mono">{r.unit}</td>
-                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-700">
-                                  {r.plannedQty > 0 ? Math.round(r.plannedQty * 10) / 10 : '—'}
+                                <td className="px-2 py-1.5 text-[10px] text-slate-500 font-mono truncate max-w-[180px]" title={r.keywords.join(', ')}>
+                                  {r.keywords.slice(0, 3).join(', ')}{r.keywords.length > 3 ? ` +${r.keywords.length - 3}` : ''}
                                 </td>
                                 <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-700">
-                                  {r.plannedDays > 0 ? r.plannedDays : '—'}
+                                  {r.firstDate ?? '—'}
                                 </td>
-                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-900 font-semibold">
-                                  {r.observedActiveDays > 0 ? r.observedActiveDays : '—'}
+                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-700">
+                                  {r.lastDate ?? '—'}
                                 </td>
-                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-600">
-                                  {r.observedManDays > 0 ? Math.round(r.observedManDays) : '—'}
+                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-900 font-bold" style={{ color: r.spanDays > 0 ? meta.color : undefined }}>
+                                  {r.spanDays > 0 ? `${r.spanDays}일` : '—'}
                                 </td>
                                 <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-500">
-                                  {cpVal}
+                                  {r.activeDays > 0 ? `${r.activeDays}회` : '—'}
                                 </td>
-                                <td className="px-2 py-1.5 text-right font-mono tabular-nums font-bold" style={{ color: meta.color }}>
-                                  {actVal}
+                                <td className="px-2 py-1.5 text-right font-mono tabular-nums text-slate-500">
+                                  {r.plannedDays > 0 ? `${r.plannedDays}일` : '—'}
                                 </td>
                                 <td className={`px-2 py-1.5 text-right font-mono tabular-nums font-bold ${devColor}`}>
                                   {r.deviationPct != null
@@ -329,23 +319,32 @@ export default function AdminProductivityPage() {
                 )
               })}
 
-              {/* 매핑 없는 공종 */}
+              {/* 키워드 없는 공종 */}
               {(() => {
-                const unmapped = cpdbData.rows.filter(r => !r.hasMapping && r.applicable)
+                const unmapped = cpdbData.rows.filter(r => !r.hasKeywords)
                 if (unmapped.length === 0) return null
                 return (
                   <details className="mt-1">
                     <summary className="text-[11px] text-slate-500 cursor-pointer hover:text-slate-900">
-                      trade 매핑이 없는 공종 {unmapped.length}종 (일보 실적과 매칭 불가) ▾
+                      텍스트 키워드가 없는 공종 {unmapped.length}종 ▾
                     </summary>
                     <p className="text-[11px] text-slate-500 mt-1.5">
                       {unmapped.map(u => u.name).join(', ')}
                       <br />
-                      <span className="text-slate-400">→ <code className="font-mono text-[10px] bg-slate-100 px-1 rounded">lib/engine/wbs-trade-map.ts</code>에 해당 공종→일보 trade 매핑 추가 필요</span>
+                      <span className="text-slate-400">→ <code className="font-mono text-[10px] bg-slate-100 px-1 rounded">lib/engine/wbs-keyword-map.ts</code>에 해당 공종의 일보 텍스트 키워드 추가 필요</span>
                     </p>
                   </details>
                 )
               })()}
+
+              {/* 물량 입력 안내 */}
+              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3 flex items-start gap-2">
+                <AlertCircle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-[11px] text-amber-900 leading-relaxed">
+                  <strong>기간만 자동 추출됩니다.</strong> 생산성(단위당 인일)을 얻으려면 공종별 <strong>실적 물량</strong>을 관리자가 수동 입력해야 합니다.
+                  일보에는 시공 물량이 기록되지 않기 때문입니다 — 다음 업데이트에서 공종별 물량 입력 UI가 추가됩니다.
+                </div>
+              </div>
             </div>
           )}
         </section>

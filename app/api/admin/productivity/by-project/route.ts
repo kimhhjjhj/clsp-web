@@ -1,19 +1,57 @@
 // ═══════════════════════════════════════════════════════════
-// CP_DB 공종별 프로젝트 실적 분석 API
-// - 선택 프로젝트의 일보 manpower를 CP_DB 공종에 매핑해 실제 vs 기준 비교
-// - 물량: computeQuantities(프로젝트 규모) 기반 계획값
-// - 실제: 해당 공종에 매핑된 trade들의 활동일·인일 합
-// - 편차: 실제 기간(활동일) vs 계획 기간(calcDuration) 비교 %
+// CP_DB 공종별 프로젝트 실적 분석 API — 키워드 기반 기간 추출
+//
+// 방식:
+//   1) 프로젝트의 모든 일보에서 workToday/workTomorrow/content 텍스트 합침
+//   2) 각 일보 텍스트에 CP_DB 공종 키워드(CPDB_KEYWORDS)가 등장하는지 검사
+//   3) 공종이 언급된 날짜들 중 min = 시작일, max = 종료일
+//   4) 실제 기간 = 종료일 - 시작일 + 1 (일 단위)
+//      활동일수 = 실제 언급된 날짜의 개수 (연속 아닐 수 있음)
+//   5) 물량은 일보에서 뽑을 수 없으므로 null (관리자 수동 입력 필요)
+//
+// 기존 trade 기반 방식은 중복 카운트 문제로 폐기.
 // ═══════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { CP_DB, computeQuantities, calcDuration } from '@/lib/engine/wbs'
-import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
-import { normalizeTrade } from '@/lib/normalizers/aliases'
+import { CPDB_KEYWORDS, matchesTask } from '@/lib/engine/wbs-keyword-map'
 import type { ProjectInput } from '@/lib/types'
 
-interface ManpowerEntry { trade: string; today: number }
+interface WorkItem { text?: string; title?: string; [k: string]: unknown }
+
+function extractDailyText(report: {
+  content: string | null
+  notes: string | null
+  workToday: unknown
+  workTomorrow: unknown
+}): string {
+  const parts: string[] = []
+  if (report.content && typeof report.content === 'string') parts.push(report.content)
+  if (report.notes && typeof report.notes === 'string') parts.push(report.notes)
+  for (const field of [report.workToday, report.workTomorrow]) {
+    if (Array.isArray(field)) {
+      for (const item of field) {
+        if (typeof item === 'string') parts.push(item)
+        else if (item && typeof item === 'object') {
+          const w = item as WorkItem
+          if (typeof w.text === 'string') parts.push(w.text)
+          if (typeof w.title === 'string') parts.push(w.title)
+        }
+      }
+    } else if (typeof field === 'string') {
+      parts.push(field)
+    }
+  }
+  return parts.join('\n')
+}
+
+function daysBetween(fromIso: string, toIso: string): number {
+  const a = new Date(fromIso)
+  const b = new Date(toIso)
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return 0
+  return Math.round((b.getTime() - a.getTime()) / 86400000) + 1
+}
 
 export async function GET(req: NextRequest) {
   const projectId = req.nextUrl.searchParams.get('projectId')
@@ -26,11 +64,11 @@ export async function GET(req: NextRequest) {
 
   const reports = await prisma.dailyReport.findMany({
     where: { projectId },
-    select: { date: true, manpower: true },
+    select: { date: true, content: true, notes: true, workToday: true, workTomorrow: true, manpower: true },
     orderBy: { date: 'asc' },
   })
 
-  // 1) 프로젝트 규모 → 계획 물량
+  // 1) 프로젝트 규모 → 계획 물량 (참고용)
   const input: ProjectInput = {
     name: project.name,
     type: project.type ?? '공동주택',
@@ -49,57 +87,36 @@ export async function GET(req: NextRequest) {
   }
   const qtys = computeQuantities(input)
 
-  // 2) trade(normalized) → { manDays, dates(Set) } 집계
-  const tradeAgg = new Map<string, { manDays: number; dates: Set<string> }>()
-  for (const r of reports) {
-    const list = (r.manpower as ManpowerEntry[] | null) ?? []
-    for (const m of list) {
-      if (!m || !m.today || m.today <= 0) continue
-      const t = normalizeTrade(m.trade)
-      if (!t) continue
-      const agg = tradeAgg.get(t) ?? { manDays: 0, dates: new Set<string>() }
-      agg.manDays += Number(m.today)
-      agg.dates.add(r.date)
-      tradeAgg.set(t, agg)
-    }
-  }
+  // 2) 일보 텍스트를 미리 추출
+  const reportTexts = reports.map(r => ({ date: r.date, text: extractDailyText(r), manpower: r.manpower }))
 
-  // 3) CP_DB 각 공종마다 매핑 trade 집계
+  // 3) CP_DB 각 공종마다 텍스트 매칭
   const rows = CP_DB.map(row => {
-    const trades = WBS_TRADE_MAP[row.name] ?? []
-    let observedManDays = 0
-    const observedDates = new Set<string>()
-    for (const t of trades) {
-      const agg = tradeAgg.get(t)
-      if (!agg) continue
-      observedManDays += agg.manDays
-      agg.dates.forEach(d => observedDates.add(d))
+    const keywords = CPDB_KEYWORDS[row.name] ?? []
+    const matchedDates: string[] = []
+    for (const rt of reportTexts) {
+      if (!rt.text) continue
+      if (matchesTask(rt.text, row.name)) matchedDates.push(rt.date)
     }
-    const observedActiveDays = observedDates.size
+    // 첫/마지막 등장일
+    const sorted = [...matchedDates].sort()
+    const firstDate = sorted[0] ?? null
+    const lastDate = sorted.at(-1) ?? null
+    const spanDays = firstDate && lastDate ? daysBetween(firstDate, lastDate) : 0
+    const activeDays = new Set(matchedDates).size
+
+    // 계획 값
     const plannedQty = qtys[row.name] ?? 0
     const applicable = plannedQty > 0 || ['전체', '개소', '대', '주'].includes(row.unit)
     const effectiveQty = plannedQty > 0 ? plannedQty : (applicable ? 1 : 0)
     const plannedDays = effectiveQty > 0 ? calcDuration(row, effectiveQty) : 0
 
-    // 실제 생산성 역산 (관측값 기준)
-    //  - 생산성(prod) 유형: 단위/일 = 물량 / 활동일
-    //  - 표준일수(stdDays) 유형: 일/단위 = 활동일 / 물량
-    let actualProd: number | null = null
-    let actualStdDays: number | null = null
-    if (effectiveQty > 0 && observedActiveDays > 0) {
-      if (row.prod !== null) {
-        actualProd = Math.round((effectiveQty / observedActiveDays) * 10) / 10
-      } else if (row.stdDays !== null) {
-        actualStdDays = Math.round((observedActiveDays / effectiveQty) * 10) / 10
-      }
-    }
-
-    // 편차: 계획 기간 vs 실제 활동일 (plannedDays가 가동률 포함이므로 그대로 비교)
-    const deviationDays = observedActiveDays > 0 && plannedDays > 0
-      ? Math.round((observedActiveDays - plannedDays) * 10) / 10
+    // 편차: 계획 기간 vs 실제 span
+    const deviationDays = spanDays > 0 && plannedDays > 0
+      ? Math.round((spanDays - plannedDays) * 10) / 10
       : null
-    const deviationPct = observedActiveDays > 0 && plannedDays > 0
-      ? Math.round(((observedActiveDays - plannedDays) / plannedDays) * 1000) / 10
+    const deviationPct = spanDays > 0 && plannedDays > 0
+      ? Math.round(((spanDays - plannedDays) / plannedDays) * 1000) / 10
       : null
 
     return {
@@ -110,17 +127,17 @@ export async function GET(req: NextRequest) {
       unit: row.unit,
       cpdbProd: row.prod,
       cpdbStdDays: row.stdDays,
-      mappedTrades: trades,
+      keywords,
       plannedQty: effectiveQty,
       plannedDays: Math.round(plannedDays * 10) / 10,
-      observedManDays: Math.round(observedManDays * 10) / 10,
-      observedActiveDays,
-      actualProd,
-      actualStdDays,
+      firstDate,
+      lastDate,
+      spanDays,
+      activeDays,
       deviationDays,
       deviationPct,
-      hasMapping: trades.length > 0,
-      hasObservation: observedManDays > 0,
+      hasKeywords: keywords.length > 0,
+      hasObservation: matchedDates.length > 0,
       applicable,
     }
   })
