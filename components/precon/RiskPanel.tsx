@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, ShieldAlert, TrendingUp, AlertTriangle, CheckCircle2, Clock, Upload, Download, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, ShieldAlert, TrendingUp, AlertTriangle, CheckCircle2, Clock, Upload, Download, Loader2, X } from 'lucide-react'
 
 interface RO {
   id: string; type: string; category: string; content: string
@@ -12,6 +12,7 @@ interface RO {
   proposer?: string | null; proposedAt?: string | null
   proposedCost?: number | null; confirmedCost?: number | null
   progress?: string | null; confirmedAt?: string | null
+  expectedAt?: string | null
   designApplied?: string | null; note?: string | null
 }
 
@@ -32,6 +33,8 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
   const [editId, setEditId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [sortType, setSortType] = useState<'all' | 'risk' | 'opportunity'>('all')
+  // 행 클릭 → 상세 모달
+  const [detailItem, setDetailItem] = useState<RO | null>(null)
 
   async function load() {
     const res = await fetch(`/api/projects/${projectId}/risks`)
@@ -291,7 +294,11 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
                 '재검토': 'bg-amber-100 text-amber-700',
               }
               return (
-              <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50">
+              <tr
+                key={item.id}
+                onClick={() => setDetailItem(item)}
+                className="border-b border-gray-50 hover:bg-blue-50/40 cursor-pointer"
+              >
                 <td className="px-3 py-2 font-mono text-[11px] text-gray-700 whitespace-nowrap">
                   {item.code ?? <span className="text-gray-300">—</span>}
                   {item.rev != null && item.rev !== 0 && <span className="ml-1 text-blue-500">·r{item.rev}</span>}
@@ -323,10 +330,10 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
                     {STATUS_LABEL[item.status]}
                   </span>
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                   <div className="flex gap-1">
-                    <button onClick={() => startEdit(item)} className="p-1 text-gray-400 hover:text-blue-600"><Pencil size={13} /></button>
-                    <button onClick={() => del(item.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
+                    <button onClick={() => startEdit(item)} title="간단 편집" className="p-1 text-gray-400 hover:text-blue-600"><Pencil size={13} /></button>
+                    <button onClick={() => del(item.id)} title="삭제" className="p-1 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
                   </div>
                 </td>
               </tr>
@@ -336,6 +343,234 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
         </table>
         </div>
       </div>
+
+      {/* 상세 모달 */}
+      {detailItem && (
+        <RODetailModal
+          item={detailItem}
+          projectId={projectId}
+          onClose={() => setDetailItem(null)}
+          onSaved={async () => { await load(); onUpdate?.() }}
+          onDeleted={async () => { setDetailItem(null); await load(); onUpdate?.() }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────── R&O 상세 모달 ───────────────────────────
+function RODetailModal({
+  item, projectId, onClose, onSaved, onDeleted,
+}: {
+  item: RO
+  projectId: string
+  onClose: () => void
+  onSaved: () => void | Promise<void>
+  onDeleted: () => void | Promise<void>
+}) {
+  const [draft, setDraft] = useState<RO>(item)
+  const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+
+  // item 바뀌면 draft 갱신
+  useEffect(() => { setDraft(item); setDirty(false) }, [item.id])
+
+  function set<K extends keyof RO>(k: K, v: RO[K]) {
+    setDraft(p => ({ ...p, [k]: v }))
+    setDirty(true)
+  }
+
+  async function save() {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/risks/${item.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: draft.content,
+          category: draft.category,
+          subCategory: draft.subCategory ?? null,
+          proposer: draft.proposer ?? null,
+          proposedAt: draft.proposedAt ?? null,
+          proposedCost: draft.proposedCost ?? null,
+          confirmedCost: draft.confirmedCost ?? null,
+          progress: draft.progress ?? null,
+          confirmedAt: draft.confirmedAt ?? null,
+          expectedAt: draft.expectedAt ?? null,
+          designApplied: draft.designApplied ?? null,
+          note: draft.note ?? null,
+        }),
+      })
+      if (!res.ok) { alert('저장 실패'); return }
+      await onSaved()
+      setDirty(false)
+    } finally { setSaving(false) }
+  }
+
+  async function del() {
+    if (!confirm(`"${item.code ?? ''} ${item.content.slice(0, 30)}" 삭제하시겠습니까?`)) return
+    await fetch(`/api/projects/${projectId}/risks/${item.id}`, { method: 'DELETE' })
+    await onDeleted()
+  }
+
+  const PROGRESS_OPTS = ['진행', '확정', '미반영', '재검토']
+  const DESIGN_OPTS = ['Yes', 'No', '-']
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/40 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-auto"
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl my-4 flex flex-col max-h-[calc(100vh-2rem)]"
+      >
+        {/* 헤더 */}
+        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-200">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              {draft.code && (
+                <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                  {draft.code}{draft.rev != null && draft.rev !== 0 ? ` · r${draft.rev}` : ''}
+                </span>
+              )}
+              <span className="text-[11px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                {draft.category}{draft.subCategory ? ` · ${draft.subCategory}` : ''}
+              </span>
+              {draft.progress && (
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${
+                  draft.progress === '확정' ? 'bg-emerald-100 text-emerald-700'
+                  : draft.progress === '진행' ? 'bg-blue-100 text-blue-700'
+                  : draft.progress === '미반영' ? 'bg-gray-100 text-gray-500'
+                  : 'bg-amber-100 text-amber-700'
+                }`}>{draft.progress}</span>
+              )}
+            </div>
+            <h3 className="text-base font-bold text-gray-900 leading-tight">
+              R&O 상세
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 p-1 -mr-1 -mt-1" aria-label="닫기">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* 본문 — 스크롤 */}
+        <div className="flex-1 overflow-auto px-5 py-4 space-y-4">
+          {/* 내용 (메인) */}
+          <div>
+            <label className="text-[11px] text-gray-500 font-semibold mb-1 block">내용</label>
+            <textarea
+              value={draft.content}
+              onChange={e => set('content', e.target.value)}
+              rows={Math.min(Math.max(3, draft.content.split(/\n|\r/).length + 1), 10)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+
+          {/* 공종 2열 */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="공종">
+              <input value={draft.category} onChange={e => set('category', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </Field>
+            <Field label="세부공종">
+              <input value={draft.subCategory ?? ''} onChange={e => set('subCategory', e.target.value || null)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="예) 골조, 공조, 위생" />
+            </Field>
+          </div>
+
+          {/* 금액 (백만원) */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="제안금액 (백만)">
+              <input type="number" inputMode="decimal"
+                value={draft.proposedCost ?? ''}
+                onChange={e => set('proposedCost', e.target.value === '' ? null : Number(e.target.value))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-right" />
+            </Field>
+            <Field label="확정금액 (백만)">
+              <input type="number" inputMode="decimal"
+                value={draft.confirmedCost ?? ''}
+                onChange={e => set('confirmedCost', e.target.value === '' ? null : Number(e.target.value))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-right" />
+            </Field>
+          </div>
+
+          {/* 상태·설계 */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="진행현황">
+              <select value={draft.progress ?? ''} onChange={e => set('progress', e.target.value || null)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                <option value="">—</option>
+                {PROGRESS_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </Field>
+            <Field label="설계반영">
+              <select value={draft.designApplied ?? ''} onChange={e => set('designApplied', e.target.value || null)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                <option value="">—</option>
+                {DESIGN_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </Field>
+          </div>
+
+          {/* 날짜 */}
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="제안일자">
+              <input type="date" value={draft.proposedAt ?? ''} onChange={e => set('proposedAt', e.target.value || null)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </Field>
+            <Field label="확정일자">
+              <input type="date" value={draft.confirmedAt ?? ''} onChange={e => set('confirmedAt', e.target.value || null)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </Field>
+            <Field label="예정완료일">
+              <input type="date" value={draft.expectedAt ?? ''} onChange={e => set('expectedAt', e.target.value || null)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </Field>
+          </div>
+
+          {/* 담당 */}
+          <Field label="제안사 / 담당">
+            <input value={draft.proposer ?? ''} onChange={e => set('proposer', e.target.value || null)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="예) 동양, 김현재" />
+          </Field>
+
+          {/* 비고 */}
+          <Field label="비고">
+            <textarea value={draft.note ?? ''} onChange={e => set('note', e.target.value || null)}
+              rows={2}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="추가 메모 (선택)" />
+          </Field>
+        </div>
+
+        {/* 푸터 */}
+        <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+          <button onClick={del} className="text-xs text-red-600 hover:text-red-800 px-3 py-2 font-semibold">
+            <Trash2 size={12} className="inline mr-1" /> 삭제
+          </button>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="text-sm text-gray-600 px-4 py-2 border border-gray-300 bg-white rounded-lg hover:bg-gray-100">
+              닫기
+            </button>
+            <button
+              onClick={save}
+              disabled={!dirty || saving}
+              className="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+            >
+              {saving ? '저장 중...' : dirty ? '저장' : '변경 없음'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-[11px] text-gray-500 font-semibold mb-1 block">{label}</label>
+      {children}
     </div>
   )
 }
