@@ -451,6 +451,7 @@ function BasicInfoStep({
         <Field label="최저기온 (°C)">
           <input
             type="number"
+            inputMode="decimal"
             value={data.tempMin ?? ''}
             onChange={e => upd('tempMin', e.target.value === '' ? null : Number(e.target.value))}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
@@ -459,6 +460,7 @@ function BasicInfoStep({
         <Field label="최고기온 (°C)">
           <input
             type="number"
+            inputMode="decimal"
             value={data.tempMax ?? ''}
             onChange={e => upd('tempMax', e.target.value === '' ? null : Number(e.target.value))}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
@@ -687,6 +689,7 @@ function ManpowerStep({
                   <td className="px-1 py-1 bg-blue-50/30">
                     <input
                       type="number"
+            inputMode="decimal"
                       value={c.today || ''}
                       placeholder="0"
                       onChange={e => updRow(idx, { today: Number(e.target.value) || 0 })}
@@ -828,6 +831,7 @@ function EquipMatStep({
               <div className="text-[10px] text-blue-600 font-semibold">금일</div>
               <input
                 type="number"
+            inputMode="decimal"
                 value={e.today || ''}
                 onChange={ev => updEq(i, { today: Number(ev.target.value) || 0 })}
                 placeholder="0"
@@ -900,6 +904,7 @@ function EquipMatStep({
                   <div className="text-[10px] text-blue-600 font-semibold">금회</div>
                   <input
                     type="number"
+            inputMode="decimal"
                     value={m.today || ''}
                     onChange={ev => updMat(i, { today: Number(ev.target.value) || 0 })}
                     placeholder="0"
@@ -949,6 +954,7 @@ function EquipMatStep({
             onChange={e => setMatDesign(e.target.value)}
             placeholder="설계량 (선택)"
             type="number"
+            inputMode="decimal"
             className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
           />
           <button

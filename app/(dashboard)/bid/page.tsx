@@ -884,7 +884,7 @@ export default function BidPage() {
                                     과거 {d.projects}개 프로젝트 범위 {d.min}~{d.max}일
                                   </p>
                                   {tid && (
-                                    <div className="flex gap-1 mt-1.5">
+                                    <div className="flex flex-wrap gap-1 mt-1.5">
                                       {[0.75, 1.0, 1.25, 1.5, 2.0].map(m => (
                                         <button
                                           key={m}
@@ -938,7 +938,7 @@ export default function BidPage() {
                                   </div>
                                   <p className="text-[10px] text-amber-700 mt-0.5">{a.message}</p>
                                   {tid && (
-                                    <div className="flex gap-1 mt-1.5">
+                                    <div className="flex flex-wrap gap-1 mt-1.5">
                                       {[0.75, 1.0, 1.25, 1.5, 2.0].map(m => (
                                         <button
                                           key={m}
@@ -1293,6 +1293,7 @@ function NumInput({
   return (
     <input
       type="number"
+      inputMode="decimal"
       value={value}
       onChange={e => onChange(e.target.value)}
       onFocus={e => e.target.select()}
