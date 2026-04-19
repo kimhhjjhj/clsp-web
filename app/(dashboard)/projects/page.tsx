@@ -272,15 +272,32 @@ function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id
   const status = getProjectStatus(p)
   const info = STATUS_META[status]
   const isCompleted = status === 'completed'
+  // 상태 색 hex → rgba 분해 (간단한 매핑)
+  const rgbMap: Record<typeof status, string> = {
+    active:    '16, 185, 129',
+    paused:    '245, 158, 11',
+    planning:  '37, 99, 235',
+    completed: '100, 116, 139',
+    archived:  '148, 163, 184',
+  }
+  const rgb = rgbMap[status]
 
   return (
     <div
-      className={`group card-elevated relative overflow-hidden flex flex-col ${
+      className={`group relative overflow-hidden flex flex-col rounded-xl bg-white transition-all duration-200 ${
         isCompleted ? 'opacity-90 hover:opacity-100' : 'hover:-translate-y-0.5'
       }`}
+      style={{
+        border: `1px solid rgba(${rgb}, 0.2)`,
+        boxShadow: `0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -10px rgba(${rgb}, 0.22)`,
+      }}
     >
-      {/* 상단 컬러 띠 — 상태 시각화 */}
-      <div className="h-1 w-full" style={{ background: info.color }} />
+      {/* 상단 컬러 워시 — 상태 시각화 */}
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-20 pointer-events-none"
+        style={{ background: `linear-gradient(180deg, rgba(${rgb}, 0.07) 0%, transparent 100%)` }}
+      />
 
       {/* 진행중: 우상단 pulse 도트 */}
       {status === 'active' && (
@@ -290,7 +307,7 @@ function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id
         </span>
       )}
 
-      <Link href={`/projects/${p.id}`} className="block p-4 flex-1 no-underline">
+      <Link href={`/projects/${p.id}`} className="relative block p-4 flex-1 no-underline">
         <div className="flex items-start justify-between mb-3 gap-2">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm flex-shrink-0"
@@ -352,7 +369,7 @@ function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id
         </div>
       </Link>
 
-      <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-2 flex items-center justify-between">
+      <div className="relative border-t border-slate-100 bg-slate-50/60 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3 text-[10px] text-gray-500">
           <span><strong className="text-gray-700 font-mono">{p._count.tasks}</strong> 공종</span>
           {typeof p._count.dailyReports === 'number' && p._count.dailyReports > 0 && (

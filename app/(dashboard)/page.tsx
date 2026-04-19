@@ -116,31 +116,45 @@ export default function DashboardPage() {
         {/* 오늘 할 일 — 진행중 프로젝트 중 이틀 이상 일보 없는 현장 */}
         {todayTasks.length > 0 && (
           <section>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 flex items-center gap-2 border-b border-blue-100">
-                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <PenLine size={14} className="text-blue-600" />
+            <div
+              className="relative rounded-xl overflow-hidden bg-white"
+              style={{
+                border: '1px solid rgba(37, 99, 235, 0.2)',
+                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px -10px rgba(37, 99, 235, 0.25)',
+              }}
+            >
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-20 pointer-events-none"
+                style={{ background: 'linear-gradient(180deg, rgba(37, 99, 235, 0.07) 0%, transparent 100%)' }}
+              />
+              <div className="relative px-4 py-3 flex items-center gap-2 border-b border-slate-100">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(37, 99, 235, 0.12)', color: '#2563eb' }}
+                >
+                  <PenLine size={15} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-bold text-blue-900">오늘 할 일</h3>
-                  <p className="text-[10px] text-blue-700">진행중 현장 중 최근 일보가 2일 이상 밀린 건</p>
+                  <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">오늘 할 일</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">진행중 현장 중 최근 일보가 2일 이상 밀린 건</p>
                 </div>
                 <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-600 text-white">{todayTasks.length}</span>
               </div>
-              <ul className="divide-y divide-blue-100/50">
+              <ul className="relative divide-y divide-slate-100">
                 {todayTasks.slice(0, 5).map(p => (
                   <li key={p.id}>
                     <Link
                       href={`/projects/${p.id}/daily-reports/new`}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-100/40 transition-colors no-underline group"
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50/40 transition-colors no-underline group"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{p.name}</p>
-                        <p className="text-[11px] text-blue-700 mt-0.5">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{p.name}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
                           마지막 일보 {p.latestReportDate ? formatRelative(p.latestReportDate) : '없음'}
                         </p>
                       </div>
-                      <span className="text-[11px] text-blue-600 font-semibold flex items-center gap-0.5 opacity-60 group-hover:opacity-100">
+                      <span className="text-[11px] text-blue-600 font-semibold flex items-center gap-0.5 opacity-70 group-hover:opacity-100">
                         일보 쓰기 <ChevronRight size={11} />
                       </span>
                     </Link>
@@ -148,7 +162,7 @@ export default function DashboardPage() {
                 ))}
               </ul>
               {todayTasks.length > 5 && (
-                <div className="px-4 py-2 border-t border-blue-100 text-[11px] text-blue-700 text-center">
+                <div className="relative px-4 py-2 border-t border-slate-100 text-[11px] text-slate-500 text-center">
                   외 {todayTasks.length - 5}개 · 프로젝트 목록에서 전체 확인
                 </div>
               )}
@@ -159,21 +173,35 @@ export default function DashboardPage() {
         {/* 일시중단 경고 */}
         {statusGroups.paused.length > 0 && (
           <section>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <AlertCircle size={16} className="text-amber-600" />
+            <div
+              className="relative rounded-xl overflow-hidden bg-white p-4 flex items-start gap-3"
+              style={{
+                border: '1px solid rgba(245, 158, 11, 0.24)',
+                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px -10px rgba(245, 158, 11, 0.3)',
+              }}
+            >
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-20 pointer-events-none"
+                style={{ background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, transparent 100%)' }}
+              />
+              <div
+                className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(245, 158, 11, 0.14)', color: '#d97706' }}
+              >
+                <AlertCircle size={16} />
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-amber-900 mb-0.5">
+              <div className="relative flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-slate-900 mb-0.5 tracking-[-0.01em]">
                   {statusGroups.paused.length}개 프로젝트가 일시중단 상태
                 </h3>
-                <p className="text-xs text-amber-800">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   최근 30~90일간 일보 입력이 없습니다. 실제 중단인지 확인 필요:
                   {' '}
                   {statusGroups.paused.slice(0, 3).map((p, i) => (
                     <span key={p.id}>
                       {i > 0 && ', '}
-                      <Link href={`/projects/${p.id}`} className="font-semibold text-amber-900 hover:underline">
+                      <Link href={`/projects/${p.id}`} className="font-semibold text-amber-700 hover:underline">
                         {p.name}
                       </Link>
                     </span>
@@ -187,11 +215,28 @@ export default function DashboardPage() {
 
         {/* 활발한 현장 + 바로가기 */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 card-elevated overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-gray-900">활발한 현장</h3>
-                <span className="text-[10px] text-gray-400">최근 일보 순</span>
+          <div
+            className="relative lg:col-span-2 rounded-xl overflow-hidden bg-white"
+            style={{
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px -10px rgba(16, 185, 129, 0.22)',
+            }}
+          >
+            <span
+              aria-hidden
+              className="absolute inset-x-0 top-0 h-20 pointer-events-none"
+              style={{ background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.06) 0%, transparent 100%)' }}
+            />
+            <div className="relative flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className="flex items-center justify-center w-7 h-7 rounded-lg"
+                  style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669' }}
+                >
+                  <Activity size={13} />
+                </span>
+                <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">활발한 현장</h3>
+                <span className="text-[10px] text-slate-400">최근 일보 순</span>
               </div>
               <Link href="/projects" className="text-xs text-blue-600 hover:underline no-underline flex items-center gap-0.5">
                 전체 보기 <ChevronRight size={11} />
@@ -214,7 +259,7 @@ export default function DashboardPage() {
                 ]}
               />
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="relative divide-y divide-slate-100">
                 {activeProjects.map(p => {
                   const info = STATUS_META[getProjectStatus(p)]
                   return (
@@ -254,18 +299,37 @@ export default function DashboardPage() {
           </div>
 
           {/* 바로가기 */}
-          <div className="card-elevated p-5">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">바로가기</h3>
-            <div className="space-y-1.5">
+          <div
+            className="relative rounded-xl overflow-hidden bg-white p-5"
+            style={{
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px -10px rgba(139, 92, 246, 0.22)',
+            }}
+          >
+            <span
+              aria-hidden
+              className="absolute inset-x-0 top-0 h-20 pointer-events-none"
+              style={{ background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.06) 0%, transparent 100%)' }}
+            />
+            <div className="relative flex items-center gap-2 mb-3">
+              <span
+                className="flex items-center justify-center w-7 h-7 rounded-lg"
+                style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#7c3aed' }}
+              >
+                <ChevronRight size={13} />
+              </span>
+              <h3 className="text-sm font-bold text-slate-900 tracking-[-0.01em]">바로가기</h3>
+            </div>
+            <div className="relative space-y-1.5">
               <QuickLink href="/projects/new" icon={<Plus size={14} />} label="새 프로젝트 만들기" color="blue" />
               <QuickLink href="/projects" icon={<FolderKanban size={14} />} label="전체 프로젝트 목록" />
               <QuickLink href="/import" icon={<Upload size={14} />} label="엑셀 일보 임포트" />
               <QuickLink href="/admin/productivity" icon={<TrendingUp size={14} />} label="관리자 · 생산성 승인" />
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-100 text-[11px] text-gray-500 leading-relaxed">
-              <kbd className="inline-flex items-center justify-center w-4 h-4 border border-gray-300 bg-white rounded text-[9px] font-mono">⌘</kbd>
+            <div className="relative mt-4 pt-4 border-t border-slate-100 text-[11px] text-slate-500 leading-relaxed">
+              <kbd className="inline-flex items-center justify-center w-4 h-4 border border-slate-300 bg-white rounded text-[9px] font-mono">⌘</kbd>
               <span className="mx-0.5">+</span>
-              <kbd className="inline-flex items-center justify-center w-4 h-4 border border-gray-300 bg-white rounded text-[9px] font-mono">K</kbd>
+              <kbd className="inline-flex items-center justify-center w-4 h-4 border border-slate-300 bg-white rounded text-[9px] font-mono">K</kbd>
               <span className="ml-1.5">로 어디서든 전역 검색을 열 수 있습니다.</span>
             </div>
           </div>
