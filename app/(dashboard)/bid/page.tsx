@@ -177,6 +177,10 @@ export default function BidPage() {
             .map((a: { taskId: string; multiplier: number }) => [a.taskId, a.multiplier] as [string, number])
           setLoadedAdjustments(seed)
         }
+        // AI 공사비 추정도 복원 — 업데이트 시 덮어쓰지 않도록
+        if (p.aiCostEstimate && typeof p.aiCostEstimate === 'object') {
+          setAiEstimate(p.aiCostEstimate)
+        }
         toast.success('프로젝트 로드됨', p.name ?? '')
       })
       .catch(() => toast.error('프로젝트 로드 실패'))
