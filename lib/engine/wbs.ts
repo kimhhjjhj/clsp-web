@@ -276,29 +276,65 @@ export function computeQuantities(p: ProjectInput): Record<string, number> {
 }
 
 // ═══════════════════════════════════════════════════════════
-// WBS 자동 생성 — 파이썬 build_default_tasks_csv_only() 포팅
-// 선후행: 단순 순차 (각 작업의 선행 = 바로 앞 작업)
-// 물량 0이거나 기간 0인 작업은 제외
+// 공법별 CP_DB·가동률·물량 산정 선택
+// null/bottom_up  → 기본 CP_DB (기존)
+// semi_top_down / full_top_down → CP_DB_TOPDOWN (상봉동 시퀀스)
+// ═══════════════════════════════════════════════════════════
+import { CP_DB_TOPDOWN, computeQuantitiesTopDown, getWorkRateTopDown } from './cp-db-topdown'
+
+function selectCpDb(method?: string | null): DBRow[] {
+  if (method === 'semi_top_down' || method === 'full_top_down') return CP_DB_TOPDOWN
+  return CP_DB
+}
+
+function selectQtys(p: ProjectInput): Record<string, number> {
+  const method = p.constructionMethod
+  if (method === 'semi_top_down' || method === 'full_top_down') {
+    return computeQuantitiesTopDown(p)
+  }
+  return computeQuantities(p)
+}
+
+function selectWorkRate(category: string, method?: string | null): number | null {
+  if (method === 'semi_top_down' || method === 'full_top_down') {
+    return getWorkRateTopDown(category)
+  }
+  return getWorkRate(category)
+}
+
+/** 공법 감안한 기간 계산 */
+function calcDurationWithMethod(row: DBRow, qty: number, method?: string | null): number {
+  const rate = selectWorkRate(row.category, method)
+  let durRaw = 0
+  if (row.prod !== null && row.prod > 0) durRaw = qty / row.prod
+  else if (row.stdDays !== null && row.stdDays > 0) durRaw = qty * row.stdDays
+  else return 0
+  if (rate !== null && rate > 0) return Math.round(durRaw / rate * 10) / 10
+  return Math.round(durRaw * 10) / 10
+}
+
+// ═══════════════════════════════════════════════════════════
+// WBS 자동 생성 — 공법별 CP_DB 자동 선택
+// 선후행: 단순 순차 (Top-down 분기 병렬은 CPM 단계에서 개선 예정)
 // ═══════════════════════════════════════════════════════════
 export function generateWBS(p: ProjectInput): WBSTask[] {
-  const qtys  = computeQuantities(p)
+  const db    = selectCpDb(p.constructionMethod)
+  const qtys  = selectQtys(p)
   const tasks: WBSTask[] = []
   let nextId  = 1
   let prevId  = ''
 
-  for (const row of CP_DB) {
+  for (const row of db) {
     // 물량 결정
     let qty = qtys[row.name] ?? 0
 
-    // 전체/개소 단위는 물량 미입력 시 1로 가정 (가설사무실·기초·마감 등)
+    // 전체/개소 단위는 물량 미입력 시 1로 가정
     if (qty <= 0 && ['전체', '개소', '대', '주'].includes(row.unit)) qty = 1
 
-    // '층' 단위는 물량이 정말 0이면 해당 공종 자체가 없는 것 → skip
-    // (저층부 0층 / 전이층 없음 / 지상 0층 케이스)
     if (qty <= 0) continue
 
-    const dur = calcDuration(row, qty)
-    if (dur <= 0) continue  // 기간 0이면 건너뜀
+    const dur = calcDurationWithMethod(row, qty, p.constructionMethod)
+    if (dur <= 0) continue
 
     const tid = String(nextId++)
     tasks.push({

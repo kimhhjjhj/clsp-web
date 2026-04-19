@@ -27,6 +27,7 @@ model Project {
   buildingArea Float?   // 건축면적 (1층 footprint, 터파기·부지정지 기준)
   wtBottom     Float?
   waBottom     Float?
+  constructionMethod     String?                // 'bottom_up' | 'full_top_down' | 'semi_top_down' | 'up_up' — null이면 bottom_up 기본
   lastCpmDuration        Int?
   industrySpecific       Json?                  // 유형별 특화 필드 (데이터센터: tier/racks/mwCapacity/cooling 등)
   processMap             Json?                  // { lanes: [], cards: [], links: [] }

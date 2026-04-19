@@ -17,6 +17,10 @@ export interface ProjectInput {
   buildingArea?: number  // 건축면적 (m²) — 1층 footprint (터파기·부지정지 기준)
   wtBottom?: number      // 풍화토 바닥 깊이 (m)
   waBottom?: number      // 풍화암 바닥 깊이 (m)
+  /** 기초 구조 시퀀스 공법. null 또는 'bottom_up' = 기본 CP_DB 사용 */
+  constructionMethod?: 'bottom_up' | 'full_top_down' | 'semi_top_down' | 'up_up' | null
+  /** Semi/Full Top-down 때 앵커 천공 공수 (상봉동: 20공) */
+  prdCount?: number
   mode?: 'cp' | 'full' // WBS 생성 모드: 개략(CP) / 상세(Full)
 }
 

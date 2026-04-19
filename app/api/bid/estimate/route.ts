@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
     buildingArea: body.buildingArea,
     wtBottom: body.wtBottom,
     waBottom: body.waBottom,
+    constructionMethod: body.constructionMethod ?? null,
+    prdCount: body.prdCount,
     mode: body.mode ?? 'cp',
   }
 
