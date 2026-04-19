@@ -482,7 +482,7 @@ function BidPage() {
         accent="violet"
       />
 
-      <div className="flex-1 min-h-0 p-4 sm:p-6">
+      <div className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-auto lg:overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:h-full">
           {/* 좌측: 입력 폼 — 독립 스크롤 */}
           <div className="lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
@@ -491,7 +491,7 @@ function BidPage() {
                 <Section color="#2563eb" rgb="37, 99, 235" label="기본 정보" icon={<FileText size={14} />} hint="저장 전 반복 시뮬">
                   <Field label="프로젝트명" hint="저장할 때 사용 · 생략 가능">
                     <input value={input.name} onChange={e => set('name', e.target.value)} placeholder="예: 강남 ◯◯ 신축공사"
-                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all" />
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-300 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all" />
                   </Field>
 
                   <Field label="공사 주소" hint="검색 → 좌표 확보 → 지층 섹션에서 시추공 자동 로드">
@@ -501,7 +501,7 @@ function BidPage() {
                         onChange={e => set('location', e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleGeocode() } }}
                         placeholder="예: 서울시 강남구 역삼동 737"
-                        className="flex-1 h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all"
+                        className="flex-1 h-10 px-3 bg-slate-50 border border-slate-300 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all"
                       />
                       <button
                         type="button"
@@ -528,7 +528,7 @@ function BidPage() {
 
                   <Field label="착공 예정일" hint="월별 인력 집계 활성 · 선택">
                     <input type="date" value={input.startDate} onChange={e => set('startDate', e.target.value)}
-                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all" />
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-300 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all" />
                   </Field>
                 </Section>
 
@@ -536,7 +536,7 @@ function BidPage() {
                 <Section color="#16a34a" rgb="22, 163, 74" label="건물 유형 · 규모" icon={<Layers size={14} />}>
                   <Field label="건물 유형" required>
                     <select value={input.type} onChange={e => set('type', e.target.value)}
-                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all">
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-300 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all">
                       <option>공동주택</option>
                       <option>오피스텔</option>
                       <option>업무시설</option>
@@ -1113,7 +1113,7 @@ function NumInput({
       onChange={e => onChange(e.target.value)}
       onFocus={e => e.target.select()}
       step={step}
-      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono text-right tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all"
+      className="w-full h-10 px-3 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono text-right tabular-nums placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all"
     />
   )
 }
