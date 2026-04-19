@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
         wtBottom: body.wtBottom,
         waBottom: body.waBottom,
         aiCostEstimate: body.aiCostEstimate ?? undefined,
+        productivityAdjustments: body.productivityAdjustments ?? undefined,
       },
     })
     return NextResponse.json(project, { status: 201 })

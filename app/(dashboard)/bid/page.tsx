@@ -330,10 +330,15 @@ export default function BidPage() {
           aiCostEstimate: aiEstimate
             ? { ...aiEstimate, estimatedAt: new Date().toISOString() }
             : null,
+          productivityAdjustments: multipliers.size > 0
+            ? Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier }))
+            : null,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? '저장 실패')
+      // bid-draft localStorage 정리 (저장 후 해당 키 삭제 — 중복 표시 방지)
+      try { window.localStorage.removeItem('productivity:bid-draft:cp') } catch { /* ignore */ }
       toast.success('프로젝트로 저장됨', input.name)
       router.push(`/projects/${data.id}`)
     } catch (e: any) {

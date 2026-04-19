@@ -37,6 +37,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
       wtBottom: body.wtBottom,
       waBottom: body.waBottom,
       industrySpecific: body.industrySpecific !== undefined ? body.industrySpecific : undefined,
+      productivityAdjustments:
+        body.productivityAdjustments !== undefined ? body.productivityAdjustments : undefined,
     },
   })
   return NextResponse.json(project)
