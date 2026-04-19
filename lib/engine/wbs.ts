@@ -283,7 +283,7 @@ export function computeQuantities(p: ProjectInput): Record<string, number> {
 // null/bottom_up  → 기본 CP_DB (기존)
 // semi_top_down / full_top_down → CP_DB_TOPDOWN (상봉동 시퀀스)
 // ═══════════════════════════════════════════════════════════
-import { CP_DB_TOPDOWN, computeQuantitiesTopDown, getWorkRateTopDown } from './cp-db-topdown'
+import { CP_DB_TOPDOWN, CP_DB_TOPDOWN_DEPS, computeQuantitiesTopDown, getWorkRateTopDown } from './cp-db-topdown'
 
 function selectCpDb(method?: string | null): DBRow[] {
   if (method === 'semi_top_down' || method === 'full_top_down') return CP_DB_TOPDOWN
@@ -321,9 +321,13 @@ function calcDurationWithMethod(row: DBRow, qty: number, method?: string | null)
 // 선후행: 단순 순차 (Top-down 분기 병렬은 CPM 단계에서 개선 예정)
 // ═══════════════════════════════════════════════════════════
 export function generateWBS(p: ProjectInput): WBSTask[] {
-  const db    = selectCpDb(p.constructionMethod)
+  const method = p.constructionMethod
+  const db    = selectCpDb(method)
   const qtys  = selectQtys(p)
+  const isTopDown = method === 'semi_top_down' || method === 'full_top_down'
+  const deps  = isTopDown ? CP_DB_TOPDOWN_DEPS : null
   const tasks: WBSTask[] = []
+  const nameToId = new Map<string, string>()
   let nextId  = 1
   let prevId  = ''
 
@@ -336,10 +340,26 @@ export function generateWBS(p: ProjectInput): WBSTask[] {
 
     if (qty <= 0) continue
 
-    const dur = calcDurationWithMethod(row, qty, p.constructionMethod)
+    const dur = calcDurationWithMethod(row, qty, method)
     if (dur <= 0) continue
 
     const tid = String(nextId++)
+    nameToId.set(row.name, tid)
+
+    // 선후행 결정:
+    //  - Top-down이고 deps 맵에 명시되면 그걸 사용 (분기·병합)
+    //  - 아니면 바로 앞 작업(prevId)을 선행으로 (단순 순차, 기본 CP_DB 또는 deps 미정의 공종)
+    let predIds: string[]
+    const explicitDeps = deps?.[row.name]
+    if (explicitDeps) {
+      predIds = explicitDeps
+        .map(n => nameToId.get(n))
+        .filter((x): x is string => !!x)
+      // 명시 선행이 아직 생성되지 않았으면 빈 배열 (공사 시작점) — CPM이 ES=0으로 처리
+    } else {
+      predIds = prevId ? [prevId] : []
+    }
+
     tasks.push({
       id:           tid,
       wbsCode:      row.wbsCode,
@@ -351,7 +371,7 @@ export function generateWBS(p: ProjectInput): WBSTask[] {
       productivity: row.prod !== null ? String(row.prod) : undefined,
       stdDays:      row.stdDays !== null ? String(row.stdDays) : undefined,
       duration:     Math.max(0.1, dur),
-      predecessors: prevId ? [prevId] : [],
+      predecessors: predIds,
     })
     prevId = tid
   }

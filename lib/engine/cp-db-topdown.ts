@@ -159,6 +159,42 @@ export function computeQuantitiesTopDown(p: {
   }
 }
 
+/**
+ * CP_DB_TOPDOWN 공종 선후행 맵 (작업명 기반)
+ * 빈 배열 = 선행 없음 (공사 시작점 or 공사준비 단계 첫 공종은 prev 순차로 fallback)
+ * 공사준비·흙막이·PRD는 명시하지 않으면 prev → next 순차 연결 (fallback)
+ *
+ * 핵심: Top-down 골조 분기/병합 구조
+ *   1F 바닥 → B1F 바닥 (공통)
+ *   B1F 바닥 ─┬─ 분기 A : B1F 수직 → 1~3F → 전이매트 → PIT ─┐
+ *             └─ 분기 B : B2·B3 바닥 → 기초 → B4·B3·B2 수직─┤
+ *                                                           └→ 4F~20F → 옥탑 → 마감
+ */
+export const CP_DB_TOPDOWN_DEPS: Record<string, string[]> = {
+  // Step 0 공통
+  '1F 바닥 타설':     ['PRD 장비해체'],          // PRD 완료 후 역타 시작
+  'B1F 바닥 타설':    ['1F 바닥 타설'],
+
+  // 분기 A — 지상 라인
+  'B1F 수직재':       ['B1F 바닥 타설'],
+  '1~3F 저층부':      ['B1F 수직재'],
+  '전이매트':         ['1~3F 저층부'],
+  'PIT층':            ['전이매트'],
+
+  // 분기 B — 지하 라인 (병렬 시작)
+  'B2F 터파기+바닥':           ['B1F 바닥 타설'],
+  'B3F 터파기+바닥':           ['B2F 터파기+바닥'],
+  'B4F 터파기+기초(MAT)':      ['B3F 터파기+바닥'],
+  'B4F 수직재':                ['B4F 터파기+기초(MAT)'],
+  'B3F 수직재':                ['B4F 수직재'],
+  'B2F 수직재':                ['B3F 수직재'],
+
+  // 병합 — PIT(분기 A 끝) ∧ B2F 수직재(분기 B 폐합) 둘 다 완료 후
+  '4F~20F 기준층':    ['PIT층', 'B2F 수직재'],
+  '옥탑 2개층':       ['4F~20F 기준층'],
+  '공동주택마감':     ['옥탑 2개층'],
+}
+
 /** Top-down 가동률 — PRD는 raw */
 export function getWorkRateTopDown(category: string): number | null {
   if (category === 'PRD') return null   // raw (가동률 미적용)
