@@ -219,6 +219,14 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                   const wr = getWorkRate(task.category)
                   const wrLabel = wr === null ? '—' : `${(wr * 100).toFixed(1)}%`
                   const isCp = task.isCritical
+                  // W.D(raw) = 물량 / 생산성 또는 물량 × 표준일수 — 가동률 적용 전
+                  // C.D(calendar) = task.duration (generateWBS에서 가동률 적용된 최종값)
+                  const prodNum = task.productivity ? Number(task.productivity) : null
+                  const stdNum  = task.stdDays      ? Number(task.stdDays)      : null
+                  const qty = task.quantity ?? 0
+                  const rawWD =
+                    prodNum && prodNum > 0 ? qty / prodNum :
+                    stdNum  && stdNum  > 0 ? qty * stdNum  : 0
                   return (
                     <tr
                       key={task.taskId}
@@ -282,7 +290,7 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                           const abn = abnormalIndex.map.get(task.name)
                           return (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              <span>{Math.round(task.duration)}</span>
+                              <span>{rawWD > 0 ? Math.round(rawWD) : '—'}</span>
                               {abn && (
                                 <span
                                   title={`⚠️ 비정상 공종\n${abn.message}\n\n이 공종의 기간이 다른 공종 대비 과도할 수 있습니다. 물량·생산성을 재확인하세요.`}
@@ -309,9 +317,9 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                         {wrLabel}
                       </td>
 
-                      {/* C.D */}
+                      {/* C.D = W.D ÷ 가동률 (= task.duration, generateWBS에서 이미 적용됨) */}
                       <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: 'monospace', fontSize: 13, color: '#475569' }}>
-                        {Math.round(task.duration * 7 / 5)}
+                        {Math.round(task.duration)}
                       </td>
 
                       {/* 회사 실적 (가중 평균 투입 인원) */}
