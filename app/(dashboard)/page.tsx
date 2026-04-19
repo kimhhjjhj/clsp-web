@@ -120,9 +120,31 @@ export default function DashboardPage() {
       />
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6">
+        {/* Hero — 오늘의 핵심 한 줄 */}
+        {!loading && projects.length > 0 && (
+          <section className="card-hero p-6 sm:p-8 relative">
+            <div className="relative">
+              <p className="text-[11px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-2">
+                {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+              </p>
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <h1 className="stat-value text-4xl sm:text-5xl font-black text-slate-900">
+                  {statusGroups.active.length}<span className="text-2xl font-semibold text-slate-400">개</span>
+                  <span className="text-slate-300 mx-3">·</span>
+                  {kpi.totalReports.toLocaleString()}<span className="text-2xl font-semibold text-slate-400">일보</span>
+                </h1>
+              </div>
+              <p className="text-sm text-slate-600 mt-3 font-medium">
+                진행 중 현장 {statusGroups.active.length}곳, 누적 일보 {kpi.totalReports.toLocaleString()}건.
+                {statusGroups.paused.length > 0 && ` 일시중단 ${statusGroups.paused.length}건 확인 필요.`}
+              </p>
+            </div>
+          </section>
+        )}
+
         {/* KPI — 상태 중심 */}
         <section>
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">전사 현황</h2>
+          <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3">전사 현황</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <KpiCard loading={loading} icon={Activity} iconBg="bg-emerald-50" iconColor="text-emerald-600"
               label="진행중" value={statusGroups.active.length} unit="개"
@@ -326,26 +348,32 @@ function KpiCard({
   unit?: string
   sub?: string
   href?: string
-  accent?: string   // hex color — 좌측 상단 컬러 띠 (상태 강조용)
+  accent?: string
 }) {
   const inner = (
-    <div className={`card-elevated relative p-5 overflow-hidden ${href ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}>
-      {accent && <div className="absolute top-0 left-0 right-0 h-1" style={{ background: accent }} />}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconBg} ring-1 ring-inset ring-black/5`}>
-          <Icon size={16} className={iconColor} strokeWidth={2.25} />
+    <div
+      className={`card-modern relative p-5 ${href ? 'cursor-pointer' : ''}`}
+      style={accent ? { color: accent } : undefined}
+    >
+      {accent && <span className="accent-dot" aria-hidden />}
+      <div className="flex items-start justify-between gap-2 mb-4">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">{label}</p>
+        <div
+          className={`w-10 h-10 rounded-2xl flex items-center justify-center ${iconBg} ring-1 ring-inset ring-black/[0.04]`}
+          style={{ boxShadow: accent ? `0 4px 20px -6px ${accent}40` : undefined }}
+        >
+          <Icon size={18} className={iconColor} strokeWidth={2} />
         </div>
       </div>
       {loading ? (
-        <Skeleton className="h-9 w-1/2" />
+        <Skeleton className="h-10 w-1/2" />
       ) : (
-        <p className="text-3xl font-bold text-slate-900 tracking-tight leading-none">
+        <p className="stat-value text-[42px] font-black text-slate-900">
           {value}
-          {unit && <span className="text-base font-medium text-slate-400 ml-1.5">{unit}</span>}
+          {unit && <span className="text-xl font-medium text-slate-400 ml-1.5">{unit}</span>}
         </p>
       )}
-      {sub && <p className="text-[11px] text-slate-500 mt-2 line-clamp-1">{sub}</p>}
+      {sub && <p className="text-[11px] text-slate-500 mt-3 line-clamp-1 font-medium">{sub}</p>}
     </div>
   )
   return href ? <Link href={href} className="no-underline">{inner}</Link> : inner

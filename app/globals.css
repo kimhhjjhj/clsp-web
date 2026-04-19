@@ -179,6 +179,97 @@
     0 16px 32px -8px rgba(15, 23, 42, 0.18);
 }
 
+/* ──────────────────────────────────────────────
+   2026 모던 카드 — Stripe · Linear 하이브리드
+   ─────────────────────────────────────────────── */
+.card-modern {
+  position: relative;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow:
+    0 1px 2px 0 rgba(15, 23, 42, 0.04),
+    0 6px 18px -6px rgba(15, 23, 42, 0.08);
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.card-modern::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.25), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.card-modern:hover {
+  border-color: rgba(148, 163, 184, 0.6);
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 12px 0 rgba(15, 23, 42, 0.06),
+    0 20px 48px -12px rgba(15, 23, 42, 0.18);
+}
+.card-modern:hover::before { opacity: 1; }
+
+/* 히어로 강조 — 그라데이션 + glow */
+.card-hero {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #fef3f2 100%);
+  border: 1px solid rgba(199, 210, 254, 0.5);
+  border-radius: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.card-hero::before {
+  content: '';
+  position: absolute;
+  top: -50%; right: -20%;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 60%);
+  pointer-events: none;
+}
+.card-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -40%; left: -10%;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* stat 값 강조 — 큰 숫자 + tabular */
+.stat-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* accent 도트 — 카드 좌측 상단 포인트 */
+.accent-dot {
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px currentColor, 0 0 12px currentColor;
+  opacity: 0.25;
+}
+
+/* 얇은 진행 바 */
+.progress-slim {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+  position: relative;
+}
+.progress-slim > span {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, currentColor, currentColor);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* 커스텀 스크롤바 — 거의 안 보이는 오버레이, 호버 시에만 실루엣 */
 .sidebar-scroll {
   scrollbar-width: thin;
