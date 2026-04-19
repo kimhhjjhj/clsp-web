@@ -6,7 +6,7 @@
 // - 좌: 리스트, 우: 상세 프로필
 // ═══════════════════════════════════════════════════════════
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -31,7 +31,15 @@ interface CompanyRow {
   lastDate: string
 }
 
-export default function CompaniesPage() {
+export default function CompaniesPageRoute() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-gray-500">불러오는 중…</div>}>
+      <CompaniesPage />
+    </Suspense>
+  )
+}
+
+function CompaniesPage() {
   const searchParams = useSearchParams()
   const initialQ = searchParams?.get('q') ?? ''
 

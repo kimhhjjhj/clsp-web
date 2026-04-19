@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Image from 'next/image'
 import { Search, Menu } from 'lucide-react'
 import { ToastProvider } from '@/components/common/Toast'
@@ -64,7 +64,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               transition-transform duration-200 shadow-xl shadow-black/20
               ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `} style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #172133 100%)' }}>
-              <Sidebar onClose={() => setMobileSidebarOpen(false)} />
+              <Suspense fallback={null}>
+                <Sidebar onClose={() => setMobileSidebarOpen(false)} />
+              </Suspense>
             </aside>
 
             {/* 본문 */}

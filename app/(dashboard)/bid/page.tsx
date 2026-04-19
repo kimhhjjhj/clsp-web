@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ClipboardCheck, Building2, Ruler, Layers, Play, Save, TrendingUp,
@@ -108,7 +108,15 @@ function groupBy<T>(arr: T[], key: (item: T) => string): Record<string, T[]> {
   }, {} as Record<string, T[]>)
 }
 
-export default function BidPage() {
+export default function BidPageRoute() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-gray-500">불러오는 중…</div>}>
+      <BidPage />
+    </Suspense>
+  )
+}
+
+function BidPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialTab = (searchParams?.get('tab') as TopTab) === 'schedule' ? 'schedule' : 'cost'
