@@ -123,13 +123,13 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1 text-emerald-600"><TrendingUp size={16} /><span className="text-xs font-semibold text-gray-500">제안 절감 합</span></div>
-          <p className="text-2xl font-bold text-emerald-700">{proposedSum.toLocaleString()}<span className="text-sm font-normal text-gray-400 ml-1">백만</span></p>
+          <p className="text-2xl font-bold text-emerald-700">{Math.round(proposedSum).toLocaleString()}<span className="text-sm font-normal text-gray-400 ml-1">백만</span></p>
           <p className="text-xs text-gray-400 mt-0.5">전 공종 누계</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1 text-blue-700"><CheckCircle2 size={16} /><span className="text-xs font-semibold text-gray-500">확정 절감 합</span></div>
-          <p className="text-2xl font-bold text-blue-700">{confirmedSum.toLocaleString()}<span className="text-sm font-normal text-gray-400 ml-1">백만</span></p>
-          <p className="text-xs text-gray-400 mt-0.5">제안 대비 {proposedSum !== 0 ? (confirmedSum / proposedSum * 100).toFixed(1) : '-'}%</p>
+          <p className="text-2xl font-bold text-blue-700">{Math.round(confirmedSum).toLocaleString()}<span className="text-sm font-normal text-gray-400 ml-1">백만</span></p>
+          <p className="text-xs text-gray-400 mt-0.5">제안 대비 {proposedSum !== 0 ? Math.round(confirmedSum / proposedSum * 100) : '-'}%</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1 text-orange-600"><AlertTriangle size={16} /><span className="text-xs font-semibold text-gray-500">레거시 리스크</span></div>
@@ -313,10 +313,10 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
                   )}
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap font-mono text-gray-700">
-                  {item.proposedCost != null ? item.proposedCost.toLocaleString() : <span className="text-gray-300">—</span>}
+                  {item.proposedCost != null ? Math.round(item.proposedCost).toLocaleString() : <span className="text-gray-300">—</span>}
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap font-mono font-semibold">
-                  {item.confirmedCost != null ? <span className={item.confirmedCost < 0 ? 'text-emerald-700' : 'text-gray-700'}>{item.confirmedCost.toLocaleString()}</span> : <span className="text-gray-300">—</span>}
+                  {item.confirmedCost != null ? <span className={item.confirmedCost < 0 ? 'text-emerald-700' : 'text-gray-700'}>{Math.round(item.confirmedCost).toLocaleString()}</span> : <span className="text-gray-300">—</span>}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   {item.progress ? (
