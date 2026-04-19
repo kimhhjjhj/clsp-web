@@ -56,6 +56,8 @@ export async function POST(req: NextRequest) {
         buildingArea: body.buildingArea,
         wtBottom: body.wtBottom,
         waBottom: body.waBottom,
+        constructionMethod: typeof body.constructionMethod === 'string' ? body.constructionMethod : undefined,
+        prdCount: typeof body.prdCount === 'number' ? body.prdCount : undefined,
         lastCpmDuration: typeof body.lastCpmDuration === 'number' ? body.lastCpmDuration : undefined,
         aiCostEstimate: body.aiCostEstimate ?? undefined,
         productivityAdjustments: body.productivityAdjustments ?? undefined,

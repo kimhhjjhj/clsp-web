@@ -27,6 +27,8 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { CPMResult } from '@/lib/types'
 
+type ConstructionMethod = 'bottom_up' | 'semi_top_down' | 'full_top_down' | 'up_up'
+
 interface BidInput {
   name: string
   type: string
@@ -43,7 +45,16 @@ interface BidInput {
   wtBottom: string
   waBottom: string
   startDate: string
+  constructionMethod: ConstructionMethod
+  prdCount: string
 }
+
+const CONSTRUCTION_METHODS: { value: ConstructionMethod; label: string; desc: string }[] = [
+  { value: 'bottom_up',     label: 'Bottom-up (재래식)',   desc: '흙막이→터파기→기초→지하→지상 순차' },
+  { value: 'semi_top_down', label: 'Semi Top-down (CWS)',  desc: '상부 Top-down + 하부 Bottom-up 폐합 (상봉동 기준)' },
+  { value: 'full_top_down', label: 'Full Top-down',         desc: '지하 전체 위→아래로, 기초는 마지막' },
+  { value: 'up_up',         label: 'Up-Up',                  desc: '기초 후 지하·지상 동시 상향' },
+]
 
 interface BoreholeResult {
   id: string
@@ -87,6 +98,8 @@ const INITIAL: BidInput = {
   sitePerim: '300', bldgPerim: '220',
   wtBottom: '3', waBottom: '6',
   startDate: '',
+  constructionMethod: 'bottom_up',
+  prdCount: '',
 }
 
 const CATEGORY_COLORS_HEX: Record<string, string> = {
@@ -181,6 +194,8 @@ function BidPage() {
           wtBottom: p.wtBottom != null ? String(p.wtBottom) : '',
           waBottom: p.waBottom != null ? String(p.waBottom) : '',
           startDate: p.startDate ?? '',
+          constructionMethod: (p.constructionMethod as ConstructionMethod) ?? 'bottom_up',
+          prdCount: p.prdCount != null ? String(p.prdCount) : '',
         })
         if (Array.isArray(p.productivityAdjustments)) {
           const seed = p.productivityAdjustments
@@ -352,6 +367,8 @@ function BidPage() {
           wtBottom: Number(input.wtBottom) || undefined,
           waBottom: Number(input.waBottom) || undefined,
           startDate: input.startDate || undefined,
+          constructionMethod: input.constructionMethod,
+          prdCount: Number(input.prdCount) || undefined,
           adjustments,
         }),
       })
@@ -399,6 +416,8 @@ function BidPage() {
           wtBottom: Number(input.wtBottom) || null,
           waBottom: Number(input.waBottom) || null,
           startDate: input.startDate || null,
+          constructionMethod: input.constructionMethod,
+          prdCount: Number(input.prdCount) || null,
           aiCostEstimate: aiEstimate
             ? { ...aiEstimate, estimatedAt: new Date().toISOString() }
             : null,
@@ -606,7 +625,30 @@ function BidPage() {
                   </div>
                 </Section>
 
-                {/* ── 섹션 3: 지층 정보 ── */}
+                {/* ── 섹션 3: 공법 시퀀스 ── */}
+                <Section color="#7c3aed" rgb="139, 92, 246" label="공법 시퀀스" icon={<Layers size={14} />}>
+                  <Field label="기초 구조 공법" hint="선택한 공법에 따라 WBS 공종 세트와 선후행이 자동 전환됩니다">
+                    <select
+                      value={input.constructionMethod}
+                      onChange={e => set('constructionMethod', e.target.value as ConstructionMethod)}
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
+                    >
+                      {CONSTRUCTION_METHODS.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <p className="text-[10px] text-slate-500 leading-relaxed bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5">
+                    {CONSTRUCTION_METHODS.find(m => m.value === input.constructionMethod)?.desc}
+                  </p>
+                  {(input.constructionMethod === 'semi_top_down' || input.constructionMethod === 'full_top_down') && (
+                    <Field label="PRD 앵커 공수" unit="공" hint="CIP 이후 천공 앵커 수. 1~1.5공/일 + 장비조립/해체 각 5일">
+                      <NumInput value={input.prdCount} onChange={v => set('prdCount', v)} />
+                    </Field>
+                  )}
+                </Section>
+
+                {/* ── 섹션 4: 지층 정보 ── */}
                 <Section color="#d97706" rgb="217, 119, 6" label="지층 정보" icon={<Drill size={14} />}>
                   <button
                     type="button"

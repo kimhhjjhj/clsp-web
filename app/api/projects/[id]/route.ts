@@ -36,6 +36,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
       buildingArea: body.buildingArea,
       wtBottom: body.wtBottom,
       waBottom: body.waBottom,
+      constructionMethod: body.constructionMethod,
+      prdCount: body.prdCount,
       // JSON 필드는 null 받으면 기존값 유지 (삭제 원하면 별도 DELETE 동작 필요)
       // Prisma JSON에 raw null 넣으면 오류 → null도 undefined로 치환
       industrySpecific: body.industrySpecific ?? undefined,

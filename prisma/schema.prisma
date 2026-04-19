@@ -28,6 +28,7 @@ model Project {
   wtBottom     Float?
   waBottom     Float?
   constructionMethod     String?                // 'bottom_up' | 'full_top_down' | 'semi_top_down' | 'up_up' — null이면 bottom_up 기본
+  prdCount               Int?                   // Top-down 공법 앵커 천공 공수 (상봉동 20공 등)
   lastCpmDuration        Int?
   industrySpecific       Json?                  // 유형별 특화 필드 (데이터센터: tier/racks/mwCapacity/cooling 등)
   processMap             Json?                  // { lanes: [], cards: [], links: [] }
