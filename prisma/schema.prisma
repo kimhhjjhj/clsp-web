@@ -66,7 +66,7 @@ model RiskOpportunity {
   id          String   @id @default(cuid())
   projectId   String
   type        String   // "risk" | "opportunity"
-  category    String   // 공종
+  category    String   // 공종 (공통가설/토목/철콘/철골/습식도장/수장/창호판넬/금속기타/기계/전기/소방/조경/장비/기타보험료)
   content     String
   impactType  String   // "schedule" | "cost"
   impactDays  Float?   // 공기영향(일)
@@ -75,9 +75,24 @@ model RiskOpportunity {
   response    String?
   owner       String?
   status      String   @default("identified") // "identified"|"reviewing"|"closed"
+  // ── 실무 엑셀 양식 호환 필드 (R&O 리스트 관리) ─────────
+  code             String?  // "CV-001", "RC-001", "EL-001" — 공종코드-번호
+  rev              Int?     // 리비전 (0, 1, 2…)
+  subCategory      String?  // 세부공종 (예: 토공, 골조, 공조, 위생, 장비)
+  proposer         String?  // 제안사 (기본 "동양")
+  proposedAt       String?  // 제안일자 YYYY-MM-DD
+  proposedCost     Float?   // 제안금액 (백만원, 음수=절감)
+  confirmedCost    Float?   // 확정금액 (백만원)
+  progress         String?  // "진행" | "확정" | "미반영" | "재검토"
+  confirmedAt      String?  // 확정일자 YYYY-MM-DD
+  expectedAt       String?  // 예정완료일 YYYY-MM-DD
+  designApplied    String?  // "Yes" | "No" | "-"
+  note             String?  // 비고
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@index([projectId, category])
+  @@index([projectId, progress])
 }
 
 model ScheduleAcceleration {
