@@ -139,8 +139,23 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* 브라우저/OS 다크모드가 폼 컨트롤(input 캐럿·스피너)을 하얗게 만드는 문제 차단 */
+    color-scheme: light;
+  }
   body {
     @apply bg-background text-foreground;
+  }
+  /* 숫자 입력 — hover/focus 시 캐럿이 흰색이 되어 배경에 묻히는 문제 */
+  input,
+  textarea,
+  select {
+    caret-color: #111827;  /* slate-900 */
+    color: inherit;
+  }
+  input:-webkit-autofill {
+    -webkit-text-fill-color: #111827 !important;
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
   }
 }
 
