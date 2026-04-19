@@ -84,11 +84,12 @@ export default function AiCostEstimate(props: Props) {
   const [manualErr, setManualErr] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const run = useCallback(async () => {
+  const run = useCallback(async (mode: 'auto' | 'preset' = 'auto') => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/bid/ai-estimate', {
+      const qs = mode === 'preset' ? '?mode=preset' : ''
+      const res = await fetch(`/api/bid/ai-estimate${qs}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -211,21 +212,29 @@ ${tasksLine}
           </p>
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <button
-              onClick={run}
+              onClick={() => run('preset')}
               className="inline-flex items-center gap-1.5 h-10 px-5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-semibold"
+              title="2026년 한국 건설 시세 룰 기반 — API 키 없어도 바로 동작"
             >
-              <Sparkles size={14} /> AI로 자동 추정
+              <Sparkles size={14} /> 프리셋으로 추정
+            </button>
+            <button
+              onClick={() => run('auto')}
+              className="inline-flex items-center gap-1.5 h-10 px-4 bg-white border border-violet-300 text-violet-700 hover:bg-violet-50 rounded-lg text-sm font-semibold"
+              title="ANTHROPIC_API_KEY 설정 시 Claude API로 정밀 추정"
+            >
+              <Sparkles size={14} /> AI API
             </button>
             <button
               onClick={() => setShowManual(true)}
-              className="inline-flex items-center gap-1.5 h-10 px-5 bg-white border border-violet-300 text-violet-700 hover:bg-violet-50 rounded-lg text-sm font-semibold"
-              title="API 키 없이 외부 AI(Claude.ai 등)로 받은 JSON 붙여넣기"
+              className="inline-flex items-center gap-1.5 h-10 px-4 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-semibold"
+              title="외부 AI로 받은 JSON 붙여넣기"
             >
-              <ClipboardPaste size={14} /> 수동 붙여넣기
+              <ClipboardPaste size={14} /> 붙여넣기
             </button>
           </div>
           <p className="text-[10px] text-gray-400 mt-3">
-            ANTHROPIC_API_KEY 미설정 시 자동 추정 실패 → 수동 모드 이용
+            프리셋: 즉시 / 유형별 단가표 · AI API: 키 필요 · 붙여넣기: 외부 AI 결과
           </p>
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 text-left">
@@ -328,7 +337,7 @@ ${tasksLine}
             <p className="text-xs opacity-80 mt-1">부가세 포함 · 연면적 {fmtKRW(summary.pricePerSqmKRW)}원/㎡ · 평당 {fmtKRW(summary.pricePerPyongKRW)}원</p>
           </div>
           <button
-            onClick={run}
+            onClick={() => run('preset')}
             disabled={loading}
             className="text-xs border border-white/40 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
           >
