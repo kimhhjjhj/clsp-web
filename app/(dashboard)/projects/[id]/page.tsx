@@ -251,8 +251,21 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
         {(() => {
           const lcInfo = STATUS_META[lifecycle]
           return (
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl overflow-hidden">
-              <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-3">
+            <div
+              className="relative rounded-xl overflow-hidden"
+              style={{
+                background: 'linear-gradient(180deg, #0f172a 0%, #0b1220 100%)',
+                border: '1px solid rgba(148, 163, 184, 0.1)',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.18), 0 10px 26px -14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+              }}
+            >
+              {/* 상단 accent 워시 — 상태 색으로 은은하게 */}
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-24 pointer-events-none"
+                style={{ background: `radial-gradient(ellipse 520px 160px at 20% -20%, ${lcInfo.color}30, transparent 65%)` }}
+              />
+              <div className="relative px-5 py-4 flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3 flex-wrap">
                   {/* 라이프사이클 상태 (전체 프로젝트 상태) */}
                   <div

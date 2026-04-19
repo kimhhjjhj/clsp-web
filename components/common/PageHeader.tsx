@@ -23,14 +23,14 @@ interface Props {
 }
 
 // 다크 헤더 전용 accent — 아이콘 박스 배경·글자 색
-const ACCENT: Record<AccentKey, { bg: string; text: string; ring: string }> = {
-  blue:    { bg: 'bg-blue-500/20',    text: 'text-blue-300',    ring: 'ring-blue-400/30' },
-  emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', ring: 'ring-emerald-400/30' },
-  orange:  { bg: 'bg-orange-500/20',  text: 'text-orange-300',  ring: 'ring-orange-400/30' },
-  violet:  { bg: 'bg-violet-500/20',  text: 'text-violet-300',  ring: 'ring-violet-400/30' },
-  slate:   { bg: 'bg-slate-500/20',   text: 'text-slate-200',   ring: 'ring-slate-400/30' },
-  amber:   { bg: 'bg-amber-500/20',   text: 'text-amber-300',   ring: 'ring-amber-400/30' },
-  pink:    { bg: 'bg-pink-500/20',    text: 'text-pink-300',    ring: 'ring-pink-400/30' },
+const ACCENT: Record<AccentKey, { text: string; rgb: string }> = {
+  blue:    { text: 'text-blue-300',    rgb: '59, 130, 246' },
+  emerald: { text: 'text-emerald-300', rgb: '16, 185, 129' },
+  orange:  { text: 'text-orange-300',  rgb: '234, 88, 12' },
+  violet:  { text: 'text-violet-300',  rgb: '139, 92, 246' },
+  slate:   { text: 'text-slate-200',   rgb: '148, 163, 184' },
+  amber:   { text: 'text-amber-300',   rgb: '245, 158, 11' },
+  pink:    { text: 'text-pink-300',    rgb: '236, 72, 153' },
 }
 
 function renderIcon(icon: Props['icon']): React.ReactNode {
@@ -51,22 +51,38 @@ export default function PageHeader({ icon, title, subtitle, actions, tabs, stick
 
   return (
     <div
-      className={`border-b border-slate-700/50 ${stickyTop ? 'sticky top-0 z-20' : ''}`}
-      style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}
+      className={`relative border-b border-slate-800/60 ${stickyTop ? 'sticky top-0 z-20' : ''}`}
+      style={{
+        background: 'linear-gradient(180deg, #0f172a 0%, #0b1220 100%)',
+        boxShadow: '0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 20px -12px rgba(0, 0, 0, 0.45)',
+      }}
     >
-      <div className="flex items-center justify-between px-4 sm:px-6 py-4 gap-3">
+      {/* 좌상단 accent 워시 — 다크 톤에 은은한 컬러 글로우 */}
+      <span
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: `radial-gradient(ellipse 640px 240px at 12% -20%, rgba(${a.rgb}, 0.18), transparent 60%)` }}
+      />
+      <div className="relative flex items-center justify-between px-4 sm:px-6 py-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {iconNode && (
             isCustomNode ? (
               <div className="flex-shrink-0">{iconNode}</div>
             ) : (
-              <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${a.bg} ${a.text} flex-shrink-0 ring-1 ${a.ring}`}>
+              <div
+                className={`flex items-center justify-center w-10 h-10 rounded-xl ${a.text} flex-shrink-0`}
+                style={{
+                  background: `rgba(${a.rgb}, 0.14)`,
+                  border: `1px solid rgba(${a.rgb}, 0.28)`,
+                  boxShadow: `inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 12px -4px rgba(${a.rgb}, 0.28)`,
+                }}
+              >
                 {iconNode}
               </div>
             )
           )}
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-bold text-white truncate tracking-tight">{title}</h1>
+            <h1 className="text-base sm:text-lg font-bold text-white truncate tracking-[-0.01em]">{title}</h1>
             {subtitle && (
               <p className="text-[11px] sm:text-xs text-slate-400 truncate mt-0.5">{subtitle}</p>
             )}
@@ -79,7 +95,7 @@ export default function PageHeader({ icon, title, subtitle, actions, tabs, stick
         )}
       </div>
       {tabs && (
-        <div className="px-4 sm:px-6 border-t border-slate-700/50 overflow-x-auto">
+        <div className="relative px-4 sm:px-6 border-t border-slate-800/60 overflow-x-auto">
           {tabs}
         </div>
       )}
