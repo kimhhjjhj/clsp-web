@@ -89,7 +89,7 @@ export default function PageHeader({ icon, title, subtitle, actions, tabs, stick
           </div>
         </div>
         {actions && (
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="relative z-10 flex items-center gap-2 flex-shrink-0">
             {actions}
           </div>
         )}
