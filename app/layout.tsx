@@ -38,7 +38,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
   // iOS 노치·Dynamic Island 영역까지 앱 배경 확장 (PWA 전체화면 자연스럽게)
   viewportFit: 'cover',
-  themeColor: '#0f172a',
+  themeColor: '#1e3a5f',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
