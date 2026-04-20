@@ -774,48 +774,7 @@ function BidPage() {
 
                   {topTab === 'schedule' && (
                     <div>
-                      {/* 🎯 유사 프로젝트 기반 추천 — 데이터 기반 주 참조 (휴리스틱 공식보다 신뢰도 우선) */}
-                      <div className="p-5 border-b border-gray-100">
-                        <SimilarProjectsPanel
-                          input={{
-                            type: input.type || undefined,
-                            ground: Number(input.ground) || undefined,
-                            basement: Number(input.basement) || undefined,
-                            lowrise: Number(input.lowrise) || undefined,
-                            bldgArea: Number(input.bldgArea) || undefined,
-                            buildingArea: Number(input.buildingArea) || undefined,
-                            siteArea: Number(input.siteArea) || undefined,
-                            hasTransfer: input.hasTransfer,
-                            constructionMethod: input.constructionMethod,
-                            wtBottom: Number(input.wtBottom) || undefined,
-                            waBottom: Number(input.waBottom) || undefined,
-                            location: input.location || undefined,
-                            excludeProjectId: editingProjectId ?? undefined,
-                          }}
-                          currentCpmDuration={result?.cpm.totalDuration}
-                        />
-                      </div>
-
-                      {/* AI 공기 추정 — 유형·규모 기반 룰 프리셋 (참고용 · 휴리스틱) */}
-                      <div className="p-5 border-b border-gray-100">
-                        <AiScheduleEstimate
-                          type={input.type}
-                          ground={Number(input.ground) || undefined}
-                          basement={Number(input.basement) || undefined}
-                          lowrise={Number(input.lowrise) || undefined}
-                          hasTransfer={input.hasTransfer}
-                          bldgArea={Number(input.bldgArea) || undefined}
-                          buildingArea={Number(input.buildingArea) || undefined}
-                          siteArea={Number(input.siteArea) || undefined}
-                          wtBottom={Number(input.wtBottom) || undefined}
-                          waBottom={Number(input.waBottom) || undefined}
-                          startDate={input.startDate || undefined}
-                          storageKey={storeKey}
-                          onResult={setAiSchedule}
-                        />
-                      </div>
-
-                      {/* 공기 그랜드 요약 — CPM 기반 결과 (AI 추정과 비교용) */}
+                      {/* 🎯 공기 요약 — CPM 기반 실제 산정값 (메인 수치) */}
                       <div className="p-5 border-b border-gray-100">
                         <div
                           className="rounded-xl p-5 text-white"
@@ -988,6 +947,47 @@ function BidPage() {
                           </div>
                         )
                       })()}
+
+                      {/* 📊 유사 프로젝트 기반 추천 — 데이터 기반 보조 참조 */}
+                      <div className="p-5 border-b border-gray-100">
+                        <SimilarProjectsPanel
+                          input={{
+                            type: input.type || undefined,
+                            ground: Number(input.ground) || undefined,
+                            basement: Number(input.basement) || undefined,
+                            lowrise: Number(input.lowrise) || undefined,
+                            bldgArea: Number(input.bldgArea) || undefined,
+                            buildingArea: Number(input.buildingArea) || undefined,
+                            siteArea: Number(input.siteArea) || undefined,
+                            hasTransfer: input.hasTransfer,
+                            constructionMethod: input.constructionMethod,
+                            wtBottom: Number(input.wtBottom) || undefined,
+                            waBottom: Number(input.waBottom) || undefined,
+                            location: input.location || undefined,
+                            excludeProjectId: editingProjectId ?? undefined,
+                          }}
+                          currentCpmDuration={result?.cpm.totalDuration}
+                        />
+                      </div>
+
+                      {/* ⚠️ AI 공기 추정 — 참고용 (휴리스틱 공식) */}
+                      <div className="p-5 border-b border-gray-100">
+                        <AiScheduleEstimate
+                          type={input.type}
+                          ground={Number(input.ground) || undefined}
+                          basement={Number(input.basement) || undefined}
+                          lowrise={Number(input.lowrise) || undefined}
+                          hasTransfer={input.hasTransfer}
+                          bldgArea={Number(input.bldgArea) || undefined}
+                          buildingArea={Number(input.buildingArea) || undefined}
+                          siteArea={Number(input.siteArea) || undefined}
+                          wtBottom={Number(input.wtBottom) || undefined}
+                          waBottom={Number(input.waBottom) || undefined}
+                          startDate={input.startDate || undefined}
+                          storageKey={storeKey}
+                          onResult={setAiSchedule}
+                        />
+                      </div>
 
                       {/* 공기 서브탭 */}
                       <div className="flex items-center gap-1 px-4 pt-3 border-b border-gray-200 bg-gray-50 overflow-x-auto">
