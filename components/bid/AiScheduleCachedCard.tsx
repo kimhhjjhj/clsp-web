@@ -25,6 +25,13 @@ interface Props {
   ground?: number
   bldgArea?: number
   type?: string
+  /** 공기 구성 내역용 — CPM 결과 태스크 (임계경로 기반 카테고리별 합산) */
+  cpmTasks?: Array<{
+    name: string
+    category?: string | null
+    duration: number
+    isCritical?: boolean
+  }>
 }
 
 const CONF_LABEL = { high: '높음', medium: '보통', low: '낮음' }
@@ -47,9 +54,30 @@ function pctDiff(a: number, b: number): string {
   return `${pct >= 0 ? '+' : ''}${pct}%`
 }
 
+/** CPM 임계경로 상 태스크들을 카테고리별로 묶어 공기 구성 내역 집계 */
+function buildCpmBreakdown(cpmTasks: Props['cpmTasks']) {
+  if (!cpmTasks || cpmTasks.length === 0) return null
+  const critical = cpmTasks.filter(t => t.isCritical)
+  if (critical.length === 0) return null
+  const groups = new Map<string, { days: number; count: number; names: string[] }>()
+  for (const t of critical) {
+    const cat = (t.category || '기타').trim()
+    const g = groups.get(cat) ?? { days: 0, count: 0, names: [] }
+    g.days += Math.round(t.duration)
+    g.count += 1
+    if (g.names.length < 3) g.names.push(t.name)
+    groups.set(cat, g)
+  }
+  const rows = Array.from(groups.entries())
+    .map(([category, g]) => ({ category, ...g }))
+    .sort((a, b) => b.days - a.days)
+  const total = rows.reduce((s, r) => s + r.days, 0)
+  return { rows, total }
+}
+
 export default function AiScheduleCachedCard({
   projectId, estimate, currentCpmDuration, startDate,
-  ground, bldgArea, type,
+  ground, bldgArea, type, cpmTasks,
 }: Props) {
   // ─── 추론 없음 ─────────────────────────────────────────
   if (!estimate || !estimate.totalDuration || estimate.totalDuration <= 0) {
@@ -179,7 +207,58 @@ export default function AiScheduleCachedCard({
         </details>
       )}
 
-      {/* 내부 크로스체크 — 국토부 회귀식·업계 밴드·CPM 과 AI 추론 병치 */}
+      {/* 공기 구성 내역 — CPM 임계경로 카테고리별 합 */}
+      {(() => {
+        const bd = buildCpmBreakdown(cpmTasks)
+        if (!bd) return null
+        return (
+          <div className="mt-4 pt-4 border-t border-white/15">
+            <div className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-2">
+              공기 구성 내역 — CPM 임계경로 기준 (이 값들이 쌓여 총 공기가 됩니다)
+            </div>
+            <div className="overflow-hidden rounded bg-white/5 border border-white/10">
+              <table className="w-full text-[11px]">
+                <thead className="bg-white/10 text-white/80">
+                  <tr>
+                    <th className="text-left px-2 py-1.5 font-semibold">공종 카테고리</th>
+                    <th className="text-left px-2 py-1.5 font-semibold">임계 태스크</th>
+                    <th className="text-right px-2 py-1.5 font-semibold w-16">일수</th>
+                    <th className="text-right px-2 py-1.5 font-semibold w-14">비중</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {bd.rows.map(r => (
+                    <tr key={r.category}>
+                      <td className="px-2 py-1.5 font-medium whitespace-nowrap">{r.category}</td>
+                      <td className="px-2 py-1.5 opacity-80">
+                        {r.names.join(', ')}
+                        {r.count > r.names.length && (
+                          <span className="opacity-60"> 외 {r.count - r.names.length}개</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-mono font-bold tabular-nums">{r.days.toLocaleString()}</td>
+                      <td className="px-2 py-1.5 text-right font-mono tabular-nums opacity-70">
+                        {bd.total > 0 ? Math.round((r.days / bd.total) * 100) : 0}%
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-white/10 font-bold">
+                    <td className="px-2 py-1.5" colSpan={2}>임계경로 합계 (CPM 총 공기)</td>
+                    <td className="px-2 py-1.5 text-right font-mono tabular-nums">{bd.total.toLocaleString()}</td>
+                    <td className="px-2 py-1.5 text-right opacity-70">100%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-1.5 text-[10px] opacity-60 leading-relaxed">
+              CPM 임계경로 상 태스크만 집계. 병렬 분기(예: Top-down 지상·지하 동시)는 더 긴 쪽만 반영됨.
+              국토부 가이드라인 준비기간(45일)·정리기간(30일)·비작업일수는 별도 카드(가이드라인 참고값) 참조.
+            </p>
+          </div>
+        )
+      })()}
+
+      {/* 내부 크로스체크 — 국토부 회귀식·업계 밴드·CPM 과 AI 추론 병치 (접이식) */}
       {(() => {
         const ai = estimate.totalDuration
         const reg = bldgArea && bldgArea > 0
@@ -189,10 +268,11 @@ export default function AiScheduleCachedCard({
         const cpm = currentCpmDuration && currentCpmDuration > 0 ? currentCpmDuration : null
         if (!reg?.days && !bench && !cpm) return null
         return (
-          <div className="mt-4 pt-4 border-t border-white/15">
-            <div className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-2">
-              내부 크로스체크 — 같은 프로젝트를 다른 근거로 뽑으면
-            </div>
+          <details className="mt-4 pt-4 border-t border-white/15">
+            <summary className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-2 cursor-pointer hover:opacity-100">
+              내부 크로스체크 (회귀식·업계 밴드 대조) ▾
+            </summary>
+            <div className="mt-2">
             <div className="overflow-hidden rounded bg-white/5 border border-white/10">
               <table className="w-full text-[11px]">
                 <thead className="bg-white/10 text-white/80">
@@ -255,7 +335,8 @@ export default function AiScheduleCachedCard({
             <p className="mt-1.5 text-[10px] opacity-60 leading-relaxed">
               AI 추론이 회귀식·업계 밴드와 크게 벗어나면 신뢰도 재검토 필요. CPM 과의 편차는 현장조건·공법 단축이 반영된 결과이므로 자연스러움.
             </p>
-          </div>
+            </div>
+          </details>
         )
       })()}
 

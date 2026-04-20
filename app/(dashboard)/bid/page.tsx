@@ -1021,6 +1021,7 @@ function BidPage() {
                           ground={Number(input.ground) || undefined}
                           bldgArea={Number(input.bldgArea) || undefined}
                           type={input.type}
+                          cpmTasks={result?.cpm.tasks}
                         />
                       </div>
 
