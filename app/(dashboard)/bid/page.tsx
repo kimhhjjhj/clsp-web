@@ -1134,80 +1134,112 @@ function BidPage() {
                           }}>
                             <span aria-hidden className="absolute inset-x-0 top-0 h-10 pointer-events-none"
                               style={{ background: `linear-gradient(180deg, ${cmp.color}0F, transparent)` }} />
-                            <div className="relative px-4 py-3 flex items-start gap-3 flex-wrap">
-                              <div className="flex-1 min-w-[260px]">
-                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                  <span className="text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: cmp.color }}>
-                                    국토부 2026 가이드라인 참고
-                                  </span>
-                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${gl.mode === 'precise' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                                    {gl.mode === 'precise' ? '정밀 모드' : '간이'}
-                                  </span>
-                                  <span className="text-[9px] text-slate-400">부록 1·2·3·5</span>
-                                </div>
-                                <p className="text-sm flex items-center gap-1.5 flex-wrap">
-                                  공식 산정:{' '}
-                                  <ValueExplainDialog
-                                    data={buildGuidelineExplain({
-                                      totalDays: gl.total,
-                                      prep: gl.preparationDays,
-                                      cp: gl.criticalWorkDays,
-                                      nonWork: gl.nonWorkDays,
-                                      cleanup: gl.cleanupDays,
-                                      mode: gl.mode,
-                                      monthlyNonWorkRows: gl.monthlyNonWork,
-                                    })}
-                                    triggerClassName="inline-flex items-center gap-0.5 hover:underline"
-                                  >
-                                    <span className="font-bold font-mono tabular-nums" style={{ color: cmp.color }}>
-                                      {Math.round(gl.total / 30)}개월 ({gl.total.toLocaleString()}일)
-                                    </span>
-                                    <Info size={11} className="opacity-50" />
-                                  </ValueExplainDialog>
-                                  <span className="text-slate-400">/</span>
-                                  현재 CPM:{' '}
-                                  <span className="font-bold font-mono tabular-nums text-slate-900">
-                                    {Math.round(result.cpm.totalDuration / 30)}개월 ({result.cpm.totalDuration.toLocaleString()}일)
-                                  </span>
-                                  <span className="text-[11px] font-semibold" style={{ color: cmp.color }}>{cmp.label}</span>
-                                </p>
-                                <p className="text-[11px] text-slate-500 mt-1 font-mono">
-                                  준비 {gl.preparationDays} + CP 작업 {gl.criticalWorkDays} + 비작업 {gl.nonWorkDays} + 정리 {gl.cleanupDays}
-                                </p>
-                                {/* 회귀식·권장밴드 보조 — ⚠️ 참고용 (클릭 시 상세 설명) */}
-                                <div className="flex gap-3 mt-2 flex-wrap text-[11px] items-center">
-                                  <span className="text-[10px] text-amber-600 font-semibold">⚠️ 참고용 · 클릭해 상세 설명 보기</span>
-                                  {reg.days != null && (
-                                    <ValueExplainDialog
-                                      data={buildRegressionExplain({
-                                        days: reg.days,
-                                        formula: reg.formula ?? '',
-                                        facility: input.type || '공동주택',
-                                        variable: '연면적',
-                                        variableValue: Number(input.bldgArea) || 0,
-                                        inRange: reg.inRange,
-                                      })}
-                                      triggerClassName={`px-2 py-0.5 rounded-md font-mono inline-flex items-center gap-0.5 ${reg.inRange ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
-                                    >
-                                      <span>회귀식 (참조) {Math.round(reg.days / 30)}개월 ({reg.days}일)</span>
-                                      <Info size={11} className="opacity-60" />
-                                    </ValueExplainDialog>
-                                  )}
-                                  <ValueExplainDialog
-                                    data={buildBenchmarkExplain({
-                                      floorRange: bench.floorRange,
-                                      typicalDaysMin: bench.typicalDays[0],
-                                      typicalDaysMax: bench.typicalDays[1],
-                                      ground: baseInput.ground,
-                                    })}
-                                    triggerClassName="px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-mono hover:bg-slate-100 inline-flex items-center gap-0.5"
-                                  >
-                                    <span>국토부 권장 {bench.floorRange} {Math.round(bench.typicalDays[0] / 30)}~{Math.round(bench.typicalDays[1] / 30)}개월 ({bench.typicalDays[0]}~{bench.typicalDays[1]}일)</span>
-                                    <Info size={11} className="opacity-60" />
-                                  </ValueExplainDialog>
-                                </div>
+                            <div className="relative px-4 py-3">
+                              {/* ── 헤더 바 ─────────────────────────── */}
+                              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                                <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: cmp.color }}>
+                                  국토부 2026 가이드라인 참고
+                                </span>
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                                  {gl.mode === 'precise' ? '정밀' : '간이'}
+                                </span>
+                                <span className="text-[10px] text-slate-400 ml-auto">부록 1·2·3·5</span>
                               </div>
-                              <details className="w-full mt-2">
+
+                              {/* ── 메인 비교 — 가이드라인 vs CPM ──────── */}
+                              <div className="flex items-baseline flex-wrap gap-x-4 gap-y-1">
+                                <ValueExplainDialog
+                                  data={buildGuidelineExplain({
+                                    totalDays: gl.total,
+                                    prep: gl.preparationDays,
+                                    cp: gl.criticalWorkDays,
+                                    nonWork: gl.nonWorkDays,
+                                    cleanup: gl.cleanupDays,
+                                    mode: gl.mode,
+                                    monthlyNonWorkRows: gl.monthlyNonWork,
+                                  })}
+                                  triggerClassName="inline-flex items-baseline gap-1 hover:underline decoration-dotted underline-offset-4"
+                                >
+                                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">가이드라인</span>
+                                  <span className="font-bold font-mono tabular-nums text-lg" style={{ color: cmp.color }}>
+                                    {Math.round(gl.total / 30)}개월
+                                  </span>
+                                  <span className="font-mono tabular-nums text-xs" style={{ color: cmp.color, opacity: 0.7 }}>
+                                    ({gl.total.toLocaleString()}일)
+                                  </span>
+                                  <Info size={11} style={{ color: cmp.color, opacity: 0.5 }} />
+                                </ValueExplainDialog>
+
+                                <span className="text-slate-300 text-xs select-none">vs</span>
+
+                                <div className="inline-flex items-baseline gap-1">
+                                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">CPM</span>
+                                  <span className="font-bold font-mono tabular-nums text-lg text-slate-900">
+                                    {Math.round(result.cpm.totalDuration / 30)}개월
+                                  </span>
+                                  <span className="font-mono tabular-nums text-xs text-slate-500">
+                                    ({result.cpm.totalDuration.toLocaleString()}일)
+                                  </span>
+                                </div>
+
+                                <span
+                                  className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                  style={{ background: `${cmp.color}18`, color: cmp.color }}
+                                >
+                                  {cmp.label}
+                                </span>
+                              </div>
+
+                              {/* ── 구성 내역 ──────────────────────────── */}
+                              <p className="text-[11px] text-slate-400 mt-2 font-mono tabular-nums">
+                                준비 {gl.preparationDays} + CP {gl.criticalWorkDays} + 비작업 {gl.nonWorkDays} + 정리 {gl.cleanupDays}
+                              </p>
+
+                              {/* ── 보조 지표 칩 (통일된 스타일) ─────── */}
+                              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mr-0.5">
+                                  참고 지표
+                                </span>
+                                {reg.days != null && (
+                                  <ValueExplainDialog
+                                    data={buildRegressionExplain({
+                                      days: reg.days,
+                                      formula: reg.formula ?? '',
+                                      facility: input.type || '공동주택',
+                                      variable: '연면적',
+                                      variableValue: Number(input.bldgArea) || 0,
+                                      inRange: reg.inRange,
+                                    })}
+                                    triggerClassName="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 transition-colors"
+                                  >
+                                    <span>회귀식</span>
+                                    <span className="font-mono tabular-nums font-semibold">
+                                      {Math.round(reg.days / 30)}개월 ({reg.days}일)
+                                    </span>
+                                    {!reg.inRange && (
+                                      <span className="text-[9px] text-amber-600 font-semibold">범위외</span>
+                                    )}
+                                    <Info size={10} className="text-slate-400" />
+                                  </ValueExplainDialog>
+                                )}
+                                <ValueExplainDialog
+                                  data={buildBenchmarkExplain({
+                                    floorRange: bench.floorRange,
+                                    typicalDaysMin: bench.typicalDays[0],
+                                    typicalDaysMax: bench.typicalDays[1],
+                                    ground: baseInput.ground,
+                                  })}
+                                  triggerClassName="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 transition-colors"
+                                >
+                                  <span>권장밴드 {bench.floorRange}</span>
+                                  <span className="font-mono tabular-nums font-semibold">
+                                    {Math.round(bench.typicalDays[0] / 30)}~{Math.round(bench.typicalDays[1] / 30)}개월
+                                  </span>
+                                  <Info size={10} className="text-slate-400" />
+                                </ValueExplainDialog>
+                              </div>
+
+                              <details className="mt-3 pt-2 border-t border-slate-100">
                                 <summary className="text-[11px] text-slate-500 hover:text-slate-900 cursor-pointer">산정 내역·월별 비작업일 ▾</summary>
                                 <div className="mt-2 text-[11px] text-slate-600 leading-relaxed space-y-2 pl-3 border-l-2 border-slate-200">
                                   <div>
