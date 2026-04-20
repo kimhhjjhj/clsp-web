@@ -202,6 +202,24 @@ model CompanyStandardProductivity {
 }
 
 // ─────────────────────────────────────────────────────────
+// F8. Scenario Comparator
+//   공법·생산성 multiplier·가속 조합을 시나리오로 저장하고 5개까지
+//   병렬 비교. params 변경 시 generateWBS+CPM 재실행 결과를 캐싱.
+// ─────────────────────────────────────────────────────────
+model Scenario {
+  id         String   @id @default(cuid())
+  projectId  String
+  name       String
+  params     Json     // { method, multipliers: [{taskId,mult}], accelerations: [{taskId,days}], startDate? }
+  result     Json     // { totalDuration, cost?, criticalCount, riskScore?, computedAt }
+  baseline   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────
 // F3. Delay Root-Cause Attribution
 //   CpmSnapshot 변동 + DailyReport 비작업일 + ProductivityObservation 편차
 //   를 결합해 Task 지연을 원인별(기상·자원·설계·제약·생산성)로 분해 저장.

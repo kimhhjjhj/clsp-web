@@ -3,12 +3,13 @@
 import React, { useEffect, useMemo, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
-  Loader2, Play, Gauge, ShieldAlert, Zap, GitCompareArrows, LayoutGrid,
+  Loader2, Play, Gauge, ShieldAlert, Zap, GitCompareArrows, LayoutGrid, Copy,
 } from 'lucide-react'
 import RiskPanel from '@/components/precon/RiskPanel'
 import AccelerationPanel from '@/components/precon/AccelerationPanel'
 import BaselineImportPanel from '@/components/precon/BaselineImportPanel'
 import ScenarioDashboard from '@/components/precon/ScenarioDashboard'
+import ScenarioComparator from '@/components/precon/ScenarioComparator'
 import BaselineCompare from '@/components/precon/BaselineCompare'
 import ProcessMapBoard from '@/components/precon/ProcessMapBoard'
 import { SkeletonKpiGrid } from '@/components/common/Skeleton'
@@ -64,7 +65,7 @@ interface Props {
   projectId: string
 }
 
-type TabId = 'overview' | 'rno' | 'scenario' | 'baseline' | 'processmap'
+type TabId = 'overview' | 'rno' | 'scenario' | 'compare' | 'baseline' | 'processmap'
 
 export default function Stage2Page({ projectId }: Props) {
   return (
@@ -146,6 +147,7 @@ function Stage2Inner({ projectId }: Props) {
     { id: 'overview',   label: '개요',         icon: <Gauge size={14} />, hint: 'CPM 결과 + 현재 상태 요약' },
     { id: 'rno',        label: 'R&O',         icon: <ShieldAlert size={14} />, badge: summary.roCount, hint: '리스크·기회 · 엑셀 연동' },
     { id: 'scenario',   label: '공기단축',     icon: <Zap size={14} />, badge: summary.scenarioCount, hint: 'CP 공종 단축 시나리오' },
+    { id: 'compare',    label: '시나리오 비교', icon: <Copy size={14} />, hint: '공법·multiplier·가속 조합 5개 병렬 비교' },
     { id: 'baseline',   label: '베이스라인',   icon: <GitCompareArrows size={14} />, badge: summary.baselineOn ? '✓' : null, hint: 'MSP 기준 · 현재 CPM 비교' },
     { id: 'processmap', label: '프로세스맵',   icon: <LayoutGrid size={14} />, hint: '협력사 Pull Planning 보드' },
   ]
@@ -319,6 +321,8 @@ function Stage2Inner({ projectId }: Props) {
               )}
             </>
           )}
+
+          {tab === 'compare' && <ScenarioComparator projectId={projectId} />}
 
           {tab === 'baseline' && (
             <div className="space-y-4">
