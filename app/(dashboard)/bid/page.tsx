@@ -27,6 +27,7 @@ import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
 import CompanyStandardsPanel from '@/components/analysis/CompanyStandardsPanel'
 import MethodComparisonPanel from '@/components/bid/MethodComparisonPanel'
+import SimilarProjectsPanel from '@/components/bid/SimilarProjectsPanel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -773,7 +774,29 @@ function BidPage() {
 
                   {topTab === 'schedule' && (
                     <div>
-                      {/* AI 공기 추정 — 유형·규모 기반 룰 프리셋 */}
+                      {/* 🎯 유사 프로젝트 기반 추천 — 데이터 기반 주 참조 (휴리스틱 공식보다 신뢰도 우선) */}
+                      <div className="p-5 border-b border-gray-100">
+                        <SimilarProjectsPanel
+                          input={{
+                            type: input.type || undefined,
+                            ground: Number(input.ground) || undefined,
+                            basement: Number(input.basement) || undefined,
+                            lowrise: Number(input.lowrise) || undefined,
+                            bldgArea: Number(input.bldgArea) || undefined,
+                            buildingArea: Number(input.buildingArea) || undefined,
+                            siteArea: Number(input.siteArea) || undefined,
+                            hasTransfer: input.hasTransfer,
+                            constructionMethod: input.constructionMethod,
+                            wtBottom: Number(input.wtBottom) || undefined,
+                            waBottom: Number(input.waBottom) || undefined,
+                            location: input.location || undefined,
+                            excludeProjectId: editingProjectId ?? undefined,
+                          }}
+                          currentCpmDuration={result?.cpm.totalDuration}
+                        />
+                      </div>
+
+                      {/* AI 공기 추정 — 유형·규모 기반 룰 프리셋 (참고용 · 휴리스틱) */}
                       <div className="p-5 border-b border-gray-100">
                         <AiScheduleEstimate
                           type={input.type}
