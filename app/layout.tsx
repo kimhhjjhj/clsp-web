@@ -20,7 +20,9 @@ export const metadata: Metadata = {
   applicationName: 'CLSP',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    // default: 상태바 영역을 앱 바깥으로 분리 → 배터리·시간 겹침 없음
+    // (black-translucent 는 상태바가 콘텐츠 위를 덮는 모드라 겹침 발생)
+    statusBarStyle: 'default',
     title: 'CLSP',
   },
   formatDetection: {
