@@ -58,6 +58,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       industrySpecific: body.industrySpecific ?? undefined,
       productivityAdjustments: body.productivityAdjustments ?? undefined,
       aiCostEstimate: body.aiCostEstimate ?? undefined,
+      aiScheduleEstimate: body.aiScheduleEstimate ?? undefined,
       lastCpmDuration:
         typeof body.lastCpmDuration === 'number' ? body.lastCpmDuration : undefined,
       // 준공 실적 (F18 자사 회귀식 학습용)

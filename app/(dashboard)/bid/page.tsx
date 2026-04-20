@@ -28,6 +28,8 @@ import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
 import CompanyStandardsPanel from '@/components/analysis/CompanyStandardsPanel'
 import MethodComparisonPanel from '@/components/bid/MethodComparisonPanel'
 import SimilarProjectsPanel from '@/components/bid/SimilarProjectsPanel'
+import AiScheduleCachedCard from '@/components/bid/AiScheduleCachedCard'
+import type { AiScheduleEstimateData } from '@/lib/types/ai-schedule'
 import { ValueExplainDialog, buildGuidelineExplain, buildRegressionExplain, buildBenchmarkExplain } from '@/components/bid/ValueExplainDialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -214,6 +216,12 @@ function BidPage() {
         // AI 공사비 추정도 복원 — 업데이트 시 덮어쓰지 않도록
         if (p.aiCostEstimate && typeof p.aiCostEstimate === 'object') {
           setAiEstimate(p.aiCostEstimate)
+        }
+        // AI 공기 추론 (관리자 큐레이션 값) 복원
+        if (p.aiScheduleEstimate && typeof p.aiScheduleEstimate === 'object') {
+          setAiSchedule(p.aiScheduleEstimate as unknown as AiScheduleResult)
+        } else {
+          setAiSchedule(null)
         }
         toast.success('프로젝트 로드됨', p.name ?? '')
       })
@@ -1003,22 +1011,13 @@ function BidPage() {
                         />
                       </div>
 
-                      {/* ⚠️ AI 공기 추정 — 참고용 (휴리스틱 공식) */}
+                      {/* 🎯 AI 공기 추론 (관리자 큐레이션) — DB 캐시 값 표시. 런타임 API 호출 0건 */}
                       <div className="p-5 border-b border-gray-100">
-                        <AiScheduleEstimate
-                          type={input.type}
-                          ground={Number(input.ground) || undefined}
-                          basement={Number(input.basement) || undefined}
-                          lowrise={Number(input.lowrise) || undefined}
-                          hasTransfer={input.hasTransfer}
-                          bldgArea={Number(input.bldgArea) || undefined}
-                          buildingArea={Number(input.buildingArea) || undefined}
-                          siteArea={Number(input.siteArea) || undefined}
-                          wtBottom={Number(input.wtBottom) || undefined}
-                          waBottom={Number(input.waBottom) || undefined}
-                          startDate={input.startDate || undefined}
-                          storageKey={storeKey}
-                          onResult={setAiSchedule}
+                        <AiScheduleCachedCard
+                          projectId={editingProjectId}
+                          estimate={aiSchedule as unknown as AiScheduleEstimateData | null}
+                          currentCpmDuration={result?.cpm.totalDuration}
+                          startDate={input.startDate}
                         />
                       </div>
 

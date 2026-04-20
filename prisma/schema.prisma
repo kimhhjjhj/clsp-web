@@ -33,6 +33,7 @@ model Project {
   industrySpecific       Json?                  // 유형별 특화 필드 (데이터센터: tier/racks/mwCapacity/cooling 등)
   processMap             Json?                  // { lanes: [], cards: [], links: [] }
   aiCostEstimate         Json?                  // AI 개략 공사비 추정 결과 (trades, summary, notes, 추정 일시)
+  aiScheduleEstimate     Json?                  // AI 공기 추론 — 관리자가 Claude Opus에게 받아 직접 입력한 값 (factors[], rationale, estimator, estimatedAt)
   productivityAdjustments Json?                 // 공종별 생산성 조정값 [{ taskId, multiplier }] — /bid 저장 시 보존
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt

@@ -14,6 +14,8 @@ import { Separator } from '@/components/ui/separator'
 import DxfUpload from '@/components/precon/DxfUpload'
 import IndustrySpecificFields, { type IndustrySpecific } from '@/components/common/IndustrySpecificFields'
 import PageHeader from '@/components/common/PageHeader'
+import AiScheduleAdminInput from '@/components/bid/AiScheduleAdminInput'
+import type { AiScheduleEstimateData } from '@/lib/types/ai-schedule'
 
 interface FormData {
   name: string
@@ -42,6 +44,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const router = useRouter()
   const [form, setForm] = useState<FormData | null>(null)
   const [industrySpecific, setIndustrySpecific] = useState<IndustrySpecific>({})
+  const [aiScheduleEstimate, setAiScheduleEstimate] = useState<AiScheduleEstimateData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -71,6 +74,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           actualCompletionDate: p.actualCompletionDate ?? '',
         })
         setIndustrySpecific((p.industrySpecific as IndustrySpecific | null) ?? {})
+        setAiScheduleEstimate((p.aiScheduleEstimate as AiScheduleEstimateData | null) ?? null)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -121,6 +125,9 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           return d > 0 ? d : null
         })(),
         industrySpecific: Object.keys(industrySpecific).length > 0 ? industrySpecific : null,
+        aiScheduleEstimate: aiScheduleEstimate && aiScheduleEstimate.totalDuration > 0
+          ? aiScheduleEstimate
+          : null,
       }),
     })
 
@@ -379,6 +386,12 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </CardContent>
           </Card>
         )}
+
+        {/* AI 공기 추론 (관리자 입력) */}
+        <AiScheduleAdminInput
+          value={aiScheduleEstimate}
+          onChange={setAiScheduleEstimate}
+        />
 
         {error && (
           <div className="bg-destructive/10 border border-destructive/30 text-destructive rounded-lg px-4 py-3 text-sm">
