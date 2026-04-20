@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ClipboardCheck, Building2, Ruler, Layers, Play, Save, TrendingUp,
   Calendar, Users, DollarSign, AlertTriangle, Loader2, ArrowRight,
-  BarChart3, ChevronRight, Search, Drill, Check, FileText,
+  BarChart3, ChevronRight, Search, Drill, Check, FileText, Info,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
@@ -28,6 +28,7 @@ import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
 import CompanyStandardsPanel from '@/components/analysis/CompanyStandardsPanel'
 import MethodComparisonPanel from '@/components/bid/MethodComparisonPanel'
 import SimilarProjectsPanel from '@/components/bid/SimilarProjectsPanel'
+import { ValueExplainDialog, buildGuidelineExplain, buildRegressionExplain, buildBenchmarkExplain } from '@/components/bid/ValueExplainDialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -866,34 +867,66 @@ function BidPage() {
                                   </span>
                                   <span className="text-[9px] text-slate-400">부록 1·2·3·5</span>
                                 </div>
-                                <p className="text-sm">
-                                  공식 산정: <span className="font-bold font-mono tabular-nums" style={{ color: cmp.color }}>
-                                    {Math.round(gl.total / 30)}개월 ({gl.total.toLocaleString()}일)
-                                  </span>
-                                  <span className="text-slate-400 mx-1.5">/</span>
-                                  현재 CPM: <span className="font-bold font-mono tabular-nums text-slate-900">
+                                <p className="text-sm flex items-center gap-1.5 flex-wrap">
+                                  공식 산정:{' '}
+                                  <ValueExplainDialog
+                                    data={buildGuidelineExplain({
+                                      totalDays: gl.total,
+                                      prep: gl.preparationDays,
+                                      cp: gl.criticalWorkDays,
+                                      nonWork: gl.nonWorkDays,
+                                      cleanup: gl.cleanupDays,
+                                      mode: gl.mode,
+                                      monthlyNonWorkRows: gl.monthlyNonWork,
+                                    })}
+                                    triggerClassName="inline-flex items-center gap-0.5 hover:underline"
+                                  >
+                                    <span className="font-bold font-mono tabular-nums" style={{ color: cmp.color }}>
+                                      {Math.round(gl.total / 30)}개월 ({gl.total.toLocaleString()}일)
+                                    </span>
+                                    <Info size={11} className="opacity-50" />
+                                  </ValueExplainDialog>
+                                  <span className="text-slate-400">/</span>
+                                  현재 CPM:{' '}
+                                  <span className="font-bold font-mono tabular-nums text-slate-900">
                                     {Math.round(result.cpm.totalDuration / 30)}개월 ({result.cpm.totalDuration.toLocaleString()}일)
                                   </span>
-                                  <span className="ml-2 text-[11px] font-semibold" style={{ color: cmp.color }}>{cmp.label}</span>
+                                  <span className="text-[11px] font-semibold" style={{ color: cmp.color }}>{cmp.label}</span>
                                 </p>
                                 <p className="text-[11px] text-slate-500 mt-1 font-mono">
                                   준비 {gl.preparationDays} + CP 작업 {gl.criticalWorkDays} + 비작업 {gl.nonWorkDays} + 정리 {gl.cleanupDays}
                                 </p>
-                                {/* 회귀식·권장밴드 보조 — ⚠️ 참고용 */}
+                                {/* 회귀식·권장밴드 보조 — ⚠️ 참고용 (클릭 시 상세 설명) */}
                                 <div className="flex gap-3 mt-2 flex-wrap text-[11px] items-center">
-                                  <span className="text-[10px] text-amber-600 font-semibold">⚠️ 참고용</span>
+                                  <span className="text-[10px] text-amber-600 font-semibold">⚠️ 참고용 · 클릭해 상세 설명 보기</span>
                                   {reg.days != null && (
-                                    <span className={`px-2 py-0.5 rounded-md font-mono ${reg.inRange ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'} cursor-help`}
-                                      title={`${reg.formula ?? ''} — 연면적만 반영. 층수·동수·지반 고려 안 됨. 단순 감잡기 용도.`}
+                                    <ValueExplainDialog
+                                      data={buildRegressionExplain({
+                                        days: reg.days,
+                                        formula: reg.formula ?? '',
+                                        facility: input.type || '공동주택',
+                                        variable: '연면적',
+                                        variableValue: Number(input.bldgArea) || 0,
+                                        inRange: reg.inRange,
+                                      })}
+                                      triggerClassName={`px-2 py-0.5 rounded-md font-mono inline-flex items-center gap-0.5 ${reg.inRange ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
                                     >
-                                      회귀식 (참조) {Math.round(reg.days / 30)}개월 ({reg.days}일) ⓘ
-                                    </span>
+                                      <span>회귀식 (참조) {Math.round(reg.days / 30)}개월 ({reg.days}일)</span>
+                                      <Info size={11} className="opacity-60" />
+                                    </ValueExplainDialog>
                                   )}
-                                  <span className="px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-mono cursor-help"
-                                    title="국토부 실무가이드 공동주택 p.129 권장 공기 범위 (실적 통계 분포 아님)"
+                                  <ValueExplainDialog
+                                    data={buildBenchmarkExplain({
+                                      floorRange: bench.floorRange,
+                                      typicalDaysMin: bench.typicalDays[0],
+                                      typicalDaysMax: bench.typicalDays[1],
+                                      ground: baseInput.ground,
+                                    })}
+                                    triggerClassName="px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-mono hover:bg-slate-100 inline-flex items-center gap-0.5"
                                   >
-                                    국토부 권장 {bench.floorRange} {Math.round(bench.typicalDays[0] / 30)}~{Math.round(bench.typicalDays[1] / 30)}개월 ({bench.typicalDays[0]}~{bench.typicalDays[1]}일) ⓘ
-                                  </span>
+                                    <span>국토부 권장 {bench.floorRange} {Math.round(bench.typicalDays[0] / 30)}~{Math.round(bench.typicalDays[1] / 30)}개월 ({bench.typicalDays[0]}~{bench.typicalDays[1]}일)</span>
+                                    <Info size={11} className="opacity-60" />
+                                  </ValueExplainDialog>
                                 </div>
                               </div>
                               <details className="w-full mt-2">

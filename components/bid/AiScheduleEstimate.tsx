@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Sparkles, Loader2, AlertCircle, Info, ClipboardPaste, Copy, Check, Calendar } from 'lucide-react'
+import { ValueExplainDialog, buildAiPresetExplain } from '@/components/bid/ValueExplainDialog'
 
 export interface SchedulePhase {
   name: string
@@ -306,6 +307,18 @@ export default function AiScheduleEstimate(props: Props) {
               신뢰도 {confLabel}
             </span>
           )}
+          <ValueExplainDialog
+            data={buildAiPresetExplain({
+              days: totalDuration,
+              formula,
+              confidence: confLabel,
+              type: byType,
+            })}
+            triggerClassName="ml-auto text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/15 border border-white/20 hover:bg-white/25 inline-flex items-center gap-1"
+          >
+            <Info size={11} />
+            상세 설명
+          </ValueExplainDialog>
         </div>
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
