@@ -20,6 +20,18 @@ export interface SchedulePhase {
   note?: string
 }
 
+export type EstimateSource =
+  | 'internal-regression' | 'similar-projects-knn' | 'guideline-regression' | 'heuristic-formula'
+
+export interface LayerAttempt {
+  source: EstimateSource
+  attempted: boolean
+  accepted: boolean
+  value?: number
+  confidence?: 'low' | 'medium' | 'high'
+  reason: string
+}
+
 export interface AiScheduleResult {
   totalDuration: number
   byType: string
@@ -29,6 +41,23 @@ export interface AiScheduleResult {
   notes?: string[]
   model?: string
   usage?: { input_tokens: number; output_tokens: number }
+  // Smart Estimate 추가 필드
+  source?: EstimateSource
+  smartConfidence?: 'low' | 'medium' | 'high'
+  layers?: LayerAttempt[]
+}
+
+const SOURCE_META: Record<EstimateSource, {
+  label: string
+  badge: string
+  color: string
+  bg: string
+  border: string
+}> = {
+  'internal-regression':   { label: '자사 회귀식 (F18)',        badge: '⭐ 최우선',    color: 'text-emerald-700', bg: 'bg-emerald-100', border: 'border-emerald-300' },
+  'similar-projects-knn':  { label: '유사 준공 프로젝트 평균',  badge: '📊 데이터 기반', color: 'text-blue-700',    bg: 'bg-blue-100',    border: 'border-blue-300' },
+  'guideline-regression':  { label: '국토부 회귀식',            badge: '📘 법정 참조', color: 'text-purple-700',  bg: 'bg-purple-100',  border: 'border-purple-300' },
+  'heuristic-formula':     { label: '하드코딩 휴리스틱',        badge: '⚠️ 휴리스틱',   color: 'text-amber-700',   bg: 'bg-amber-100',   border: 'border-amber-300' },
 }
 
 interface Props {
@@ -279,32 +308,69 @@ export default function AiScheduleEstimate(props: Props) {
 
   if (!result) return null
 
-  const { totalDuration, phases, formula, notes, byType, confidence } = result
+  const { totalDuration, phases, formula, notes, byType, confidence, source, smartConfidence, layers } = result
+  const sourceMeta = source ? SOURCE_META[source] : null
+  const effectiveConfidence = smartConfidence ?? confidence
+  const confLabelEff = effectiveConfidence === 'high' ? '높음' : effectiveConfidence === 'medium' ? '보통' : '낮음'
   const finishDate = addDays(props.startDate, totalDuration)
   const months = Math.round(totalDuration / 30)
   const confLabel = confidence === 'high' ? '높음' : confidence === 'medium' ? '보통' : '낮음'
 
   return (
     <div className="space-y-4">
-      {/* ⚠️ 참고용 안내 배너 — 이 값은 휴리스틱 공식 산출물 */}
-      <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 flex items-start gap-2">
-        <span className="text-amber-600 text-base leading-none mt-0.5">⚠️</span>
-        <div className="text-[11px] text-amber-900 leading-relaxed">
-          <strong>참고용 (휴리스틱 공식)</strong> — 이 수치는 연면적·층수 등 소수 변수로 계산한 <strong>개략 추정</strong>입니다.
-          계수 근거가 불투명하고 외부 변수(민원·악천후·설계변경)를 반영하지 않아 <strong>실제와 큰 편차</strong>가 있을 수 있습니다.
-          <br />
-          <strong>실제 의사결정은 CPM 결과 또는 상단의 &ldquo;유사 프로젝트 기반 추천&rdquo;을 기준</strong>으로 하세요.
+      {/* 소스별 동적 배너 — Smart Estimate 다단 폴백 결과 표시 */}
+      {sourceMeta && (
+        <div className={`${sourceMeta.bg} ${sourceMeta.border} border rounded-lg px-3 py-2 flex items-start gap-2`}>
+          <span className="text-base leading-none mt-0.5">{sourceMeta.badge.split(' ')[0]}</span>
+          <div className={`text-[11px] ${sourceMeta.color} leading-relaxed flex-1`}>
+            <strong>산출 소스: {sourceMeta.label}</strong>
+            {source === 'internal-regression' && (
+              <> — 자사 준공 프로젝트 실적을 학습한 회귀식으로 계산한 값. 현재 소스 중 <strong>가장 신뢰도 높음</strong>.</>
+            )}
+            {source === 'similar-projects-knn' && (
+              <> — 자사 DB 의 유사 준공 프로젝트 실적 가중 평균. 실제 시공 사례 기반.</>
+            )}
+            {source === 'guideline-regression' && (
+              <> — 국토부 부록 5 전국 회귀식 적용. 연면적만 반영하는 <strong>참고값</strong>.</>
+            )}
+            {source === 'heuristic-formula' && (
+              <> — <strong>하드코딩 공식 (fallback)</strong>. 자사 실적 데이터 누적 시 자동으로 상위 소스로 승격됩니다.
+                계수 근거 불투명·외부 변수 미반영으로 <strong>실제와 편차</strong> 있을 수 있음.</>
+            )}
+            {layers && layers.length > 0 && (
+              <details className="mt-1">
+                <summary className="cursor-pointer opacity-75 hover:opacity-100 text-[10px]">왜 이 소스가 선택됐나? (다단 폴백 이력)</summary>
+                <ul className="mt-1 space-y-0.5 text-[10px] pl-3 border-l-2 border-current opacity-80">
+                  {layers.map((l, i) => (
+                    <li key={i}>
+                      <strong>{SOURCE_META[l.source]?.label}:</strong>{' '}
+                      {l.accepted ? '✅ 채택' : '❌ 제외'} — {l.reason}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* 최상단 요약 — 색상 낮춰서 주요 수치 아님을 시각적으로 표현 */}
-      <div className="bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-xl p-5 opacity-90">
-        <div className="flex items-center gap-2 mb-3">
+      {/* 최상단 요약 — 소스별 색상 분기 (자사회귀 emerald, 유사 blue, 국토부 purple, 휴리스틱 slate) */}
+      <div className={`rounded-xl p-5 text-white ${
+        source === 'internal-regression'  ? 'bg-gradient-to-r from-emerald-600 to-teal-600' :
+        source === 'similar-projects-knn' ? 'bg-gradient-to-r from-blue-600 to-cyan-600' :
+        source === 'guideline-regression' ? 'bg-gradient-to-r from-purple-600 to-indigo-600' :
+                                            'bg-gradient-to-r from-slate-500 to-slate-600 opacity-90'
+      }`}>
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
           <Sparkles size={16} />
-          <span className="text-xs font-bold uppercase tracking-wider opacity-80">AI 프리셋 (참고용)</span>
-          {confidence && (
+          <span className="text-xs font-bold uppercase tracking-wider opacity-80">
+            {source === 'heuristic-formula' ? 'AI 프리셋 (참고용 · 휴리스틱)' :
+             sourceMeta ? `Smart Estimate · ${sourceMeta.label}` :
+             'AI 추정 공기'}
+          </span>
+          {effectiveConfidence && (
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/15 border border-white/20">
-              신뢰도 {confLabel}
+              신뢰도 {confLabelEff}
             </span>
           )}
           <ValueExplainDialog

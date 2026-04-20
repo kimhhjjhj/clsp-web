@@ -147,19 +147,24 @@ export function computeSimilarity(input: SimilarityInput, target: SimilarityInpu
 
 export async function findSimilarProjects(
   input: SimilarityInput,
-  opts: { minSimilarity?: number; limit?: number } = {},
+  opts: { minSimilarity?: number; limit?: number; includeCpmOnly?: boolean } = {},
 ): Promise<SimilarProjectMatch[]> {
   const minSimilarity = opts.minSimilarity ?? 0.5
   const limit = opts.limit ?? 10
+  // 기본: 준공된 프로젝트(actualDuration)만 사용
+  //   includeCpmOnly=true 로 명시해야 계획중/진행중 프로젝트의 lastCpmDuration 도 후보 포함
+  const includeCpmOnly = opts.includeCpmOnly ?? false
 
   const candidates = await prisma.project.findMany({
     where: {
       id: input.excludeProjectId ? { not: input.excludeProjectId } : undefined,
-      // 최소 lastCpmDuration 이라도 있는 프로젝트만 비교 대상
-      OR: [
-        { lastCpmDuration: { not: null } },
-        { actualDuration: { not: null } },
-      ],
+      // 준공(actualDuration 있는) 프로젝트만 기본 필터
+      //   "유사 프로젝트"의 의미는 "완료되어 실제 공기가 밝혀진 사례"여야 하므로
+      //   계획·진행중 프로젝트의 CPM 예측값은 참고 신뢰도 낮음
+      ...(includeCpmOnly
+        ? { OR: [{ lastCpmDuration: { not: null } }, { actualDuration: { not: null } }] }
+        : { actualDuration: { not: null } }
+      ),
     },
     select: {
       id: true, name: true, client: true, type: true,

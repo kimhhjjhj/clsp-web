@@ -1,31 +1,37 @@
 // ═══════════════════════════════════════════════════════════
-// AI 공기 추정 API
-// - mode=preset : 룰 기반 즉시 응답 (API 키 불필요)
-// - mode=auto   : ANTHROPIC_API_KEY 있으면 Claude API, 없으면 preset fallback
-// 동일한 JSON 스키마 반환:
-//   { totalDuration, phases[], formula, notes[], byType, confidence }
+// AI 공기 추정 API — 다단 폴백 Smart Estimate 기반
+// - mode=preset : Smart Estimate (자사 회귀 → 유사 KNN → 국토부 → 휴리스틱)
+// - mode=auto   : preset과 동일 (과거 Claude 호출은 schedule-smart-estimate 에 의해 자동 승격)
+// 응답에 source·layers·smartConfidence 추가해 어느 레이어가 채택됐는지 투명 노출
 // ═══════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server'
 import { computeSchedulePreset, type SchedulePresetInput } from '@/lib/engine/schedule-preset'
+import { computeSmartEstimate } from '@/lib/engine/schedule-smart-estimate'
 import Anthropic from '@anthropic-ai/sdk'
 
 export async function POST(req: NextRequest) {
   const url = new URL(req.url)
   const mode = url.searchParams.get('mode') ?? 'auto'
-  const body = (await req.json()) as SchedulePresetInput
+  const body = (await req.json()) as SchedulePresetInput & {
+    excludeProjectId?: string
+    location?: string
+    constructionMethod?: string | null
+  }
 
-  // 1) preset: 항상 먼저 계산 — fallback·baseline 겸용
+  // 1) Smart Estimate — 자사 회귀식 / 유사 프로젝트 / 국토부 회귀 / 휴리스틱 순 자동 선택
+  const smart = await computeSmartEstimate(body)
+  // 기존 호환을 위한 heuristic-only preset 도 보관 (auto 모드 fallback 텍스트에만 사용)
   const preset = computeSchedulePreset(body)
 
   if (mode === 'preset') {
-    return NextResponse.json(preset)
+    return NextResponse.json(smart)
   }
 
   // 2) auto: API 키 있으면 Claude에 넘겨 정밀 추정, 없으면 preset 반환
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ ...preset, notes: [...preset.notes, 'ANTHROPIC_API_KEY 미설정 → 프리셋 결과로 응답'] })
+    return NextResponse.json({ ...smart, notes: [...smart.notes, 'ANTHROPIC_API_KEY 미설정 → Smart Estimate 결과로 응답'] })
   }
 
   try {
@@ -38,7 +44,7 @@ export async function POST(req: NextRequest) {
     })
     const text = res.content.filter(c => c.type === 'text').map(c => (c as { text: string }).text).join('\n')
     const json = extractJson(text)
-    if (!json) return NextResponse.json({ ...preset, notes: [...preset.notes, 'AI 응답 파싱 실패 → 프리셋으로 대체'] })
+    if (!json) return NextResponse.json({ ...smart, notes: [...smart.notes, 'AI 응답 파싱 실패 → Smart Estimate 로 대체'] })
     return NextResponse.json({
       ...json,
       model: res.model,
@@ -46,8 +52,8 @@ export async function POST(req: NextRequest) {
     })
   } catch (e) {
     return NextResponse.json({
-      ...preset,
-      notes: [...preset.notes, `AI 호출 실패: ${(e as Error).message} → 프리셋으로 대체`],
+      ...smart,
+      notes: [...smart.notes, `AI 호출 실패: ${(e as Error).message} → Smart Estimate 로 대체`],
     })
   }
 }
