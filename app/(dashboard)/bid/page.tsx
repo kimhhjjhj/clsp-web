@@ -523,10 +523,10 @@ function BidPage() {
         accent="violet"
       />
 
-      <div className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-auto lg:overflow-hidden">
+      <div className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-auto lg:overflow-hidden thin-scroll">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:h-full">
           {/* 좌측: 입력 폼 — 독립 스크롤 */}
-          <div className="lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+          <div className="lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1 thin-scroll">
             <div className="space-y-3">
                 {/* ── 섹션 1: 기본 정보 (프로젝트명 · 주소 · 착공일) ── */}
                 <Section color="#2563eb" rgb="37, 99, 235" label="기본 정보" icon={<FileText size={14} />} hint="저장 전 반복 시뮬">
@@ -738,7 +738,7 @@ function BidPage() {
           </div>
 
           {/* 우측: 결과 — 독립 스크롤 */}
-          <div className="lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:pr-1 space-y-5">
+          <div className="lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:pr-1 space-y-5 thin-scroll">
             {!result ? (
               <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
                 <ClipboardCheck size={32} className="mx-auto mb-3 text-gray-300" />
