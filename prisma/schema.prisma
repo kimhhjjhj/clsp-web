@@ -43,6 +43,7 @@ model Project {
   weeklyProgress         WeeklyProgress[]
   dailyReports           DailyReport[]
   productivityProposals  ProductivityProposal[]
+  cpmSnapshots           CpmSnapshot[]
 }
 
 model Task {
@@ -198,4 +199,25 @@ model CompanyStandardProductivity {
   lastUpdated       DateTime @default(now())
 
   @@unique([trade, unit])
+}
+
+// ─────────────────────────────────────────────────────────
+// F1. CPM Intelligence Timeline
+//   매 이벤트(수동 재계산, 일보 등록, WBS 편집)마다 CPM 결과를 스냅샷으로 영속화.
+//   변동 히스토리 시각화 + 두 스냅샷 간 diff 조회.
+//   generateWBS·calculateCPM 엔진은 불변. 결과만 저장.
+// ─────────────────────────────────────────────────────────
+model CpmSnapshot {
+  id               String   @id @default(cuid())
+  projectId        String
+  capturedAt       DateTime @default(now())
+  totalDuration    Int
+  criticalTaskIds  Json     // 크리티컬 경로에 있는 taskId 배열
+  tasksSnapshot    Json     // [{ taskId, name, category, ES, EF, duration, isCritical }]
+  triggerEvent     String   // 'manual' | 'daily-report' | 'wbs-edit' | 'initial'
+  triggerRef       String?  // 예: dailyReportId, taskId 등 이벤트 연결 식별자
+  note             String?
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, capturedAt])
 }

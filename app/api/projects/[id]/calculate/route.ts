@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { generateWBS } from '@/lib/engine/wbs'
 import { generateWBSFull } from '@/lib/engine/wbs-full'
 import { calculateCPM } from '@/lib/engine/cpm'
+import { saveCpmSnapshot } from '@/lib/engine/cpm-snapshot'
 import type { ProjectInput } from '@/lib/types'
 
 type Params = { params: Promise<{ id: string }> }
@@ -59,6 +60,15 @@ export async function POST(req: NextRequest, { params }: Params) {
   await prisma.project.update({
     where: { id },
     data: { lastCpmDuration: cpmResult.totalDuration },
+  })
+
+  // F1. CPM Intelligence Timeline — 스냅샷 저장 (best-effort, 실패해도 응답에 영향 없음)
+  await saveCpmSnapshot({
+    projectId: id,
+    totalDuration: cpmResult.totalDuration,
+    tasks: cpmResult.tasks,
+    trigger: 'manual',
+    note: `mode=${mode}`,
   })
 
   return NextResponse.json(cpmResult)

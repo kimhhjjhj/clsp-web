@@ -2,9 +2,10 @@
 
 import React, { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { BarChart3, TrendingUp } from 'lucide-react'
+import { BarChart3, TrendingUp, GitBranch } from 'lucide-react'
 import ProgressDashboard from '@/components/analytics/ProgressDashboard'
 import ExecutionAnalytics from '@/components/analytics/ExecutionAnalytics'
+import CpmTimeline from '@/components/analytics/CpmTimeline'
 import { StageTabs, type StageTabDef } from '@/components/common/StageTabs'
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
   projectName?: string
 }
 
-type TabId = 'analytics' | 'progress'
+type TabId = 'analytics' | 'progress' | 'cpm-timeline'
 
 export default function Stage4Page(props: Props) {
   return (
@@ -30,6 +31,7 @@ function Inner({ projectId, projectName }: Props) {
   const tabs: StageTabDef<TabId>[] = [
     { id: 'analytics', label: '실적 분석', icon: <BarChart3 size={14} />, hint: '공종·월·요일·날씨별 집계' },
     { id: 'progress',  label: 'S-Curve',  icon: <TrendingUp size={14} />, hint: '주간 보고 + 진행 곡선' },
+    { id: 'cpm-timeline', label: 'CPM 타임라인', icon: <GitBranch size={14} />, hint: '스냅샷 히스토리 + 변동 diff' },
   ]
 
   return (
@@ -45,6 +47,7 @@ function Inner({ projectId, projectName }: Props) {
               cpmResult={null}
             />
           )}
+          {tab === 'cpm-timeline' && <CpmTimeline projectId={projectId} />}
         </div>
       </div>
     </div>
