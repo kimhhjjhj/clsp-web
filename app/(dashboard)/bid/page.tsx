@@ -915,19 +915,20 @@ function BidPage() {
                                 <p className="text-[11px] text-slate-500 mt-1 font-mono">
                                   준비 {gl.preparationDays} + CP 작업 {gl.criticalWorkDays} + 비작업 {gl.nonWorkDays} + 정리 {gl.cleanupDays}
                                 </p>
-                                {/* 회귀식·벤치마크 보조 */}
-                                <div className="flex gap-3 mt-2 flex-wrap text-[11px]">
+                                {/* 회귀식·권장밴드 보조 — ⚠️ 참고용 */}
+                                <div className="flex gap-3 mt-2 flex-wrap text-[11px] items-center">
+                                  <span className="text-[10px] text-amber-600 font-semibold">⚠️ 참고용</span>
                                   {reg.days != null && (
-                                    <span className={`px-2 py-0.5 rounded-md font-mono ${reg.inRange ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}
-                                      title={`부록 5 회귀식: ${reg.formula ?? ''}${reg.inRange ? '' : ' · 적용범위 밖'}`}
+                                    <span className={`px-2 py-0.5 rounded-md font-mono ${reg.inRange ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'} cursor-help`}
+                                      title={`${reg.formula ?? ''} — 연면적만 반영. 층수·동수·지반 고려 안 됨. 단순 감잡기 용도.`}
                                     >
-                                      회귀식 {reg.days}일
+                                      회귀식 (참조) {reg.days}일 ⓘ
                                     </span>
                                   )}
-                                  <span className="px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-mono"
-                                    title="실무가이드 공동주택 p.129~"
+                                  <span className="px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-mono cursor-help"
+                                    title="국토부 실무가이드 공동주택 p.129 권장 공기 범위 (실적 통계 분포 아님)"
                                   >
-                                    업계 {bench.floorRange} {bench.typicalDays[0]}~{bench.typicalDays[1]}일
+                                    국토부 권장 {bench.floorRange} {bench.typicalDays[0]}~{bench.typicalDays[1]}일 ⓘ
                                   </span>
                                 </div>
                               </div>

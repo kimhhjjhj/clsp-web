@@ -285,11 +285,22 @@ export default function AiScheduleEstimate(props: Props) {
 
   return (
     <div className="space-y-4">
-      {/* 최상단 요약 — 공사비 AI 카드(violet→blue)와 대칭으로 blue→cyan */}
-      <div className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl p-5">
+      {/* ⚠️ 참고용 안내 배너 — 이 값은 휴리스틱 공식 산출물 */}
+      <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 flex items-start gap-2">
+        <span className="text-amber-600 text-base leading-none mt-0.5">⚠️</span>
+        <div className="text-[11px] text-amber-900 leading-relaxed">
+          <strong>참고용 (휴리스틱 공식)</strong> — 이 수치는 연면적·층수 등 소수 변수로 계산한 <strong>개략 추정</strong>입니다.
+          계수 근거가 불투명하고 외부 변수(민원·악천후·설계변경)를 반영하지 않아 <strong>실제와 큰 편차</strong>가 있을 수 있습니다.
+          <br />
+          <strong>실제 의사결정은 CPM 결과 또는 상단의 &ldquo;유사 프로젝트 기반 추천&rdquo;을 기준</strong>으로 하세요.
+        </div>
+      </div>
+
+      {/* 최상단 요약 — 색상 낮춰서 주요 수치 아님을 시각적으로 표현 */}
+      <div className="bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-xl p-5 opacity-90">
         <div className="flex items-center gap-2 mb-3">
           <Sparkles size={16} />
-          <span className="text-xs font-bold uppercase tracking-wider opacity-80">AI 추정 공기</span>
+          <span className="text-xs font-bold uppercase tracking-wider opacity-80">AI 프리셋 (참고용)</span>
           {confidence && (
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/15 border border-white/20">
               신뢰도 {confLabel}
