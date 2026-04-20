@@ -202,6 +202,27 @@ model CompanyStandardProductivity {
 }
 
 // ─────────────────────────────────────────────────────────
+// F3. Delay Root-Cause Attribution
+//   CpmSnapshot 변동 + DailyReport 비작업일 + ProductivityObservation 편차
+//   를 결합해 Task 지연을 원인별(기상·자원·설계·제약·생산성)로 분해 저장.
+// ─────────────────────────────────────────────────────────
+model DelayAttribution {
+  id          String   @id @default(cuid())
+  projectId   String
+  taskId      String?
+  taskName    String?
+  periodFrom  String   // YYYY-MM-DD
+  periodTo    String
+  cause       String   // weather | manpower | material | design-change | constraint | productivity | unknown
+  days        Float
+  evidence    Json     // { snapshots: [from, to], observationIds: [...], weatherLogIds: [...] }
+  computedAt  DateTime @default(now())
+
+  @@index([projectId, cause])
+  @@index([projectId, periodFrom])
+}
+
+// ─────────────────────────────────────────────────────────
 // F4. Productivity Variance Dashboard
 //   DailyReport 저장 시 공종별 관측 생산성을 기록하고
 //   CompanyStandardProductivity 대비 z-score 계산.

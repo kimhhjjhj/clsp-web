@@ -2,11 +2,12 @@
 
 import React, { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { BarChart3, TrendingUp, GitBranch, Zap } from 'lucide-react'
+import { BarChart3, TrendingUp, GitBranch, Zap, AlertTriangle } from 'lucide-react'
 import ProgressDashboard from '@/components/analytics/ProgressDashboard'
 import ExecutionAnalytics from '@/components/analytics/ExecutionAnalytics'
 import CpmTimeline from '@/components/analytics/CpmTimeline'
 import ProductivityVariancePanel from '@/components/analytics/ProductivityVariancePanel'
+import DelayCauseChart from '@/components/analytics/DelayCauseChart'
 import { StageTabs, type StageTabDef } from '@/components/common/StageTabs'
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
   projectName?: string
 }
 
-type TabId = 'analytics' | 'progress' | 'cpm-timeline' | 'prod-variance'
+type TabId = 'analytics' | 'progress' | 'cpm-timeline' | 'prod-variance' | 'delay-cause'
 
 export default function Stage4Page(props: Props) {
   return (
@@ -34,6 +35,7 @@ function Inner({ projectId, projectName }: Props) {
     { id: 'progress',  label: 'S-Curve',  icon: <TrendingUp size={14} />, hint: '주간 보고 + 진행 곡선' },
     { id: 'cpm-timeline', label: 'CPM 타임라인', icon: <GitBranch size={14} />, hint: '스냅샷 히스토리 + 변동 diff' },
     { id: 'prod-variance', label: '생산성 편차',  icon: <Zap size={14} />, hint: '회사 표준 대비 일보 관측 z-score' },
+    { id: 'delay-cause',   label: '지연 원인',    icon: <AlertTriangle size={14} />, hint: '기상·자원·설계·제약·생산성 분해' },
   ]
 
   return (
@@ -51,6 +53,7 @@ function Inner({ projectId, projectName }: Props) {
           )}
           {tab === 'cpm-timeline' && <CpmTimeline projectId={projectId} />}
           {tab === 'prod-variance' && <ProductivityVariancePanel projectId={projectId} />}
+          {tab === 'delay-cause' && <DelayCauseChart projectId={projectId} />}
         </div>
       </div>
     </div>
