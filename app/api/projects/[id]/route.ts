@@ -16,6 +16,21 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params
   const body = await req.json()
+
+  // 준공 실적 actualDuration은 startDate·actualCompletionDate에서 항상 재계산 (단일 진실 소스)
+  //   - client 가 잘못된 값을 보내거나, 착공일만 바꾸고 actualDuration은 옛날 값을 유지하는 케이스 방지
+  function computeActualDuration(): number | null {
+    const start = body.startDate ?? null
+    const end = body.actualCompletionDate ?? null
+    if (!start || !end) return null
+    const s = new Date(start)
+    const e = new Date(end)
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return null
+    const d = Math.round((e.getTime() - s.getTime()) / 86400000)
+    return d > 0 ? d : null
+  }
+  const recomputedActualDuration = computeActualDuration()
+
   const project = await prisma.project.update({
     where: { id },
     data: {
@@ -47,8 +62,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
         typeof body.lastCpmDuration === 'number' ? body.lastCpmDuration : undefined,
       // 준공 실적 (F18 자사 회귀식 학습용)
       actualCompletionDate: body.actualCompletionDate ?? undefined,
-      actualDuration:
-        typeof body.actualDuration === 'number' ? body.actualDuration : undefined,
+      actualDuration: recomputedActualDuration,
     },
   })
   return NextResponse.json(project)

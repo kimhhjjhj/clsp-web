@@ -321,15 +321,27 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                   {/* 준공된 프로젝트: 실제 준공일 우선, 없으면 입력 안내 */}
                   {lifecycle === 'completed' ? (
                     project.actualCompletionDate ? (
-                      <span className="flex items-center gap-1.5">
-                        <span className="text-slate-500">→</span>
-                        준공 <span className="text-white font-semibold">{project.actualCompletionDate}</span>
-                        {project.actualDuration && (
-                          <span className="text-slate-400 ml-1">
-                            ({Math.round(project.actualDuration / 30)}개월 · {project.actualDuration}일)
+                      (() => {
+                        // 실제 공기 = 준공일 - 착공일 (저장된 actualDuration 값은 무시하고 항상 재계산)
+                        const computed = (() => {
+                          if (!project.startDate || !project.actualCompletionDate) return null
+                          const s = new Date(project.startDate)
+                          const e = new Date(project.actualCompletionDate)
+                          if (isNaN(s.getTime()) || isNaN(e.getTime())) return null
+                          return Math.round((e.getTime() - s.getTime()) / 86400000)
+                        })()
+                        return (
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-slate-500">→</span>
+                            준공 <span className="text-white font-semibold">{project.actualCompletionDate}</span>
+                            {computed != null && computed > 0 && (
+                              <span className="text-slate-400 ml-1">
+                                ({Math.round(computed / 30)}개월 · {computed.toLocaleString()}일)
+                              </span>
+                            )}
                           </span>
-                        )}
-                      </span>
+                        )
+                      })()
                     ) : (
                       <span className="flex items-center gap-1.5 text-amber-400">
                         <span className="text-slate-500">→</span>

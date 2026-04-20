@@ -34,7 +34,7 @@ interface FormData {
   wtBottom: string
   waBottom: string
   actualCompletionDate: string
-  actualDuration: string
+  // actualDuration 은 저장·표시 모두 startDate·actualCompletionDate 에서 파생 계산 (form state 보유 안 함)
 }
 
 export default function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -69,7 +69,6 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           wtBottom: p.wtBottom != null ? String(p.wtBottom) : '',
           waBottom: p.waBottom != null ? String(p.waBottom) : '',
           actualCompletionDate: p.actualCompletionDate ?? '',
-          actualDuration: p.actualDuration != null ? String(p.actualDuration) : '',
         })
         setIndustrySpecific((p.industrySpecific as IndustrySpecific | null) ?? {})
         setLoading(false)
@@ -112,7 +111,15 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         wtBottom: form.wtBottom ? Number(form.wtBottom) : null,
         waBottom: form.waBottom ? Number(form.waBottom) : null,
         actualCompletionDate: form.actualCompletionDate || null,
-        actualDuration: form.actualDuration ? Number(form.actualDuration) : null,
+        // 저장 시 항상 dates 기반 재계산 — 단일 진실 소스
+        actualDuration: (() => {
+          if (!form.startDate || !form.actualCompletionDate) return null
+          const s = new Date(form.startDate)
+          const e = new Date(form.actualCompletionDate)
+          if (isNaN(s.getTime()) || isNaN(e.getTime())) return null
+          const d = Math.round((e.getTime() - s.getTime()) / 86400000)
+          return d > 0 ? d : null
+        })(),
         industrySpecific: Object.keys(industrySpecific).length > 0 ? industrySpecific : null,
       }),
     })
@@ -206,47 +213,55 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* 준공 실적 (선택) — 준공된 프로젝트에 입력하면 자사 회귀식 학습에 반영 */}
-            <div className="mt-4 pt-4 border-t border-dashed">
-              <div className="text-xs font-semibold text-slate-600 mb-2">
-                준공 실적 <span className="text-slate-400 font-normal">(선택 · 준공 완료 시 입력 → 자사 회귀식 학습에 사용)</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="actualCompletionDate">실제 준공일</Label>
-                  <Input
-                    id="actualCompletionDate"
-                    type="date"
-                    value={form.actualCompletionDate}
-                    onChange={e => {
-                      set('actualCompletionDate', e.target.value)
-                      // 착공일과 준공일로 실제 공기 자동 계산
-                      if (e.target.value && form.startDate) {
-                        const start = new Date(form.startDate)
-                        const end = new Date(e.target.value)
-                        const days = Math.round((end.getTime() - start.getTime()) / 86400000)
-                        if (days > 0) set('actualDuration', String(days))
-                      }
-                    }}
-                  />
+            {(() => {
+              // 착공일 + 준공일로 실제 공기를 항상 동적 계산 (단일 진실 소스)
+              const computedDuration = (() => {
+                if (!form.startDate || !form.actualCompletionDate) return null
+                const s = new Date(form.startDate)
+                const e = new Date(form.actualCompletionDate)
+                if (isNaN(s.getTime()) || isNaN(e.getTime())) return null
+                const d = Math.round((e.getTime() - s.getTime()) / 86400000)
+                return d > 0 ? d : null
+              })()
+              return (
+                <div className="mt-4 pt-4 border-t border-dashed">
+                  <div className="text-xs font-semibold text-slate-600 mb-2">
+                    준공 실적 <span className="text-slate-400 font-normal">(선택 · 준공 완료 시 입력 → 자사 회귀식 학습에 사용)</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="actualCompletionDate">실제 준공일</Label>
+                      <Input
+                        id="actualCompletionDate"
+                        type="date"
+                        value={form.actualCompletionDate}
+                        onChange={e => set('actualCompletionDate', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>실제 공기 (자동 계산)</Label>
+                      <div className="h-10 px-3 rounded-md border border-slate-200 bg-slate-50 flex items-center text-sm">
+                        {computedDuration != null ? (
+                          <>
+                            <span className="font-mono font-bold text-slate-800 tabular-nums">
+                              {computedDuration.toLocaleString()}일
+                            </span>
+                            <span className="text-slate-500 ml-2">
+                              (약 {Math.round(computedDuration / 30)}개월)
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-slate-400 text-xs">착공일·준공일 입력 필요</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        착공일 또는 준공일 변경 시 자동 재계산 · 수동 편집 불가
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="actualDuration">실제 공기 (일)</Label>
-                  <Input
-                    id="actualDuration"
-                    type="number"
-                    min={1}
-                    value={form.actualDuration}
-                    onChange={e => set('actualDuration', e.target.value)}
-                    placeholder="준공일 입력 시 자동 계산"
-                  />
-                  {form.actualDuration && Number(form.actualDuration) > 0 && (
-                    <p className="text-[10px] text-slate-500">
-                      약 {Math.round(Number(form.actualDuration) / 30)}개월
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+              )
+            })()}
           </CardContent>
         </Card>
 
