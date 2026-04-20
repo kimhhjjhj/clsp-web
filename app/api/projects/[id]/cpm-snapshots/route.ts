@@ -56,7 +56,7 @@ export async function POST(
   // 프로젝트 로드 + generateWBS 입력 재구성
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    include: { tasks: { orderBy: { createdAt: 'asc' } } },
+    include: { tasks: { orderBy: { id: 'asc' } } },
   })
   if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 

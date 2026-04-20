@@ -14,7 +14,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useState, type ReactNode } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Info, BookOpen, Calculator, Database, AlertTriangle, Lightbulb } from 'lucide-react'
 
 export interface ExplainSection {
@@ -51,16 +51,15 @@ export function ValueExplainDialog({
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className={triggerClassName ?? 'inline-flex items-center gap-1 hover:underline cursor-pointer'}
-          onClick={() => setOpen(true)}
-        >
-          {children}
-        </button>
-      </DialogTrigger>
+    <>
+      <button
+        type="button"
+        className={triggerClassName ?? 'inline-flex items-center gap-1 hover:underline cursor-pointer'}
+        onClick={() => setOpen(true)}
+      >
+        {children}
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -104,6 +103,7 @@ export function ValueExplainDialog({
         </div>
       </DialogContent>
     </Dialog>
+    </>
   )
 }
 

@@ -177,7 +177,7 @@ export default function DelayCauseChart({ projectId }: { projectId: string }) {
                     return (
                       <div key={cause} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs"
                         style={{ borderColor: meta.color + '40', background: meta.color + '10' }}>
-                        <Icon size={12} style={{ color: meta.color }} />
+                        <span style={{ color: meta.color }} className="inline-flex"><Icon size={12} /></span>
                         <span className="font-semibold text-slate-700">{meta.label}</span>
                         <span className="font-mono font-bold tabular-nums" style={{ color: meta.color }}>
                           {days.toFixed(1)}일

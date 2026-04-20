@@ -376,7 +376,7 @@ export default function AiScheduleEstimate(props: Props) {
           <ValueExplainDialog
             data={buildAiPresetExplain({
               days: totalDuration,
-              formula,
+              formula: formula ?? '',
               confidence: confLabel,
               type: byType,
             })}

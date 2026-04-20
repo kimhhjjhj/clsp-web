@@ -1154,7 +1154,7 @@ function BidPage() {
                                     cp: gl.criticalWorkDays,
                                     nonWork: gl.nonWorkDays,
                                     cleanup: gl.cleanupDays,
-                                    mode: gl.mode,
+                                    mode: gl.mode === 'approximate' ? 'simple' : 'precise',
                                     monthlyNonWorkRows: gl.monthlyNonWork,
                                   })}
                                   triggerClassName="inline-flex items-baseline gap-1 hover:underline decoration-dotted underline-offset-4"
