@@ -12,6 +12,7 @@
 import Link from 'next/link'
 import { Sparkles, Calendar, AlertCircle, ExternalLink, Info } from 'lucide-react'
 import type { AiScheduleEstimateData } from '@/lib/types/ai-schedule'
+import { computeGuidelineRegression, guidelineBenchmark } from '@/lib/engine/guideline'
 
 interface Props {
   projectId?: string | null
@@ -20,6 +21,10 @@ interface Props {
   currentCpmDuration?: number
   /** 착공일 (준공일 계산용) */
   startDate?: string
+  /** 내부 크로스체크용 — 국토부 회귀식·업계 밴드 재계산 입력 */
+  ground?: number
+  bldgArea?: number
+  type?: string
 }
 
 const CONF_LABEL = { high: '높음', medium: '보통', low: '낮음' }
@@ -36,7 +41,16 @@ function addDays(iso: string, days: number): string | null {
   return d.toLocaleDateString('ko-KR')
 }
 
-export default function AiScheduleCachedCard({ projectId, estimate, currentCpmDuration, startDate }: Props) {
+function pctDiff(a: number, b: number): string {
+  if (!b) return '—'
+  const pct = Math.round(((a - b) / b) * 100)
+  return `${pct >= 0 ? '+' : ''}${pct}%`
+}
+
+export default function AiScheduleCachedCard({
+  projectId, estimate, currentCpmDuration, startDate,
+  ground, bldgArea, type,
+}: Props) {
   // ─── 추론 없음 ─────────────────────────────────────────
   if (!estimate || !estimate.totalDuration || estimate.totalDuration <= 0) {
     return (
@@ -164,6 +178,86 @@ export default function AiScheduleCachedCard({ projectId, estimate, currentCpmDu
           </p>
         </details>
       )}
+
+      {/* 내부 크로스체크 — 국토부 회귀식·업계 밴드·CPM 과 AI 추론 병치 */}
+      {(() => {
+        const ai = estimate.totalDuration
+        const reg = bldgArea && bldgArea > 0
+          ? computeGuidelineRegression(type ?? '공동주택', bldgArea)
+          : null
+        const bench = ground && ground > 0 ? guidelineBenchmark(ground) : null
+        const cpm = currentCpmDuration && currentCpmDuration > 0 ? currentCpmDuration : null
+        if (!reg?.days && !bench && !cpm) return null
+        return (
+          <div className="mt-4 pt-4 border-t border-white/15">
+            <div className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-2">
+              내부 크로스체크 — 같은 프로젝트를 다른 근거로 뽑으면
+            </div>
+            <div className="overflow-hidden rounded bg-white/5 border border-white/10">
+              <table className="w-full text-[11px]">
+                <thead className="bg-white/10 text-white/80">
+                  <tr>
+                    <th className="text-left px-2 py-1.5 font-semibold">근거</th>
+                    <th className="text-right px-2 py-1.5 font-semibold">공기(일)</th>
+                    <th className="text-right px-2 py-1.5 font-semibold w-16">AI 대비</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  <tr>
+                    <td className="px-2 py-1.5 font-medium">AI 추론 (본 카드)</td>
+                    <td className="px-2 py-1.5 text-right font-mono font-bold tabular-nums">{ai.toLocaleString()}</td>
+                    <td className="px-2 py-1.5 text-right opacity-50">—</td>
+                  </tr>
+                  {cpm && (
+                    <tr>
+                      <td className="px-2 py-1.5">
+                        CPM 산정
+                        <span className="ml-1 text-[9px] opacity-60">WBS 임계경로 기반</span>
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-mono tabular-nums">{cpm.toLocaleString()}</td>
+                      <td className="px-2 py-1.5 text-right font-mono tabular-nums opacity-80">{pctDiff(cpm, ai)}</td>
+                    </tr>
+                  )}
+                  {reg?.days && reg.formula && (
+                    <tr>
+                      <td className="px-2 py-1.5">
+                        국토부 회귀식
+                        <span
+                          className="ml-1 text-[9px] opacity-60 cursor-help"
+                          title={`${reg.formula} · 적용범위 ${reg.inRange ? '내' : '밖'}`}
+                        >
+                          부록 5 {reg.inRange ? '' : '(범위외)'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-mono tabular-nums">{reg.days.toLocaleString()}</td>
+                      <td className="px-2 py-1.5 text-right font-mono tabular-nums opacity-80">{pctDiff(reg.days, ai)}</td>
+                    </tr>
+                  )}
+                  {bench && (
+                    <tr>
+                      <td className="px-2 py-1.5">
+                        업계 밴드 {bench.floorRange}
+                        <span className="ml-1 text-[9px] opacity-60">실무가이드 p.129</span>
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-mono tabular-nums">
+                        {bench.typicalDays[0].toLocaleString()}~{bench.typicalDays[1].toLocaleString()}
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-mono tabular-nums opacity-80">
+                        {ai < bench.typicalDays[0] ? '밴드 아래'
+                          : ai > bench.typicalDays[1] ? '밴드 위'
+                          : '밴드 내'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-1.5 text-[10px] opacity-60 leading-relaxed">
+              AI 추론이 회귀식·업계 밴드와 크게 벗어나면 신뢰도 재검토 필요. CPM 과의 편차는 현장조건·공법 단축이 반영된 결과이므로 자연스러움.
+            </p>
+          </div>
+        )
+      })()}
 
       {projectId && (
         <div className="mt-3 text-right">

@@ -1018,6 +1018,9 @@ function BidPage() {
                           estimate={aiSchedule as unknown as AiScheduleEstimateData | null}
                           currentCpmDuration={result?.cpm.totalDuration}
                           startDate={input.startDate}
+                          ground={Number(input.ground) || undefined}
+                          bldgArea={Number(input.bldgArea) || undefined}
+                          type={input.type}
                         />
                       </div>
 
