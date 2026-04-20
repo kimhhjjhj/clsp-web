@@ -1,0 +1,26 @@
+{
+  "name": "CLSP Scheduler — 건설 공기산정 플랫폼",
+  "short_name": "CLSP",
+  "description": "(주)동양 건설부문 공사 공기·원가·품질 예측 플랫폼",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0f172a",
+  "background_color": "#ffffff",
+  "lang": "ko",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

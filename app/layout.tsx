@@ -16,6 +16,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'CLSP Scheduler — 건설 공기산정 플랫폼',
   description: '공동주택 공기산정 및 공정 관리 통합 플랫폼',
+  manifest: '/manifest.json',
+  applicationName: 'CLSP',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'CLSP',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 }
 
 export const viewport: Viewport = {
@@ -24,7 +34,9 @@ export const viewport: Viewport = {
   minimumScale: 1,
   // 사용자 확대 허용 (현장에서 작은 글자 줌 가능)
   maximumScale: 5,
-  themeColor: '#1e293b',
+  // iOS 노치·Dynamic Island 영역까지 앱 배경 확장 (PWA 전체화면 자연스럽게)
+  viewportFit: 'cover',
+  themeColor: '#0f172a',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
