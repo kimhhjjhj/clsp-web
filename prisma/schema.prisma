@@ -44,6 +44,9 @@ model Project {
   dailyReports           DailyReport[]
   productivityProposals  ProductivityProposal[]
   cpmSnapshots           CpmSnapshot[]
+  // F18. 자사 회귀식 재학습용 — 준공 실적
+  actualCompletionDate String?
+  actualDuration       Int?
 }
 
 model Task {
@@ -199,6 +202,23 @@ model CompanyStandardProductivity {
   lastUpdated       DateTime @default(now())
 
   @@unique([trade, unit])
+}
+
+// ─────────────────────────────────────────────────────────
+// F18. Internal Regression Calibration
+//   사내 준공 프로젝트(Project.actualDuration)로 공기 회귀식을
+//   재학습. 국토부 회귀 vs 자사 회귀를 overlay 표시.
+// ─────────────────────────────────────────────────────────
+model InternalRegression {
+  id            String   @id @default(cuid())
+  projectType   String   // 공동주택 | 오피스텔 | 업무 | 학교 | 병원 | 도로 | 교량 | 터널 | all
+  coefficients  Json     // { intercept, slope } 또는 { a, b, c } for polynomial
+  sampleSize    Int
+  rSquared      Float
+  trainedAt     DateTime @default(now())
+  note          String?
+
+  @@index([projectType, trainedAt])
 }
 
 // ─────────────────────────────────────────────────────────

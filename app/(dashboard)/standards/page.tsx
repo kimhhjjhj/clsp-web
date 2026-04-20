@@ -19,6 +19,7 @@ import PageHeader from '@/components/common/PageHeader'
 import { FullscreenToggle, fullscreenClass, useFullscreen } from '@/components/common/Fullscreen'
 import { CP_DB, computeQuantities, calcDuration, getWorkRate, type DBRow } from '@/lib/engine/wbs'
 import type { ProjectInput } from '@/lib/types'
+import RegressionCompare from '@/components/standards/RegressionCompare'
 
 interface PlanSize {
   type: string
@@ -313,6 +314,21 @@ export default function StandardsPage() {
             <li>가동률: 공사준비·토목 66.6% · 골조 63.2% · 마감은 raw 값 그대로.</li>
             <li>관리자 승인 후의 회사 실적 표준은 CPM에서 이 기본값을 덮어씁니다 — <Link href="/admin/productivity" className="text-blue-600 hover:underline">관리자 승인</Link>.</li>
           </ul>
+        </section>
+
+        {/* F18. 자사 회귀식 재학습 */}
+        <section
+          className="relative rounded-xl overflow-hidden bg-white p-4 sm:p-5"
+          style={{
+            border: '1px solid rgba(79, 70, 229, 0.2)',
+            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -10px rgba(79, 70, 229, 0.22)',
+          }}
+        >
+          <span aria-hidden className="absolute inset-x-0 top-0 h-16 pointer-events-none"
+            style={{ background: 'linear-gradient(180deg, rgba(79, 70, 229, 0.06) 0%, transparent 100%)' }} />
+          <div className="relative">
+            <RegressionCompare />
+          </div>
         </section>
       </div>
     </div>
