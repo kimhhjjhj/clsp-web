@@ -452,13 +452,13 @@ function BasicInfoStep({
 }) {
   return (
     <Section title="기본 정보" desc="날짜와 기상 조건. 이 값들은 상단 요약바에 실시간 반영됩니다.">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Field label="작성일">
           <input
             type="date"
             value={data.date}
             onChange={e => upd('date', e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-gray-200 rounded-lg px-3 h-10 sm:h-auto sm:py-2 text-sm"
           />
         </Field>
         <Field label="날씨">
@@ -467,7 +467,7 @@ function BasicInfoStep({
               <button
                 key={w}
                 onClick={() => upd('weather', w)}
-                className={`flex-1 px-2 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                className={`flex-1 px-2 h-10 sm:h-auto sm:py-2 rounded-lg text-sm font-semibold border transition-colors whitespace-nowrap ${
                   data.weather === w
                     ? 'bg-blue-50 border-blue-500 text-blue-700'
                     : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
@@ -487,7 +487,7 @@ function BasicInfoStep({
             inputMode="decimal"
             value={data.tempMin ?? ''}
             onChange={e => upd('tempMin', e.target.value === '' ? null : Number(e.target.value))}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-gray-200 rounded-lg px-3 h-10 sm:h-auto sm:py-2 text-sm"
           />
         </Field>
         <Field label="최고기온 (°C)">
@@ -496,7 +496,7 @@ function BasicInfoStep({
             inputMode="decimal"
             value={data.tempMax ?? ''}
             onChange={e => upd('tempMax', e.target.value === '' ? null : Number(e.target.value))}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-gray-200 rounded-lg px-3 h-10 sm:h-auto sm:py-2 text-sm"
           />
         </Field>
       </div>
@@ -656,7 +656,7 @@ function WorkCategory({
               }
             }}
             placeholder="항목 입력 후 Enter"
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
+            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 h-10 sm:h-auto sm:py-1.5 text-sm"
           />
           <button
             onClick={() => {
@@ -665,7 +665,7 @@ function WorkCategory({
                 setInput('')
               }
             }}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-blue-600 font-semibold border border-blue-200 rounded-lg hover:bg-blue-50"
+            className="inline-flex items-center justify-center gap-1 h-10 sm:h-auto px-3 sm:py-1.5 text-xs text-blue-600 font-semibold border border-blue-200 rounded-lg hover:bg-blue-50 whitespace-nowrap flex-shrink-0"
           >
             <Plus size={12} /> 추가
           </button>
@@ -710,11 +710,11 @@ function AddCustomTrade({
             if (e.key === 'Enter' && input.trim()) { onAdd(input.trim()); setInput('') }
           }}
           placeholder="직접 입력 (예: 방수)"
-          className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
+          className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 h-10 sm:h-auto sm:py-1.5 text-sm"
         />
         <button
           onClick={() => { if (input.trim()) { onAdd(input.trim()); setInput('') } }}
-          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-blue-600 font-semibold border border-blue-200 rounded-lg hover:bg-blue-50"
+          className="inline-flex items-center justify-center gap-1 h-10 sm:h-auto px-3 sm:py-1.5 text-xs text-blue-600 font-semibold border border-blue-200 rounded-lg hover:bg-blue-50 whitespace-nowrap flex-shrink-0"
         >
           <Plus size={12} /> 추가
         </button>
@@ -997,52 +997,72 @@ function EquipMatStep({
           </div>
         )}
         {data.equipmentList.map((e, i) => (
-          <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-            <div className="flex-1">
-              <div className="text-sm font-semibold text-gray-800">{e.name}</div>
-              <div className="text-xs text-gray-400">{e.spec || '—'}</div>
+          <div
+            key={i}
+            className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-2.5 sm:py-2 border-b border-gray-100 last:border-0"
+          >
+            <div className="flex items-start justify-between sm:flex-1 gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-gray-800 truncate">{e.name}</div>
+                <div className="text-xs text-gray-400 truncate">{e.spec || '—'}</div>
+              </div>
+              {/* 모바일 전용 삭제 버튼 (우상단) */}
+              <button
+                onClick={() => rmEq(i)}
+                className="sm:hidden text-gray-300 hover:text-red-500 p-1.5 -m-1 flex-shrink-0"
+                aria-label="장비 삭제"
+              >
+                <X size={16} />
+              </button>
             </div>
-            <div className="text-right">
-              <div className="text-[10px] text-gray-400">전일</div>
-              <div className="text-sm font-mono text-gray-500">{e.yesterday ?? 0}</div>
+            <div className="grid grid-cols-3 gap-2 sm:contents">
+              <div className="text-right">
+                <div className="text-[10px] text-gray-400">전일</div>
+                <div className="text-sm font-mono text-gray-500">{e.yesterday ?? 0}</div>
+              </div>
+              <div className="text-right sm:w-20">
+                <div className="text-[10px] text-blue-600 font-semibold">금일</div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={e.today || ''}
+                  onChange={ev => updEq(i, { today: Number(ev.target.value) || 0 })}
+                  placeholder="0"
+                  className="w-full text-right font-mono text-sm font-semibold text-blue-900 border border-blue-200 rounded-md px-2 h-10 sm:h-auto sm:py-1 bg-blue-50/30"
+                />
+              </div>
+              <div className="text-right sm:w-20">
+                <div className="text-[10px] text-gray-400">누계</div>
+                <div className="text-sm font-mono text-gray-700">{(e.yesterday ?? 0) + e.today}</div>
+              </div>
             </div>
-            <div className="text-right w-20">
-              <div className="text-[10px] text-blue-600 font-semibold">금일</div>
-              <input
-                type="number"
-            inputMode="decimal"
-                value={e.today || ''}
-                onChange={ev => updEq(i, { today: Number(ev.target.value) || 0 })}
-                placeholder="0"
-                className="w-full text-right font-mono text-sm font-semibold text-blue-900 border border-blue-200 rounded-md px-2 py-1 bg-blue-50/30"
-              />
-            </div>
-            <div className="text-right w-20">
-              <div className="text-[10px] text-gray-400">누계</div>
-              <div className="text-sm font-mono text-gray-700">{(e.yesterday ?? 0) + e.today}</div>
-            </div>
-            <button onClick={() => rmEq(i)} className="text-gray-300 hover:text-red-500 p-1">
+            {/* 데스크톱 전용 삭제 버튼 */}
+            <button
+              onClick={() => rmEq(i)}
+              className="hidden sm:inline-flex text-gray-300 hover:text-red-500 p-1"
+              aria-label="장비 삭제"
+            >
               <X size={14} />
             </button>
           </div>
         ))}
 
-        <div className="flex gap-2 mt-3 bg-gray-50 rounded-xl p-3">
+        <div className="flex flex-col sm:flex-row gap-2 mt-3 bg-gray-50 rounded-xl p-3">
           <input
             value={eqName}
             onChange={e => setEqName(e.target.value)}
             placeholder="장비명 (예: 타워크레인)"
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full sm:flex-1 border border-gray-200 rounded-lg px-3 h-10 sm:py-2 text-sm bg-white"
           />
           <input
             value={eqSpec}
             onChange={e => setEqSpec(e.target.value)}
             placeholder="규격 (선택)"
-            className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full sm:w-32 border border-gray-200 rounded-lg px-3 h-10 sm:py-2 text-sm bg-white"
           />
           <button
             onClick={addEq}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center justify-center gap-1.5 h-10 sm:h-auto px-4 sm:py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
           >
             <Plus size={12} /> 장비 추가
           </button>
@@ -1061,42 +1081,59 @@ function EquipMatStep({
           const pct = m.design ? Math.min(100, Math.round((total / m.design) * 100)) : 0
           return (
             <div key={i} className="py-3 border-b border-gray-100 last:border-0">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex-1">
-                  <div className="text-sm font-semibold text-gray-800">
-                    {m.name} <span className="text-gray-400 font-normal">· {m.spec || '—'}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                <div className="flex items-start justify-between sm:flex-1 gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-gray-800 truncate">
+                      {m.name} <span className="text-gray-400 font-normal">· {m.spec || '—'}</span>
+                    </div>
+                  </div>
+                  {/* 모바일 전용 삭제 */}
+                  <button
+                    onClick={() => rmMat(i)}
+                    className="sm:hidden text-gray-300 hover:text-red-500 p-1.5 -m-1 flex-shrink-0"
+                    aria-label="자재 삭제"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-2 sm:contents">
+                  <div className="text-right">
+                    <div className="text-[10px] text-gray-400">설계량</div>
+                    <div className="text-sm font-mono text-gray-700">
+                      {m.design ? m.design.toLocaleString() : '—'}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-gray-400">전회</div>
+                    <div className="text-sm font-mono text-gray-500">
+                      {(m.prev ?? 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="text-right sm:w-24">
+                    <div className="text-[10px] text-blue-600 font-semibold">금회</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={m.today || ''}
+                      onChange={ev => updMat(i, { today: Number(ev.target.value) || 0 })}
+                      placeholder="0"
+                      className="w-full text-right font-mono text-sm font-semibold text-blue-900 border border-blue-200 rounded-md px-2 h-10 sm:h-auto sm:py-1 bg-blue-50/30"
+                    />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-gray-400">잔량</div>
+                    <div className="text-sm font-mono text-emerald-600 font-semibold">
+                      {m.design ? remain.toLocaleString() : '—'}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-gray-400">설계량</div>
-                  <div className="text-sm font-mono text-gray-700">
-                    {m.design ? m.design.toLocaleString() : '—'}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-gray-400">전회</div>
-                  <div className="text-sm font-mono text-gray-500">
-                    {(m.prev ?? 0).toLocaleString()}
-                  </div>
-                </div>
-                <div className="text-right w-24">
-                  <div className="text-[10px] text-blue-600 font-semibold">금회</div>
-                  <input
-                    type="number"
-            inputMode="decimal"
-                    value={m.today || ''}
-                    onChange={ev => updMat(i, { today: Number(ev.target.value) || 0 })}
-                    placeholder="0"
-                    className="w-full text-right font-mono text-sm font-semibold text-blue-900 border border-blue-200 rounded-md px-2 py-1 bg-blue-50/30"
-                  />
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-gray-400">잔량</div>
-                  <div className="text-sm font-mono text-emerald-600 font-semibold">
-                    {m.design ? remain.toLocaleString() : '—'}
-                  </div>
-                </div>
-                <button onClick={() => rmMat(i)} className="text-gray-300 hover:text-red-500 p-1">
+                {/* 데스크톱 전용 삭제 */}
+                <button
+                  onClick={() => rmMat(i)}
+                  className="hidden sm:inline-flex text-gray-300 hover:text-red-500 p-1"
+                  aria-label="자재 삭제"
+                >
                   <X size={14} />
                 </button>
               </div>
@@ -1115,30 +1152,32 @@ function EquipMatStep({
           )
         })}
 
-        <div className="flex gap-2 mt-3 bg-gray-50 rounded-xl p-3">
+        <div className="flex flex-col sm:flex-row gap-2 mt-3 bg-gray-50 rounded-xl p-3">
           <input
             value={matName}
             onChange={e => setMatName(e.target.value)}
             placeholder="자재명 (예: 레미콘)"
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full sm:flex-1 border border-gray-200 rounded-lg px-3 h-10 sm:py-2 text-sm bg-white"
           />
-          <input
-            value={matSpec}
-            onChange={e => setMatSpec(e.target.value)}
-            placeholder="규격 (예: 25-21-150)"
-            className="w-36 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
-          />
-          <input
-            value={matDesign}
-            onChange={e => setMatDesign(e.target.value)}
-            placeholder="설계량 (선택)"
-            type="number"
-            inputMode="decimal"
-            className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
-          />
+          <div className="flex gap-2 sm:contents">
+            <input
+              value={matSpec}
+              onChange={e => setMatSpec(e.target.value)}
+              placeholder="규격 (예: 25-21-150)"
+              className="flex-1 sm:flex-none sm:w-36 border border-gray-200 rounded-lg px-3 h-10 sm:py-2 text-sm bg-white"
+            />
+            <input
+              value={matDesign}
+              onChange={e => setMatDesign(e.target.value)}
+              placeholder="설계량 (선택)"
+              type="number"
+              inputMode="decimal"
+              className="flex-1 sm:flex-none sm:w-32 border border-gray-200 rounded-lg px-3 h-10 sm:py-2 text-sm bg-white"
+            />
+          </div>
           <button
             onClick={addMat}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center justify-center gap-1.5 h-10 sm:h-auto px-4 sm:py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
           >
             <Plus size={12} /> 자재 추가
           </button>
