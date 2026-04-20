@@ -177,6 +177,28 @@ model DailyReport {
 }
 
 // ─────────────────────────────────────────────────────────
+// G8. Multi-signal Anomaly Detection
+//   F1(CpmSnapshot) · F4(ProductivityObservation) · DailyReport 미제출 ·
+//   CP 신규 진입 · duration 증가 5개 시그널을 통합 스코어링.
+// ─────────────────────────────────────────────────────────
+model AnomalySignal {
+  id          String   @id @default(cuid())
+  projectId   String
+  kind        String   // 'task' | 'contractor' | 'stage'
+  subjectId   String
+  subjectName String
+  score       Int      // 0~100
+  severity    String   // 'low' | 'med' | 'high'
+  signals     Json     // [{source, value, weight, contribution, detail?}]
+  detectedAt  DateTime @default(now())
+  resolvedAt  DateTime?
+  note        String?
+
+  @@index([projectId, severity, detectedAt])
+  @@index([kind, subjectId])
+}
+
+// ─────────────────────────────────────────────────────────
 // G7. AI 호출 추적 — 정확도·비용 모니터링, 프롬프트 개선 재료
 // ─────────────────────────────────────────────────────────
 model AiExtractionLog {

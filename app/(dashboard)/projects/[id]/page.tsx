@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/common/Skeleton'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
 import { IndustrySpecificSummary, type IndustrySpecific } from '@/components/common/IndustrySpecificFields'
 import CpAlertBanner from '@/components/common/CpAlertBanner'
+import AnomalyBanner from '@/components/analytics/AnomalyBanner'
 import { getProjectStatus, STATUS_META, formatRelative } from '@/lib/project-status'
 
 interface AiCostEstimate {
@@ -247,6 +248,11 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
         {/* CP 공종 조기 경보 (alert 있을 때만 렌더) — 준공·보관은 의미 없어 숨김 */}
         {lifecycle !== 'completed' && lifecycle !== 'archived' && (
           <CpAlertBanner projectId={id} />
+        )}
+
+        {/* G8. Multi-signal Anomaly — 생산성·CPM·일보 종합 위험 */}
+        {lifecycle !== 'completed' && lifecycle !== 'archived' && (
+          <AnomalyBanner projectId={id} />
         )}
 
         {/* 상태 배너 — 라이프사이클 상태 + 현재 진행 단계 통합 */}
