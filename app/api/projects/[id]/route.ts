@@ -45,6 +45,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
       aiCostEstimate: body.aiCostEstimate ?? undefined,
       lastCpmDuration:
         typeof body.lastCpmDuration === 'number' ? body.lastCpmDuration : undefined,
+      // 준공 실적 (F18 자사 회귀식 학습용)
+      actualCompletionDate: body.actualCompletionDate ?? undefined,
+      actualDuration:
+        typeof body.actualDuration === 'number' ? body.actualDuration : undefined,
     },
   })
   return NextResponse.json(project)

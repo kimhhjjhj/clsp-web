@@ -42,6 +42,8 @@ interface Project {
   aiCostEstimate?: AiCostEstimate | null
   productivityAdjustments?: Array<{ taskId: string; multiplier: number }> | null
   lastCpmDuration?: number | null
+  actualCompletionDate?: string | null
+  actualDuration?: number | null
 }
 
 interface StageStatus {
@@ -309,21 +311,48 @@ export default function StageHubPage({ params }: { params: Promise<{ id: string 
                     </Link>
                   )}
                 </div>
-                <div className="flex items-center gap-5 text-xs text-slate-300">
+                <div className="flex items-center gap-5 text-xs text-slate-300 flex-wrap">
                   {project.startDate && (
                     <span className="flex items-center gap-1.5">
                       <Calendar size={12} className="text-slate-400" />
                       착공 {project.startDate}
                     </span>
                   )}
-                  {finishDate && (
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-slate-500">→</span>
-                      준공 <span className="text-white font-semibold">{finishDate}</span>
-                      <span className={`font-bold font-mono ml-1 ${lifecycle === 'completed' ? 'text-slate-400' : 'text-emerald-400'}`}>
-                        {daysUntil(finishDate)}
+                  {/* 준공된 프로젝트: 실제 준공일 우선, 없으면 입력 안내 */}
+                  {lifecycle === 'completed' ? (
+                    project.actualCompletionDate ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-slate-500">→</span>
+                        준공 <span className="text-white font-semibold">{project.actualCompletionDate}</span>
+                        {project.actualDuration && (
+                          <span className="text-slate-400 ml-1">
+                            ({Math.round(project.actualDuration / 30)}개월 · {project.actualDuration}일)
+                          </span>
+                        )}
                       </span>
-                    </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-amber-400">
+                        <span className="text-slate-500">→</span>
+                        <Link href={`/projects/${id}/edit`} className="underline decoration-dotted hover:text-amber-300">
+                          실제 준공일 미입력 (클릭해 입력)
+                        </Link>
+                      </span>
+                    )
+                  ) : (
+                    /* 진행중/계획중/일시중단: CPM 예측 준공일 + D-day */
+                    finishDate && (
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-slate-500">→</span>
+                        <span className="text-slate-400">예정</span>
+                        <span className="text-white font-semibold">{finishDate}</span>
+                        <span className="font-bold font-mono ml-1 text-emerald-400">
+                          {daysUntil(finishDate)}
+                        </span>
+                        <span className="text-[10px] text-slate-500" title="CPM 기반 예측 — lastCpmDuration 이용">
+                          CPM 예측
+                        </span>
+                      </span>
+                    )
                   )}
                 </div>
               </div>

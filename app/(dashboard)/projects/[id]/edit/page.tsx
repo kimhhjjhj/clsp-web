@@ -33,6 +33,8 @@ interface FormData {
   bldgPerim: string
   wtBottom: string
   waBottom: string
+  actualCompletionDate: string
+  actualDuration: string
 }
 
 export default function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -66,6 +68,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           bldgPerim: p.bldgPerim != null ? String(p.bldgPerim) : '',
           wtBottom: p.wtBottom != null ? String(p.wtBottom) : '',
           waBottom: p.waBottom != null ? String(p.waBottom) : '',
+          actualCompletionDate: p.actualCompletionDate ?? '',
+          actualDuration: p.actualDuration != null ? String(p.actualDuration) : '',
         })
         setIndustrySpecific((p.industrySpecific as IndustrySpecific | null) ?? {})
         setLoading(false)
@@ -107,6 +111,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         bldgPerim: form.bldgPerim ? Number(form.bldgPerim) : null,
         wtBottom: form.wtBottom ? Number(form.wtBottom) : null,
         waBottom: form.waBottom ? Number(form.waBottom) : null,
+        actualCompletionDate: form.actualCompletionDate || null,
+        actualDuration: form.actualDuration ? Number(form.actualDuration) : null,
         industrySpecific: Object.keys(industrySpecific).length > 0 ? industrySpecific : null,
       }),
     })
@@ -196,6 +202,49 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
               <div className="space-y-1.5 col-span-2">
                 <Label htmlFor="startDate">착공 예정일</Label>
                 <Input id="startDate" type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} />
+              </div>
+            </div>
+
+            {/* 준공 실적 (선택) — 준공된 프로젝트에 입력하면 자사 회귀식 학습에 반영 */}
+            <div className="mt-4 pt-4 border-t border-dashed">
+              <div className="text-xs font-semibold text-slate-600 mb-2">
+                준공 실적 <span className="text-slate-400 font-normal">(선택 · 준공 완료 시 입력 → 자사 회귀식 학습에 사용)</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="actualCompletionDate">실제 준공일</Label>
+                  <Input
+                    id="actualCompletionDate"
+                    type="date"
+                    value={form.actualCompletionDate}
+                    onChange={e => {
+                      set('actualCompletionDate', e.target.value)
+                      // 착공일과 준공일로 실제 공기 자동 계산
+                      if (e.target.value && form.startDate) {
+                        const start = new Date(form.startDate)
+                        const end = new Date(e.target.value)
+                        const days = Math.round((end.getTime() - start.getTime()) / 86400000)
+                        if (days > 0) set('actualDuration', String(days))
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="actualDuration">실제 공기 (일)</Label>
+                  <Input
+                    id="actualDuration"
+                    type="number"
+                    min={1}
+                    value={form.actualDuration}
+                    onChange={e => set('actualDuration', e.target.value)}
+                    placeholder="준공일 입력 시 자동 계산"
+                  />
+                  {form.actualDuration && Number(form.actualDuration) > 0 && (
+                    <p className="text-[10px] text-slate-500">
+                      약 {Math.round(Number(form.actualDuration) / 30)}개월
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
