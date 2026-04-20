@@ -176,13 +176,13 @@ export default function RisksLibraryPage() {
 
         {/* 검색·필터 */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="내용·대응방안·프로젝트명 검색"
-              className="w-full pl-9 pr-8 h-9 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              className="w-full pl-9 pr-8 h-10 sm:h-9 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
             {query && (
               <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
@@ -196,7 +196,7 @@ export default function RisksLibraryPage() {
               <button
                 key={t}
                 onClick={() => setTypeFilter(t)}
-                className={`h-7 px-3 rounded text-xs font-semibold transition-colors ${
+                className={`h-7 px-3 rounded text-xs font-semibold whitespace-nowrap transition-colors ${
                   typeFilter === t ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >{t === 'all' ? '전체' : t === 'risk' ? '리스크' : '기회'}</button>
@@ -214,7 +214,7 @@ export default function RisksLibraryPage() {
             </select>
           )}
 
-          <span className="ml-auto text-xs text-gray-500 hidden sm:block">{filtered.length}건</span>
+          <span className="sm:ml-auto text-xs text-gray-500 hidden sm:block">{filtered.length}건</span>
         </div>
 
         {/* 목록 */}

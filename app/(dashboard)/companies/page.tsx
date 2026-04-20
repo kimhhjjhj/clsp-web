@@ -130,7 +130,7 @@ function CompaniesPage() {
 
         {/* 검색 */}
         <div className="flex items-center gap-2">
-          <div className="relative flex-1 min-w-[220px] max-w-md">
+          <div className="relative flex-1 sm:min-w-[220px] sm:max-w-md">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={query}

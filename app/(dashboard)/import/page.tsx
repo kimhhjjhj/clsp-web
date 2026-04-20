@@ -217,7 +217,7 @@ export default function ImportPage() {
         {!committed && (
           <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-5">
             <h2 className="text-base font-bold text-gray-900 mb-4">1. 엑셀 포맷 선택</h2>
-            <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
               <FormatCard
                 selected={format === 'paju'}
                 onClick={() => { setFormat('paju'); resetAll() }}
@@ -235,18 +235,18 @@ export default function ImportPage() {
             </div>
 
             <h2 className="text-base font-bold text-gray-900 mb-4">2. 엑셀 파일 업로드</h2>
-            <div className="flex items-center gap-3">
-              <label className="flex-1 border-2 border-dashed border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <label className="w-full sm:flex-1 border-2 border-dashed border-gray-200 rounded-xl p-4 sm:p-6 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
                 <input
                   type="file"
                   accept=".xlsx,.xls"
                   onChange={e => setFile(e.target.files?.[0] ?? null)}
                   className="hidden"
                 />
-                <div className="flex items-center gap-3">
-                  <FileSpreadsheet size={28} className="text-gray-400" />
-                  <div>
-                    <div className="text-sm font-semibold text-gray-700">
+                <div className="flex items-center gap-3 min-w-0">
+                  <FileSpreadsheet size={28} className="text-gray-400 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-gray-700 truncate">
                       {file ? file.name : '파일 선택 (.xlsx, .xls)'}
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5">
@@ -258,7 +258,7 @@ export default function ImportPage() {
               <button
                 onClick={handleUpload}
                 disabled={!file || parsing}
-                className="px-5 py-3 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 inline-flex items-center gap-2"
+                className="w-full sm:w-auto h-11 sm:h-auto px-5 sm:py-3 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 inline-flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 {parsing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                 {parsing ? '파싱 중...' : '업로드 & 파싱'}

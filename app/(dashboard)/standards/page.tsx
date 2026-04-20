@@ -227,8 +227,8 @@ export default function StandardsPage() {
                   </p>
                 </div>
               </div>
-              <div className="relative overflow-x-auto">
-                <table className="w-full text-[12px]">
+              <div className="relative overflow-x-auto thin-scroll">
+                <table className="w-full text-[12px] min-w-[820px]">
                   <thead className="bg-slate-50/70 border-b border-slate-100">
                     <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">
                       <th className="text-left px-4 py-2 w-[70px]">WBS</th>
