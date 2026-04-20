@@ -212,61 +212,56 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
 
   return (
     <div className="min-h-full bg-gray-50 overflow-x-hidden max-w-full">
-      {/* 상단 바 */}
+      {/* 상단 바 — 모바일: 2단 stack · 데스크톱: 1줄 */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
-        <div className="px-4 sm:px-8 py-3 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push(`/projects/${projectId}/stage/3`)}
-              className="p-1.5 hover:bg-gray-100 rounded-lg"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <div className="text-xs text-gray-400 font-medium">공사일보</div>
-              <h1 className="text-base font-bold text-gray-900">
-                {isEdit ? '일보 수정' : '일일 작업일보 작성'}
-              </h1>
-            </div>
+        {/* Row 1: 뒤로·제목·저장 */}
+        <div className="px-4 sm:px-8 pt-3 pb-2 flex items-center gap-3">
+          <button
+            onClick={() => router.push(`/projects/${projectId}/stage/3`)}
+            className="p-2 -ml-2 hover:bg-gray-100 rounded-lg flex-shrink-0"
+            aria-label="뒤로가기"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] text-gray-400 font-medium leading-tight">공사일보</div>
+            <h1 className="text-base font-bold text-gray-900 leading-tight truncate">
+              {isEdit ? '일보 수정' : '일일 작업일보 작성'}
+            </h1>
           </div>
-
-          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-            <div className="hidden sm:flex items-center gap-4">
-              <SummaryChip icon={<Calendar size={14} />} label={data.date || '—'} />
-              <SummaryChip
-                icon={<Cloud size={14} />}
-                label={`${data.weather ?? '—'} · ${data.tempMin ?? '—'}°/${data.tempMax ?? '—'}°`}
-              />
-              <SummaryChip
-                icon={<Users size={14} />}
-                label={`총 ${totalToday}명 · ${activeCompanies}개 업체`}
-                highlight
-              />
-            </div>
-            {/* 모바일: 요약만 */}
-            <div className="sm:hidden text-xs text-gray-600 font-semibold">
-              {data.date} · {totalToday}명
-            </div>
-            {!isEdit && (
-              <button
-                onClick={copyYesterday}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                <Copy size={12} /> 어제 일보 복제
-              </button>
-            )}
+          {!isEdit && (
             <button
-              onClick={save}
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 text-xs font-semibold bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+              onClick={copyYesterday}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
             >
-              <Save size={12} /> {saving ? '저장 중...' : '저장'}
+              <Copy size={12} /> 어제 복제
             </button>
-          </div>
+          )}
+          <button
+            onClick={save}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-4 h-10 text-sm font-semibold bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 flex-shrink-0"
+          >
+            <Save size={14} /> {saving ? '저장중' : '저장'}
+          </button>
         </div>
 
-        {/* 스텝 */}
-        <div className="px-4 sm:px-8 pb-2 flex items-center gap-1 overflow-x-auto">
+        {/* Row 2: 요약 칩 (모바일은 가로 스크롤 없이 flex-wrap) */}
+        <div className="px-4 sm:px-8 pb-2 flex items-center gap-2 flex-wrap">
+          <SummaryChip icon={<Calendar size={13} />} label={data.date || '—'} />
+          <SummaryChip
+            icon={<Cloud size={13} />}
+            label={`${data.weather ?? '—'} ${data.tempMin ?? '—'}°/${data.tempMax ?? '—'}°`}
+          />
+          <SummaryChip
+            icon={<Users size={13} />}
+            label={`${totalToday}명 · ${activeCompanies}업체`}
+            highlight
+          />
+        </div>
+
+        {/* 스텝 — 모바일에선 아이콘+번호만, sm 이상에서 이름까지 */}
+        <div className="px-3 sm:px-8 pb-2 flex items-center gap-0.5 overflow-x-auto thin-scroll">
           {STEPS.map((s, i) => {
             const Icon = s.icon
             const active = step === s.id
@@ -274,17 +269,18 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
               <React.Fragment key={s.id}>
                 <button
                   onClick={() => setStep(s.id)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${
-                    active ? 'bg-blue-50 text-blue-700' : 'text-gray-400 hover:bg-gray-50'
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 h-10 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${
+                    active ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'
                   }`}
+                  aria-label={s.name}
                 >
-                  <Icon size={14} className="flex-shrink-0" />
-                  <span className="text-[11px] font-bold tracking-wider text-gray-400">
+                  <Icon size={15} className="flex-shrink-0" />
+                  <span className={`text-[11px] font-bold tracking-wider ${active ? 'text-blue-400' : 'text-gray-400'}`}>
                     {String(s.id).padStart(2, '0')}
                   </span>
-                  <span className="whitespace-nowrap">{s.name}</span>
+                  <span className="hidden sm:inline whitespace-nowrap">{s.name}</span>
                 </button>
-                {i < STEPS.length - 1 && <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />}
+                {i < STEPS.length - 1 && <ChevronRight size={12} className="text-gray-300 flex-shrink-0 hidden sm:block" />}
               </React.Fragment>
             )
           })}
@@ -362,21 +358,21 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
           />
         )}
 
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200 gap-3">
           <button
             onClick={() => setStep(s => Math.max(1, s - 1))}
             disabled={step === 1}
-            className="px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40"
+            className="flex-1 sm:flex-none h-11 sm:h-10 px-5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40"
           >
             이전
           </button>
-          <span className="text-sm text-gray-400">
+          <span className="text-xs sm:text-sm text-gray-400 font-mono tabular-nums flex-shrink-0">
             {step} / {STEPS.length}
           </span>
           {step < STEPS.length ? (
             <button
               onClick={() => setStep(s => s + 1)}
-              className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex-1 sm:flex-none h-11 sm:h-10 px-5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               다음
             </button>
@@ -384,7 +380,7 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
             <button
               onClick={save}
               disabled={saving}
-              className="px-4 py-2 text-sm font-semibold bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+              className="flex-1 sm:flex-none h-11 sm:h-10 px-5 text-sm font-semibold bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
             >
               {saving ? '저장 중...' : '저장하고 닫기'}
             </button>
