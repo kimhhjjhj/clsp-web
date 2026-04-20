@@ -168,9 +168,18 @@ export default function AiScheduleCachedCard({
         )}
       </div>
 
+      {/* ↓ 상세보기 — 요소 분해 · 근거 · 공기 구성 · 크로스체크 한 번에 접기 */}
+      <details className="mt-4 group">
+        <summary className="cursor-pointer select-none list-none flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 transition-colors">
+          <span className="text-xs font-bold tracking-wide">
+            상세보기 — 요소 분해 · 종합 근거 · 공기 구성 · 내부 대조
+          </span>
+          <span className="text-xs opacity-70 group-open:rotate-180 transition-transform">▾</span>
+        </summary>
+
       {/* 요소별 분해 */}
       {estimate.factors && estimate.factors.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-white/15">
+        <div className="mt-3">
           <div className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-2">
             요소별 공기 기여 분해
           </div>
@@ -197,14 +206,14 @@ export default function AiScheduleCachedCard({
 
       {/* 종합 근거 */}
       {estimate.rationale && (
-        <details className="mt-3">
-          <summary className="text-[11px] opacity-70 cursor-pointer hover:opacity-100">
-            종합 추정 근거 ▾
-          </summary>
-          <p className="mt-2 text-[11px] opacity-80 leading-relaxed whitespace-pre-wrap bg-white/5 rounded p-2 border border-white/10">
+        <div className="mt-4 pt-4 border-t border-white/15">
+          <div className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-2">
+            종합 추정 근거
+          </div>
+          <p className="text-[11px] opacity-80 leading-relaxed whitespace-pre-wrap bg-white/5 rounded p-2 border border-white/10">
             {estimate.rationale}
           </p>
-        </details>
+        </div>
       )}
 
       {/* 공기 구성 내역 — CPM 임계경로 카테고리별 합 */}
@@ -339,6 +348,8 @@ export default function AiScheduleCachedCard({
           </details>
         )
       })()}
+      </details>
+      {/* ↑ 상세보기 details 닫기 */}
 
       {projectId && (
         <div className="mt-3 text-right">
