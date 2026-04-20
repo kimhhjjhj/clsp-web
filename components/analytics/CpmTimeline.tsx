@@ -8,6 +8,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Clock, GitBranch, Loader2, AlertCircle, ChevronRight, ArrowLeftRight } from 'lucide-react'
 import CpmDiffView, { type SnapshotDiff } from './CpmDiffView'
+import CommentThread from '@/components/collab/CommentThread'
 
 interface Snapshot {
   id: string
@@ -227,7 +228,17 @@ export default function CpmTimeline({ projectId }: { projectId: string }) {
           <Loader2 size={14} className="animate-spin mx-auto mb-2" /> 변동 분석 중...
         </div>
       )}
-      {diff && !diffLoading && <CpmDiffView diff={diff} />}
+      {diff && !diffLoading && (
+        <>
+          <CpmDiffView diff={diff} />
+          {/* 이 diff에 대한 협업 토론 */}
+          <CommentThread
+            entityType="cpm-diff"
+            entityId={`${diff.from.id}_${diff.to.id}`}
+            title="이 변동에 대한 의견"
+          />
+        </>
+      )}
     </div>
   )
 }

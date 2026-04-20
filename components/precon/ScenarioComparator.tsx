@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import { Loader2, Plus, Trash2, Star, RefreshCw, Copy, ArrowRight } from 'lucide-react'
+import CommentThread from '@/components/collab/CommentThread'
 
 interface Scenario {
   id: string
@@ -297,6 +298,15 @@ export default function ScenarioComparator({ projectId }: { projectId: string })
             </table>
           </div>
         </div>
+      )}
+
+      {/* 시나리오 비교에 대한 협업 토론 */}
+      {visible.length > 0 && (
+        <CommentThread
+          entityType="scenario-comparison"
+          entityId={projectId}
+          title="시나리오 선택 논의"
+        />
       )}
     </div>
   )

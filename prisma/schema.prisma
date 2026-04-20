@@ -177,6 +177,27 @@ model DailyReport {
 }
 
 // ─────────────────────────────────────────────────────────
+// G1-lite. Universal Comment (이름 기반 경량 버전)
+//   인증 없이 자유 입력 이름으로 작성. 본격 인증(G0) 도입 시 User FK로 교체 예정.
+//   폴리모픽: entityType + entityId 로 Task/Risk/DailyReport/Scenario/Snapshot 등 모든 엔터티 부착.
+// ─────────────────────────────────────────────────────────
+model Comment {
+  id          String    @id @default(cuid())
+  entityType  String
+  entityId    String
+  authorName  String
+  authorRole  String    @default("field") // 'field' | 'hq' | 'guest'
+  body        String    @db.Text
+  attachments Json?
+  parentId    String?
+  editedAt    DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([entityType, entityId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────
 // G8. Multi-signal Anomaly Detection
 //   F1(CpmSnapshot) · F4(ProductivityObservation) · DailyReport 미제출 ·
 //   CP 신규 진입 · duration 증가 5개 시그널을 통합 스코어링.

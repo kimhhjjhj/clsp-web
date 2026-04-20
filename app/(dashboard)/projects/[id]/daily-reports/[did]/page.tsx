@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react'
 import DailyReportForm, { DailyReportData, EMPTY_DATA } from '@/components/construction/DailyReportForm'
 import { Skeleton, SkeletonKpiGrid, SkeletonTable } from '@/components/common/Skeleton'
+import CommentThread from '@/components/collab/CommentThread'
 
 export default function EditDailyReportPage({
   params,
@@ -47,5 +48,12 @@ export default function EditDailyReportPage({
     )
   }
 
-  return <DailyReportForm projectId={id} reportId={did} initialData={data} />
+  return (
+    <>
+      <DailyReportForm projectId={id} reportId={did} initialData={data} />
+      <div className="px-4 sm:px-8 py-4 max-w-6xl">
+        <CommentThread entityType="daily-report" entityId={did} title="일보 토론" />
+      </div>
+    </>
+  )
 }

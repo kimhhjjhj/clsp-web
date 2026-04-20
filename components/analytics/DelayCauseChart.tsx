@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { Loader2, RefreshCw, AlertTriangle, CloudRain, Users, Package, Pencil, Link2, Zap, HelpCircle } from 'lucide-react'
+import CommentThread from '@/components/collab/CommentThread'
 
 interface Snapshot {
   id: string; capturedAt: string; totalDuration: number; triggerEvent: string
@@ -234,6 +235,12 @@ export default function DelayCauseChart({ projectId }: { projectId: string }) {
             ※ 원인 귀속은 규칙 기반 휴리스틱: 생산성 flagged 매칭 → 50% 할당, 기상 민감 공종 + 비작업일 → 일당 0.5일 할당, 나머지는 &ldquo;기타&rdquo;.
             향후 TaskConstraint/자재/설계변경 이벤트 연결 후 정밀도 향상 예정.
           </p>
+          {/* 이 귀속 결과에 대한 협업 토론 */}
+          <CommentThread
+            entityType="delay-attribution"
+            entityId={`${result.projectId}_${result.periodFrom}_${result.periodTo}`}
+            title="이 지연 분석에 대한 의견"
+          />
         </>
       )}
     </div>
