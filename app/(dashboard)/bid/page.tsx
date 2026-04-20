@@ -167,7 +167,9 @@ function BidPage() {
   const [loadingProject, setLoadingProject] = useState(false)
 
   // 편집 모드 진입 시 ProjectContext에도 '현재 프로젝트'로 등록 (상단 Switcher가 반영)
-  const { selectProject } = useProjectContext()
+  const { selectProject, currentProjectId } = useProjectContext()
+  // 유사 프로젝트 필터링용 — URL projectId 없어도 선택된 프로젝트는 본인 제외
+  const selfProjectId = editingProjectId ?? currentProjectId ?? undefined
   useEffect(() => {
     if (editingProjectId) selectProject(editingProjectId)
   }, [editingProjectId, selectProject])
@@ -1005,7 +1007,7 @@ function BidPage() {
                             wtBottom: Number(input.wtBottom) || undefined,
                             waBottom: Number(input.waBottom) || undefined,
                             location: input.location || undefined,
-                            excludeProjectId: editingProjectId ?? undefined,
+                            excludeProjectId: selfProjectId,
                           }}
                           currentCpmDuration={result?.cpm.totalDuration}
                         />
