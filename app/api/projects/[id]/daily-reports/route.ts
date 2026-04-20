@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { recordObservation } from '@/lib/engine/productivity-variance'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -36,5 +37,23 @@ export async function POST(req: NextRequest, { params }: Params) {
       photos:        body.photos ?? null,
     },
   })
+
+  // F4. 생산성 관측값 기록 (best-effort, 실패해도 응답에 영향 없음)
+  const workers = body.workers as Record<string, number> | undefined
+  if (workers && body.date) {
+    for (const [trade, count] of Object.entries(workers)) {
+      if (typeof count === 'number' && count > 0) {
+        await recordObservation({
+          projectId: id,
+          dailyReportId: item.id,
+          trade,
+          date: String(body.date),
+          manDays: count,
+          unit: 'man/day',
+        })
+      }
+    }
+  }
+
   return NextResponse.json(item, { status: 201 })
 }

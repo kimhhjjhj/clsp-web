@@ -202,6 +202,30 @@ model CompanyStandardProductivity {
 }
 
 // ─────────────────────────────────────────────────────────
+// F4. Productivity Variance Dashboard
+//   DailyReport 저장 시 공종별 관측 생산성을 기록하고
+//   CompanyStandardProductivity 대비 z-score 계산.
+//   임계 초과 누적은 ProductivityProposal 자동 생성 트리거.
+// ─────────────────────────────────────────────────────────
+model ProductivityObservation {
+  id             String   @id @default(cuid())
+  projectId      String
+  dailyReportId  String?
+  trade          String
+  date           String   // YYYY-MM-DD
+  observedValue  Float    // 관측 생산성 (man/day 또는 mandays/unit)
+  unit           String
+  quantity       Float?
+  manDays        Float?
+  zScore         Float?
+  status         String   @default("noted") // noted | flagged | proposed
+  createdAt      DateTime @default(now())
+
+  @@index([projectId, trade, date])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────
 // F1. CPM Intelligence Timeline
 //   매 이벤트(수동 재계산, 일보 등록, WBS 편집)마다 CPM 결과를 스냅샷으로 영속화.
 //   변동 히스토리 시각화 + 두 스냅샷 간 diff 조회.
