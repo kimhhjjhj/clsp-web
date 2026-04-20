@@ -349,7 +349,7 @@ function GanttChart({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto thin-scroll">
       <div className="min-w-[700px]">
         {/* 월 타임라인 */}
         <div className="flex items-end h-6 relative border-b border-gray-200 mb-2 ml-32">

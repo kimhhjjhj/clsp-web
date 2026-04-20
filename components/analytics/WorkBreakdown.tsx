@@ -183,7 +183,7 @@ function LocationTable({ items }: { items: LocationItem[] }) {
   const maxMD = Math.max(...items.map(i => i.manDays), 1)
   const sorted = [...items].sort((a, b) => compareLocation(a.location, b.location))
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto thin-scroll">
       <table className="w-full text-xs">
         <thead className="text-gray-400 border-b border-gray-100 sticky top-0 z-10 bg-white">
           <tr>
@@ -231,7 +231,7 @@ function PartTable({ items }: { items: PartItem[] }) {
   if (items.length === 0) return <Empty />
   const maxMD = Math.max(...items.map(i => i.manDays), 1)
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto thin-scroll">
       <table className="w-full text-xs">
         <thead className="text-gray-400 border-b border-gray-100 sticky top-0 z-10 bg-white">
           <tr>

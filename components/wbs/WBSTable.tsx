@@ -131,7 +131,7 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
       <div className="absolute top-2 right-2 z-30">
         <FullscreenToggle fullscreen={fullscreen} onToggle={toggleFullscreen} />
       </div>
-      <div className={`overflow-auto w-full ${fullscreen ? 'max-h-[calc(100vh-80px)]' : ''}`}>
+      <div className={`overflow-auto thin-scroll w-full ${fullscreen ? 'max-h-[calc(100vh-80px)]' : ''}`}>
       <table style={{ width: totalW, tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 13 }}>
         <colgroup>
           {colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}

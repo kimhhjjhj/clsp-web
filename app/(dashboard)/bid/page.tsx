@@ -834,7 +834,7 @@ function BidPage() {
                       </div>
 
                       {/* 공기 서브탭 */}
-                      <div className="flex items-center gap-1 px-4 pt-3 border-b border-gray-200 bg-gray-50 overflow-x-auto">
+                      <div className="flex items-center gap-1 px-4 pt-3 border-b border-gray-200 bg-gray-50 overflow-x-auto thin-scroll">
                         {SUB_TABS.map(t => (
                           <button
                             key={t.id}
@@ -888,7 +888,7 @@ function BidPage() {
                       {/* CPM 결과 요약 */}
                       {subTab === 'summary' && (
                         <div className="p-4 space-y-4">
-                          <div className="grid grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                             <Card className="border-blue-200 bg-blue-50">
                               <CardContent className="pt-6">
                                 <p className="text-xs text-gray-500 mb-1">총 공사 기간</p>
@@ -1277,7 +1277,7 @@ function BidPage() {
                                   {gl.monthlyNonWork && gl.monthlyNonWork.length > 0 && (
                                     <div>
                                       <p className="font-bold text-slate-700 mb-1">월별 비작업일 (정밀 모드 · 서울 철콘 기준)</p>
-                                      <div className="overflow-x-auto">
+                                      <div className="overflow-x-auto thin-scroll">
                                         <table className="text-[10px] font-mono w-full">
                                           <thead className="bg-slate-50">
                                             <tr>
