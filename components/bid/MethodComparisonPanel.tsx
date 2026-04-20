@@ -122,7 +122,9 @@ export default function MethodComparisonPanel({ input }: { input: Partial<Projec
             <div className="text-[10px] text-slate-400">지하·지상 동시</div>
           </div>
           <div className="text-3xl font-bold text-slate-900 tabular-nums">
-            {d.topDown.toLocaleString()} <span className="text-sm font-normal text-slate-500">일</span>
+            {Math.round(d.topDown / 30)}
+            <span className="text-sm font-normal text-slate-500 ml-1">개월</span>
+            <span className="text-xs font-normal text-slate-400 ml-2">({d.topDown.toLocaleString()}일)</span>
           </div>
           <div className="mt-1 text-xs text-slate-500">
             공종 {stats.topDown.taskCount}개 · CP {stats.topDown.criticalCount}개
@@ -142,7 +144,9 @@ export default function MethodComparisonPanel({ input }: { input: Partial<Projec
             <div className="text-[10px] text-slate-400">지하 완료 후 지상</div>
           </div>
           <div className="text-3xl font-bold text-slate-900 tabular-nums">
-            {d.bottomUp.toLocaleString()} <span className="text-sm font-normal text-slate-500">일</span>
+            {Math.round(d.bottomUp / 30)}
+            <span className="text-sm font-normal text-slate-500 ml-1">개월</span>
+            <span className="text-xs font-normal text-slate-400 ml-2">({d.bottomUp.toLocaleString()}일)</span>
           </div>
           <div className="mt-1 text-xs text-slate-500">
             공종 {stats.bottomUp.taskCount}개 · CP {stats.bottomUp.criticalCount}개

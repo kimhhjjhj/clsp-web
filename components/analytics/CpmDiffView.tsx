@@ -40,13 +40,17 @@ export default function CpmDiffView({ diff }: { diff: SnapshotDiff }) {
             <div className="text-xs text-slate-500 mb-1">
               {fmtDate(diff.from.capturedAt)} <span className="mx-1">→</span> {fmtDate(diff.to.capturedAt)}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <span className="text-2xl font-bold tabular-nums text-slate-900">
-                {diff.from.totalDuration}<span className="text-sm text-slate-400 ml-1">일</span>
+                {Math.round(diff.from.totalDuration / 30)}
+                <span className="text-sm text-slate-400 ml-1">개월</span>
+                <span className="text-[11px] text-slate-400 ml-1">({diff.from.totalDuration}일)</span>
               </span>
               <span className="text-slate-400">→</span>
               <span className="text-2xl font-bold tabular-nums text-slate-900">
-                {diff.to.totalDuration}<span className="text-sm text-slate-400 ml-1">일</span>
+                {Math.round(diff.to.totalDuration / 30)}
+                <span className="text-sm text-slate-400 ml-1">개월</span>
+                <span className="text-[11px] text-slate-400 ml-1">({diff.to.totalDuration}일)</span>
               </span>
             </div>
           </div>

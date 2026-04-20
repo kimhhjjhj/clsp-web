@@ -310,11 +310,12 @@ export default function AiScheduleEstimate(props: Props) {
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
             <p className="text-3xl sm:text-4xl font-bold font-mono leading-none tabular-nums">
-              {totalDuration.toLocaleString()}
-              <span className="text-base font-normal opacity-70 ml-1.5">일</span>
+              {months}
+              <span className="text-base font-normal opacity-70 ml-1.5">개월</span>
+              <span className="text-sm font-normal opacity-60 ml-2">({totalDuration.toLocaleString()}일)</span>
             </p>
             <p className="text-xs opacity-80 mt-1.5">
-              {byType} · 약 {months}개월
+              {byType}
               {props.startDate && finishDate && (
                 <>
                   <span className="mx-1.5 opacity-60">·</span>

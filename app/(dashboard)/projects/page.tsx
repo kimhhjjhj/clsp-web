@@ -462,7 +462,10 @@ function ProjectCard({ project: p, onDelete }: { project: Project; onDelete: (id
             <span><strong className="text-gray-700 font-mono">{p._count.dailyReports}</strong> 일보</span>
           )}
           {p.lastCpmDuration && (
-            <span><strong className="text-blue-700 font-mono">{p.lastCpmDuration}</strong>일</span>
+            <span title={`${p.lastCpmDuration}일`}>
+              <strong className="text-blue-700 font-mono">{Math.round(p.lastCpmDuration / 30)}</strong>개월
+              <span className="text-gray-400 ml-0.5">({p.lastCpmDuration}일)</span>
+            </span>
           )}
         </div>
         <div className="flex items-center gap-1.5">

@@ -14,6 +14,7 @@ import {
   Database, Loader2, AlertTriangle, CheckCircle2, TrendingUp,
   Building2, Calendar, Layers, ExternalLink, RefreshCw,
 } from 'lucide-react'
+import { formatDuration, splitDurationDisplay, daysToMonths } from '@/lib/utils/format-duration'
 
 export interface SimilarityInput {
   type?: string
@@ -193,17 +194,23 @@ export default function SimilarProjectsPanel({
                 <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">
                   유사 프로젝트 기반 추천 공기
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-slate-900 tabular-nums">
-                    {data.recommendation.mean}
-                  </span>
-                  <span className="text-sm text-slate-500">일</span>
-                  <span className="text-xs text-slate-400 ml-2">
-                    ± {data.recommendation.std}일
-                  </span>
-                </div>
+                {(() => {
+                  const d = splitDurationDisplay(data.recommendation.mean)
+                  return (
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold text-slate-900 tabular-nums">
+                        {d.main}
+                      </span>
+                      <span className="text-sm text-slate-500">{d.unit}</span>
+                      {d.sub && <span className="text-xs text-slate-400">({d.sub})</span>}
+                      <span className="text-xs text-slate-400 ml-2">
+                        ± {data.recommendation.std}일
+                      </span>
+                    </div>
+                  )
+                })()}
                 <div className="text-[11px] text-slate-500 mt-1">
-                  중위 {data.recommendation.median}일 · 범위 {data.recommendation.min}~{data.recommendation.max}일
+                  중위 {formatDuration(data.recommendation.median)} · 범위 {formatDuration(data.recommendation.min)} ~ {formatDuration(data.recommendation.max)}
                 </div>
               </div>
               <div className={`text-right ${confStyle.color}`}>
@@ -220,13 +227,13 @@ export default function SimilarProjectsPanel({
             {cpmDeviation && (
               <div className="bg-white/60 rounded border border-slate-200 px-3 py-2 mb-2">
                 <div className="text-[11px] text-slate-500 mb-0.5">현재 CPM vs 유사 프로젝트 추천 편차</div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-bold text-slate-800 tabular-nums">
-                    {currentCpmDuration}일
+                    {formatDuration(currentCpmDuration)}
                   </span>
                   <span className="text-slate-400">vs</span>
                   <span className="text-sm font-bold text-slate-800 tabular-nums">
-                    {data.recommendation.mean}일
+                    {formatDuration(data.recommendation.mean)}
                   </span>
                   <span className={`text-xs font-semibold tabular-nums ml-auto ${
                     Math.abs(cpmDeviation.pct) <= 15 ? 'text-emerald-600' :
@@ -301,7 +308,7 @@ export default function SimilarProjectsPanel({
                         <Calendar size={10} className="text-slate-400" />
                         <span className="text-[10px] text-slate-500">공기</span>
                         <span className="font-mono font-bold text-slate-800 tabular-nums">
-                          {m.durationUsed ?? '—'}일
+                          {formatDuration(m.durationUsed)}
                         </span>
                         {m.durationSource === 'actual' && (
                           <span className="text-[9px] font-bold px-1 rounded bg-emerald-600 text-white">실적</span>

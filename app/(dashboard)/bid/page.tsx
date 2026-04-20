@@ -833,14 +833,15 @@ function BidPage() {
                           <div className="flex items-end justify-between flex-wrap gap-5">
                             <div>
                               <p className="text-3xl sm:text-4xl font-bold font-mono leading-none tabular-nums">
-                                {result.cpm.totalDuration}
-                                <span className="text-base font-normal opacity-70 ml-1.5">일</span>
+                                {Math.round(result.cpm.totalDuration / 30)}
+                                <span className="text-base font-normal opacity-70 ml-1.5">개월</span>
+                                <span className="text-sm font-normal opacity-60 ml-2">
+                                  ({result.cpm.totalDuration.toLocaleString()}일)
+                                </span>
                               </p>
                               <p className="text-[11px] opacity-80 mt-2">
-                                약 <span className="font-semibold">{Math.round(result.cpm.totalDuration / 30)}개월</span>
                                 {input.startDate && completionDate() && (
                                   <>
-                                    <span className="mx-1.5 opacity-50">·</span>
                                     착공 {input.startDate}
                                     <span className="mx-1 opacity-60">→</span>
                                     준공 <span className="font-semibold">{completionDate()}</span>
@@ -907,9 +908,13 @@ function BidPage() {
                                   <span className="text-[9px] text-slate-400">부록 1·2·3·5</span>
                                 </div>
                                 <p className="text-sm">
-                                  공식 산정: <span className="font-bold font-mono tabular-nums" style={{ color: cmp.color }}>{gl.total}일</span>
+                                  공식 산정: <span className="font-bold font-mono tabular-nums" style={{ color: cmp.color }}>
+                                    {Math.round(gl.total / 30)}개월 ({gl.total.toLocaleString()}일)
+                                  </span>
                                   <span className="text-slate-400 mx-1.5">/</span>
-                                  현재 CPM: <span className="font-bold font-mono tabular-nums text-slate-900">{result.cpm.totalDuration}일</span>
+                                  현재 CPM: <span className="font-bold font-mono tabular-nums text-slate-900">
+                                    {Math.round(result.cpm.totalDuration / 30)}개월 ({result.cpm.totalDuration.toLocaleString()}일)
+                                  </span>
                                   <span className="ml-2 text-[11px] font-semibold" style={{ color: cmp.color }}>{cmp.label}</span>
                                 </p>
                                 <p className="text-[11px] text-slate-500 mt-1 font-mono">
@@ -922,13 +927,13 @@ function BidPage() {
                                     <span className={`px-2 py-0.5 rounded-md font-mono ${reg.inRange ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'} cursor-help`}
                                       title={`${reg.formula ?? ''} — 연면적만 반영. 층수·동수·지반 고려 안 됨. 단순 감잡기 용도.`}
                                     >
-                                      회귀식 (참조) {reg.days}일 ⓘ
+                                      회귀식 (참조) {Math.round(reg.days / 30)}개월 ({reg.days}일) ⓘ
                                     </span>
                                   )}
                                   <span className="px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-mono cursor-help"
                                     title="국토부 실무가이드 공동주택 p.129 권장 공기 범위 (실적 통계 분포 아님)"
                                   >
-                                    국토부 권장 {bench.floorRange} {bench.typicalDays[0]}~{bench.typicalDays[1]}일 ⓘ
+                                    국토부 권장 {bench.floorRange} {Math.round(bench.typicalDays[0] / 30)}~{Math.round(bench.typicalDays[1] / 30)}개월 ({bench.typicalDays[0]}~{bench.typicalDays[1]}일) ⓘ
                                   </span>
                                 </div>
                               </div>
@@ -1044,11 +1049,14 @@ function BidPage() {
                               <CardContent className="pt-6">
                                 <p className="text-xs text-gray-500 mb-1">총 공사 기간</p>
                                 <p className="text-3xl font-bold text-blue-700">
-                                  {result.cpm.totalDuration}
-                                  <span className="text-sm font-normal text-gray-400 ml-1">일</span>
+                                  {Math.round(result.cpm.totalDuration / 30)}
+                                  <span className="text-sm font-normal text-gray-400 ml-1">개월</span>
+                                  <span className="text-xs font-normal text-gray-400 ml-1.5">
+                                    ({result.cpm.totalDuration.toLocaleString()}일)
+                                  </span>
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
-                                  {completionDate() ? `준공 예정 ${completionDate()}` : `약 ${Math.round(result.cpm.totalDuration / 30)}개월`}
+                                  {completionDate() ? `준공 예정 ${completionDate()}` : ''}
                                 </p>
                               </CardContent>
                             </Card>

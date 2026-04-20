@@ -185,14 +185,15 @@ export default function CpmTimeline({ projectId }: { projectId: string }) {
                         {trig}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-mono">
-                      <span className="font-bold text-slate-800">{s.totalDuration}</span>
-                      <span className="text-xs text-slate-400 ml-1">일</span>
+                    <td className="px-3 py-2 text-right tabular-nums font-mono whitespace-nowrap">
+                      <span className="font-bold text-slate-800">{Math.round(s.totalDuration / 30)}</span>
+                      <span className="text-xs text-slate-400 ml-1">개월</span>
+                      <span className="text-[10px] text-slate-400 ml-1">({s.totalDuration}일)</span>
                       {delta !== null && delta !== 0 && (
                         <span className={`text-[10px] font-semibold ml-1.5 ${
                           delta > 0 ? 'text-red-600' : 'text-emerald-600'
                         }`}>
-                          {delta > 0 ? `+${delta}` : delta}
+                          {delta > 0 ? `+${delta}` : delta}일
                         </span>
                       )}
                     </td>

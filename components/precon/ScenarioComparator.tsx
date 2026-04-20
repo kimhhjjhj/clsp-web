@@ -196,11 +196,14 @@ export default function ScenarioComparator({ projectId }: { projectId: string })
                 <div className="text-[11px] text-slate-500 mb-2">
                   {s.params.method ? METHOD_LABEL[s.params.method] : '프로젝트 기본 공법'}
                 </div>
-                <div className="flex items-end gap-2 mb-2">
+                <div className="flex items-end gap-2 mb-2 flex-wrap">
                   <span className="text-2xl font-bold text-slate-900 tabular-nums">
-                    {s.result.totalDuration}
+                    {Math.round(s.result.totalDuration / 30)}
                   </span>
-                  <span className="text-xs text-slate-500 mb-1">일</span>
+                  <span className="text-xs text-slate-500 mb-1">개월</span>
+                  <span className="text-[10px] text-slate-400 mb-1">
+                    ({s.result.totalDuration}일)
+                  </span>
                   {delta !== null && delta !== 0 && (
                     <span className={`text-xs font-semibold ml-auto mb-1 ${
                       delta < 0 ? 'text-emerald-600' : 'text-red-600'
@@ -268,8 +271,9 @@ export default function ScenarioComparator({ projectId }: { projectId: string })
                 <tr className="border-t border-slate-100">
                   <td className="px-3 py-2 text-slate-500">총공기</td>
                   {visible.map(s => (
-                    <td key={s.id} className="px-3 py-2 text-right font-mono font-bold tabular-nums text-slate-900">
-                      {s.result.totalDuration}일
+                    <td key={s.id} className="px-3 py-2 text-right font-mono font-bold tabular-nums text-slate-900 whitespace-nowrap">
+                      {Math.round(s.result.totalDuration / 30)}개월
+                      <span className="text-[10px] font-normal text-slate-400 ml-1">({s.result.totalDuration}일)</span>
                     </td>
                   ))}
                 </tr>
