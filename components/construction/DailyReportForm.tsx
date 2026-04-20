@@ -772,33 +772,34 @@ function ManpowerStep({
       title="업체별 투입인원"
       desc="0명 업체는 기본 숨김. 전일은 이전 일보에서 자동 세팅. 금일만 입력."
     >
-      <div className="flex items-center justify-between mb-3 gap-3">
-        <div className="flex-1 max-w-sm relative">
+      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        <div className="flex-1 min-w-0 max-w-sm relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="공종 또는 업체명 검색..."
-            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm"
+            className="w-full pl-9 pr-3 h-10 border border-gray-200 rounded-lg text-sm"
           />
         </div>
-        <label className="inline-flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
-          <input type="checkbox" checked={showZero} onChange={e => setShowZero(e.target.checked)} />
+        <label className="inline-flex items-center gap-2 text-xs text-gray-500 cursor-pointer flex-shrink-0">
+          <input type="checkbox" checked={showZero} onChange={e => setShowZero(e.target.checked)} className="w-4 h-4" />
           0명 업체 표시
         </label>
       </div>
 
-      <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
+      {/* 데스크톱 (sm+): 테이블 */}
+      <div className="hidden sm:block border border-gray-200 rounded-xl overflow-hidden mb-3">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr className="text-xs text-gray-500">
-              <th className="text-left px-4 py-2 font-semibold">공종</th>
-              <th className="text-left px-4 py-2 font-semibold">업체명</th>
-              <th className="text-right px-4 py-2 font-semibold text-gray-400">전일</th>
-              <th className="text-right px-4 py-2 font-semibold bg-blue-50 text-blue-700">
+              <th className="text-left px-4 py-2 font-semibold whitespace-nowrap">공종</th>
+              <th className="text-left px-4 py-2 font-semibold whitespace-nowrap">업체명</th>
+              <th className="text-right px-4 py-2 font-semibold text-gray-400 whitespace-nowrap">전일</th>
+              <th className="text-right px-4 py-2 font-semibold bg-blue-50 text-blue-700 whitespace-nowrap">
                 금일 <span className="font-normal">(입력)</span>
               </th>
-              <th className="text-right px-4 py-2 font-semibold text-gray-400">누계 (자동)</th>
+              <th className="text-right px-4 py-2 font-semibold text-gray-400 whitespace-nowrap">누계 (자동)</th>
               <th className="w-10"></th>
             </tr>
           </thead>
@@ -813,33 +814,22 @@ function ManpowerStep({
             {visible.map((c) => {
               const idx = data.manpower.indexOf(c)
               return (
-                <tr
-                  key={idx}
-                  className={`hover:bg-blue-50/30 ${c.today > 0 ? 'bg-blue-50/20' : ''}`}
-                >
+                <tr key={idx} className={`hover:bg-blue-50/30 ${c.today > 0 ? 'bg-blue-50/20' : ''}`}>
                   <td className="px-4 py-2.5 font-medium text-gray-800">{c.trade}</td>
                   <td className="px-4 py-2.5 text-gray-600">{c.company || '-'}</td>
-                  <td className="px-4 py-2.5 text-right text-gray-400 font-mono">
-                    {(c.yesterday ?? 0).toLocaleString()}
-                  </td>
+                  <td className="px-4 py-2.5 text-right text-gray-400 font-mono">{(c.yesterday ?? 0).toLocaleString()}</td>
                   <td className="px-1 py-1 bg-blue-50/30">
                     <input
-                      type="number"
-            inputMode="decimal"
+                      type="number" inputMode="decimal"
                       value={c.today || ''}
                       placeholder="0"
                       onChange={e => updRow(idx, { today: Number(e.target.value) || 0 })}
                       className="w-full text-right font-mono text-blue-900 font-semibold bg-transparent border border-transparent hover:border-blue-300 focus:border-blue-500 focus:bg-white rounded px-2 py-1.5 outline-none"
                     />
                   </td>
-                  <td className="px-4 py-2.5 text-right font-mono text-gray-700">
-                    {((c.yesterday ?? 0) + c.today).toLocaleString()}
-                  </td>
+                  <td className="px-4 py-2.5 text-right font-mono text-gray-700">{((c.yesterday ?? 0) + c.today).toLocaleString()}</td>
                   <td className="px-2">
-                    <button
-                      onClick={() => removeRow(idx)}
-                      className="p-1 text-gray-300 hover:text-red-500"
-                    >
+                    <button onClick={() => removeRow(idx)} className="p-1 text-gray-300 hover:text-red-500">
                       <X size={12} />
                     </button>
                   </td>
@@ -851,15 +841,9 @@ function ManpowerStep({
             <tfoot className="bg-gray-900 text-white">
               <tr>
                 <td className="px-4 py-2.5 font-bold" colSpan={2}>합계</td>
-                <td className="px-4 py-2.5 text-right font-mono text-gray-300">
-                  {totalYest.toLocaleString()}
-                </td>
-                <td className="px-4 py-2.5 text-right font-mono font-bold text-blue-300">
-                  {totalToday.toLocaleString()}
-                </td>
-                <td className="px-4 py-2.5 text-right font-mono font-bold">
-                  {totalSum.toLocaleString()}
-                </td>
+                <td className="px-4 py-2.5 text-right font-mono text-gray-300">{totalYest.toLocaleString()}</td>
+                <td className="px-4 py-2.5 text-right font-mono font-bold text-blue-300">{totalToday.toLocaleString()}</td>
+                <td className="px-4 py-2.5 text-right font-mono font-bold">{totalSum.toLocaleString()}</td>
                 <td></td>
               </tr>
             </tfoot>
@@ -867,25 +851,84 @@ function ManpowerStep({
         </table>
       </div>
 
-      {/* 추가 행 */}
-      <div className="flex gap-2 items-center bg-gray-50 rounded-xl p-3">
+      {/* 모바일: 카드 리스트 */}
+      <div className="sm:hidden space-y-2 mb-3">
+        {visible.length === 0 ? (
+          <div className="text-center py-8 text-gray-400 text-sm border border-dashed border-gray-200 rounded-xl">
+            아래에서 업체를 추가하세요
+          </div>
+        ) : (
+          visible.map((c) => {
+            const idx = data.manpower.indexOf(c)
+            const sum = (c.yesterday ?? 0) + c.today
+            return (
+              <div key={idx} className={`border rounded-xl p-3 ${c.today > 0 ? 'bg-blue-50/30 border-blue-200' : 'bg-white border-gray-200'}`}>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900 text-sm truncate">{c.trade}</div>
+                    {c.company && <div className="text-xs text-gray-500 truncate">{c.company}</div>}
+                  </div>
+                  <button onClick={() => removeRow(idx)} className="p-1.5 -m-1 text-gray-300 hover:text-red-500 flex-shrink-0">
+                    <X size={14} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-lg bg-gray-50 px-2 py-1.5">
+                    <div className="text-[10px] text-gray-400 font-semibold">전일</div>
+                    <div className="font-mono text-sm text-gray-500 tabular-nums">{(c.yesterday ?? 0).toLocaleString()}</div>
+                  </div>
+                  <div className="rounded-lg bg-blue-50 px-2 py-1 border border-blue-200">
+                    <div className="text-[10px] text-blue-600 font-semibold">금일 (입력)</div>
+                    <input
+                      type="number" inputMode="decimal"
+                      value={c.today || ''}
+                      placeholder="0"
+                      onChange={e => updRow(idx, { today: Number(e.target.value) || 0 })}
+                      className="w-full bg-transparent font-mono text-blue-900 font-bold text-sm tabular-nums outline-none"
+                    />
+                  </div>
+                  <div className="rounded-lg bg-gray-50 px-2 py-1.5">
+                    <div className="text-[10px] text-gray-400 font-semibold">누계</div>
+                    <div className="font-mono text-sm font-semibold text-gray-800 tabular-nums">{sum.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+        {data.manpower.length > 0 && (
+          <div className="bg-gray-900 text-white rounded-xl p-3 flex items-center justify-between">
+            <span className="font-bold text-sm">합계</span>
+            <span className="font-mono text-sm font-bold tabular-nums">
+              <span className="text-gray-400">{totalYest.toLocaleString()}</span>
+              <span className="mx-1 text-gray-500">+</span>
+              <span className="text-blue-300">{totalToday.toLocaleString()}</span>
+              <span className="mx-1 text-gray-500">=</span>
+              <span>{totalSum.toLocaleString()}</span>
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* 추가 행 — 모바일: 세로 stack · sm+: 1줄 */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center bg-gray-50 rounded-xl p-3">
         <input
           value={addTrade}
           onChange={e => setAddTrade(e.target.value)}
           placeholder="공종 (예: 철근)"
-          className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+          className="w-full sm:w-32 border border-gray-200 rounded-lg px-3 h-10 text-sm bg-white"
         />
         <input
           value={addCompany}
           onChange={e => setAddCompany(e.target.value)}
           placeholder="업체명 (선택)"
-          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+          className="w-full sm:flex-1 border border-gray-200 rounded-lg px-3 h-10 text-sm bg-white"
         />
         <button
           onClick={addRow}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="inline-flex items-center justify-center gap-1.5 h-10 px-4 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto flex-shrink-0"
         >
-          <Plus size={12} /> 업체 추가
+          <Plus size={14} /> 업체 추가
         </button>
       </div>
     </Section>
