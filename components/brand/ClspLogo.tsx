@@ -3,6 +3,7 @@
 // Construction Lifecycle Solution Platform
 // 3면(상·좌·우) = 설계 · 시공 · 운영 통합
 // ═══════════════════════════════════════════════════════════
+import { useId } from 'react'
 
 interface Props {
   size?: number
@@ -22,8 +23,9 @@ interface Props {
  *   3면 분할선: 중심(50,50)에서 top / left-up / right-up 꼭짓점
  */
 export default function ClspLogo({ size = 40, className = '', luminous = false }: Props) {
-  // 매 렌더마다 유니크 id (중복 gradient 방지)
-  const uid = Math.random().toString(36).slice(2, 7)
+  // SSR-safe 유니크 id (중복 gradient 방지 + hydration mismatch 회피)
+  const rawId = useId()
+  const uid = rawId.replace(/[^a-zA-Z0-9]/g, '')
 
   // 육각형 꼭짓점
   const T  = '50,5'      // top

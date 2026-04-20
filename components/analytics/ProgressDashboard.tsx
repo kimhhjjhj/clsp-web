@@ -307,7 +307,7 @@ export default function ProgressDashboard({ projectId, projectName, cpmResult }:
           </h3>
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               {['공종','평균 계획률(%)','평균 실적률(%)','편차','상태'].map(h => (
                 <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500">{h}</th>

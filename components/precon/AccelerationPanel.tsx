@@ -176,7 +176,7 @@ export default function AccelerationPanel({ projectId, cpmResult }: Props) {
       {/* 테이블 */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
             <tr>
               {['공종','단축공법','단축일수','비용증가율','적용조건','참고사례',''].map((h,i) => (
                 <th key={i} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500">{h}</th>

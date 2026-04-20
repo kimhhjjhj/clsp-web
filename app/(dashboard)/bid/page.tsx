@@ -26,6 +26,7 @@ import WBSTable, { type WBSTableHandle, type CompanyStandardSummary } from '@/co
 import { GanttChart, type GanttViewMode } from '@/components/gantt/GanttChart'
 import ResourcePlanPanel from '@/components/analysis/ResourcePlanPanel'
 import CompanyStandardsPanel from '@/components/analysis/CompanyStandardsPanel'
+import MethodComparisonPanel from '@/components/bid/MethodComparisonPanel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -93,7 +94,7 @@ interface EstimateResult {
 }
 
 type TopTab = 'cost' | 'schedule'
-type SubTab = 'wbs' | 'summary' | 'critical' | 'gantt' | 'resource' | 'standards'
+type SubTab = 'wbs' | 'summary' | 'critical' | 'method' | 'gantt' | 'resource' | 'standards'
 
 const INITIAL: BidInput = {
   name: '', type: '공동주택', location: '',
@@ -491,8 +492,9 @@ function BidPage() {
     return result.cpm.tasks.filter(t => t.isCritical).map(t => t.name)
   }, [result])
 
-  const SUB_TABS: { id: SubTab; label: string }[] = [
-    { id: 'wbs',       label: 'WBS 공정표' },
+  const SUB_TABS: { id: SubTab; label: string; badge?: string }[] = [
+    { id: 'method',    label: '공법 비교', badge: 'NEW' },
+    { id: 'wbs',       label: 'WBS' },
     { id: 'summary',   label: 'CPM 결과' },
     { id: 'critical',  label: '크리티컬 패스' },
     { id: 'gantt',     label: '공정표(Gantt)' },
@@ -965,13 +967,18 @@ function BidPage() {
                             key={t.id}
                             type="button"
                             onClick={() => setSubTab(t.id)}
-                            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
+                            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 ${
                               subTab === t.id
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-800'
                             }`}
                           >
                             {t.label}
+                            {t.badge && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-600 text-white leading-none">
+                                {t.badge}
+                              </span>
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1157,6 +1164,25 @@ function BidPage() {
                             />
                           </div>
                         </div>
+                      )}
+
+                      {/* 공법 비교 — Top-down vs Bottom-up */}
+                      {subTab === 'method' && (
+                        <MethodComparisonPanel input={{
+                          name: input.name || '임시 견적',
+                          ground: Number(input.ground) || 0,
+                          basement: Number(input.basement) || 0,
+                          lowrise: Number(input.lowrise) || 0,
+                          hasTransfer: input.hasTransfer,
+                          bldgArea: Number(input.bldgArea) || undefined,
+                          buildingArea: Number(input.buildingArea) || undefined,
+                          siteArea: Number(input.siteArea) || undefined,
+                          sitePerim: Number(input.sitePerim) || undefined,
+                          bldgPerim: Number(input.bldgPerim) || undefined,
+                          wtBottom: Number(input.wtBottom) || undefined,
+                          waBottom: Number(input.waBottom) || undefined,
+                          prdCount: Number(input.prdCount) || undefined,
+                        }} />
                       )}
 
                       {/* 자원 계획 */}

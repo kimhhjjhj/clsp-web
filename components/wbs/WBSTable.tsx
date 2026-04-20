@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react'
+import { Fragment, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { getWorkRate, explainDuration, type ProductivitySource } from '@/lib/engine/wbs'
 import { buildAbnormalIndex } from '@/lib/engine/abnormal-detection'
 import { WBS_TRADE_MAP } from '@/lib/engine/wbs-trade-map'
@@ -137,14 +137,15 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
           {colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
         </colgroup>
 
-        {/* ── 헤더 ── */}
-        <thead>
+        {/* ── 헤더 (스크롤 시 상단 고정) ── */}
+        <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
           <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
             {HEADERS.map((h, i) => (
               <th
                 key={i}
                 style={{
                   position: 'relative',
+                  background: '#f8fafc',
                   padding: '8px 10px',
                   textAlign: h.align,
                   fontSize: 11,
@@ -182,10 +183,9 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
             const dotColor = categoryColors[cat] ?? '#94a3b8'
 
             return (
-              <>
+              <Fragment key={cat}>
                 {/* 카테고리 헤더 행 */}
                 <tr
-                  key={`cat-${cat}`}
                   onClick={() => toggleCat(cat)}
                   style={{
                     background: '#f1f5f9',
@@ -366,7 +366,7 @@ const WBSTable = forwardRef<WBSTableHandle, Props>(function WBSTable({ byCategor
                     </tr>
                   )
                 })}
-              </>
+              </Fragment>
             )
           })}
         </tbody>

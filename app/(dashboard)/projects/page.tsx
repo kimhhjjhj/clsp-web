@@ -32,6 +32,7 @@ interface Project {
 
 type SortKey = 'recent' | 'name' | 'startDate'
 type StatusFilter = 'all' | ProjectStatus
+type GroupKey = 'status' | 'type' | 'client' | 'none'
 
 export default function ProjectsPageRoute() {
   return (
@@ -55,6 +56,7 @@ function ProjectsPage() {
       : 'all'
   )
   const [sortKey, setSortKey] = useState<SortKey>('recent')
+  const [groupBy, setGroupBy] = useState<GroupKey>('status')
   const toast = useToast()
 
   useEffect(() => {
@@ -118,6 +120,48 @@ function ProjectsPage() {
       return db - da
     })
   }, [projects, query, typeFilter, statusFilter, sortKey])
+
+  // ── 그룹화: 섹션 헤더 + 카드 묶음 ─────────────────────────
+  // statusFilter가 특정 상태면 status로 그룹화해도 단일 섹션뿐이라 무의미 → type으로 자동 전환
+  const effectiveGroup: GroupKey = useMemo(() => {
+    if (groupBy === 'status' && statusFilter !== 'all') return 'type'
+    return groupBy
+  }, [groupBy, statusFilter])
+
+  const STATUS_ORDER: ProjectStatus[] = ['active', 'paused', 'planning', 'completed', 'archived']
+
+  const grouped = useMemo(() => {
+    if (effectiveGroup === 'none') {
+      return [{ key: 'all', label: '', items: filtered, color: '#94a3b8' }]
+    }
+    const map = new Map<string, { key: string; label: string; items: Project[]; color: string; meta?: string }>()
+    for (const p of filtered) {
+      let key = '', label = '', color = '#94a3b8', meta: string | undefined
+      if (effectiveGroup === 'status') {
+        const st = getProjectStatus(p)
+        key = st
+        label = STATUS_META[st].label
+        color = STATUS_META[st].color
+      } else if (effectiveGroup === 'type') {
+        key = p.type || '__unset__'
+        label = p.type || '유형 미지정'
+      } else {
+        key = p.client || '__unset__'
+        label = p.client || '발주처 미지정'
+      }
+      const cur = map.get(key)
+      if (cur) cur.items.push(p)
+      else map.set(key, { key, label, items: [p], color, meta })
+    }
+    const arr = Array.from(map.values())
+    // 정렬: status는 고정 순, 나머지는 count desc
+    if (effectiveGroup === 'status') {
+      arr.sort((a, b) => STATUS_ORDER.indexOf(a.key as ProjectStatus) - STATUS_ORDER.indexOf(b.key as ProjectStatus))
+    } else {
+      arr.sort((a, b) => b.items.length - a.items.length)
+    }
+    return arr
+  }, [filtered, effectiveGroup])
 
   const STATUS_TABS: { key: StatusFilter; label: string; dot?: string }[] = [
     { key: 'all',        label: '전체' },
@@ -215,7 +259,27 @@ function ProjectsPage() {
             </div>
           )}
 
-          <div className="inline-flex items-center gap-1 text-xs text-gray-500 ml-auto">
+          <div className="inline-flex items-center gap-2 text-xs text-gray-500 ml-auto">
+            {/* 그룹 기준 */}
+            <div className="inline-flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5">
+              <span className="text-[10px] text-gray-400 font-semibold px-1.5">그룹</span>
+              {([
+                { k: 'status', l: '상태' },
+                { k: 'type',   l: '유형' },
+                { k: 'client', l: '발주처' },
+                { k: 'none',   l: '없음' },
+              ] as { k: GroupKey; l: string }[]).map(opt => (
+                <button
+                  key={opt.k}
+                  onClick={() => setGroupBy(opt.k)}
+                  className={`h-7 px-2.5 rounded text-[11px] font-semibold transition-colors ${
+                    groupBy === opt.k ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >{opt.l}</button>
+              ))}
+            </div>
+
+            {/* 정렬 */}
             <SortAsc size={12} className="text-gray-400" />
             <select
               value={sortKey}
@@ -257,9 +321,31 @@ function ProjectsPage() {
               ]}
             />
           </div>
-        ) : (
+        ) : effectiveGroup === 'none' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(p => <ProjectCard key={p.id} project={p} onDelete={deleteProject} />)}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {grouped.map(group => (
+              <section key={group.key}>
+                {/* 섹션 헤더 */}
+                <div className="py-2 mb-3 flex items-center gap-2.5 border-b border-slate-300/40">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ background: group.color }}
+                  />
+                  <h3 className="text-sm font-bold text-slate-800 tracking-tight">{group.label}</h3>
+                  <span className="text-[11px] font-mono font-semibold text-slate-500 bg-white/60 rounded px-1.5 py-0.5">
+                    {group.items.length}
+                  </span>
+                  <div className="flex-1 h-px bg-slate-300/40" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.items.map(p => <ProjectCard key={p.id} project={p} onDelete={deleteProject} />)}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </div>

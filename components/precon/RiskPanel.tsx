@@ -477,7 +477,7 @@ export default function RiskPanel({ projectId, onUpdate }: { projectId: string; 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[900px]">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
             <tr>
               {([
                 { label: 'NO',         key: 'code' as SortKey },

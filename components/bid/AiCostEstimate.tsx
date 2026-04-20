@@ -444,7 +444,7 @@ ${tasksLine}
                 {expanded && (
                   <div className="px-5 pb-3 pt-1">
                     <table className="w-full text-xs">
-                      <thead>
+                      <thead className="sticky top-0 z-10 bg-white">
                         <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                           <th className="text-left py-1.5 pr-2">아이템</th>
                           <th className="text-right py-1.5 pr-2 w-20">물량</th>

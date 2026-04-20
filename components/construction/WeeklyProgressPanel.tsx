@@ -200,7 +200,7 @@ export default function WeeklyProgressPanel({ projectId, cpmResult, onSaved }: P
           <h3 className="text-sm font-bold text-gray-900">{year}년 {weekNo}주차 공정률 입력</h3>
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               {['공종','계획 공정률(%)','실적 공정률(%)','편차'].map(h => (
                 <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>

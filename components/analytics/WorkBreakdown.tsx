@@ -185,7 +185,7 @@ function LocationTable({ items }: { items: LocationItem[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
-        <thead className="text-gray-400 border-b border-gray-100">
+        <thead className="text-gray-400 border-b border-gray-100 sticky top-0 z-10 bg-white">
           <tr>
             <th className="text-left py-2 font-semibold">위치 <span className="font-normal text-gray-300">(층순)</span></th>
             <th className="text-right py-2 font-semibold">활동일</th>
@@ -233,7 +233,7 @@ function PartTable({ items }: { items: PartItem[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
-        <thead className="text-gray-400 border-b border-gray-100">
+        <thead className="text-gray-400 border-b border-gray-100 sticky top-0 z-10 bg-white">
           <tr>
             <th className="text-left py-2 font-semibold">부위</th>
             <th className="text-right py-2 font-semibold">활동일</th>

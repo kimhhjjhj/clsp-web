@@ -178,7 +178,7 @@ export default function CompanyStandardsPanel({ cpmTasks }: Props) {
       {/* 표준 테이블 */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 w-10">상태</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">공종 (trade)</th>
@@ -261,7 +261,7 @@ export default function CompanyStandardsPanel({ cpmTasks }: Props) {
             <p className="text-xs text-gray-500 mt-0.5">현재 CPM 공종이 회사 실적 DB의 어떤 trade와 연관되는지</p>
           </div>
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-t border-gray-100">
+            <thead className="bg-gray-50 border-t border-gray-100 sticky top-0 z-10">
               <tr>
                 <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">WBS 공종</th>
                 <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">대분류</th>

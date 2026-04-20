@@ -764,7 +764,7 @@ function ManpowerStep({
 
       <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
             <tr className="text-xs text-gray-500">
               <th className="text-left px-4 py-2 font-semibold">공종</th>
               <th className="text-left px-4 py-2 font-semibold">업체명</th>

@@ -101,7 +101,7 @@ export default function ResourcePlanPanel({ cpmTasks, startDate, standards }: Pr
             <h3 className="text-sm font-bold text-gray-900">월별 필요 인력</h3>
           </div>
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">월</th>
                 <th className="text-right px-4 py-2 text-xs font-semibold text-gray-500">총 인일</th>
@@ -143,7 +143,7 @@ export default function ResourcePlanPanel({ cpmTasks, startDate, standards }: Pr
             </h3>
           </div>
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">공종 (trade)</th>
                 <th className="text-right px-4 py-2 text-xs font-semibold text-gray-500">인원</th>

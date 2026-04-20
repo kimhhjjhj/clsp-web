@@ -141,7 +141,7 @@ export default function Stage1Page({ projectId, project }: Props) {
   }
 
   const PANEL_TABS: { id: ActivePanel; label: string }[] = [
-    { id: 'wbs', label: 'WBS 공정표' },
+    { id: 'wbs', label: 'WBS' },
     { id: 'summary', label: 'CPM 결과' },
     { id: 'critical', label: '크리티컬 패스' },
     { id: 'gantt', label: '공정표(Gantt)' },

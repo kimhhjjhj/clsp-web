@@ -296,7 +296,7 @@ export default function DailyReportPanel({
                 <p className="text-xs font-semibold text-gray-500 mb-2">업체별 투입인원</p>
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr className="text-xs text-gray-500">
                         <th className="text-left px-3 py-1.5 font-semibold">공종</th>
                         <th className="text-left px-3 py-1.5 font-semibold">업체</th>

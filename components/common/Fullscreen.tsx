@@ -29,10 +29,13 @@ export function useFullscreen() {
   return { fullscreen, setFullscreen, toggle: () => setFullscreen(v => !v) }
 }
 
-/** 컨테이너에 붙일 classname — 풀스크린이면 fixed inset-0 등으로 확장 */
+/** 컨테이너에 붙일 classname — 풀스크린이면 fixed inset-0 등으로 확장
+ *  주의: 호출부 wrapper에 `relative` 같은 position 유틸이 함께 붙어 있을 때
+ *  Tailwind 생성 순서상 `.relative`가 `.fixed`보다 뒤라 `.relative`가 이김.
+ *  이를 회피하기 위해 `!important` 변형자(`!fixed`, `!inset-0`)를 사용. */
 export function fullscreenClass(fullscreen: boolean, baseBg = 'bg-slate-50') {
   return fullscreen
-    ? `fixed inset-0 z-50 ${baseBg} overflow-auto p-3 sm:p-5`
+    ? `!fixed !inset-0 !z-50 ${baseBg} !overflow-auto p-3 sm:p-5`
     : ''
 }
 
