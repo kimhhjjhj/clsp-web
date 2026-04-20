@@ -105,8 +105,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {/* 브레드크럼 */}
               <Breadcrumb />
 
-              {/* 메인 콘텐츠 */}
-              <main className="flex-1 overflow-auto" style={{ background: '#d9dfe8' }}>
+              {/* 메인 콘텐츠 — 세로만 스크롤, 가로 드래그 차단 */}
+              <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none" style={{ background: '#d9dfe8', touchAction: 'pan-y pinch-zoom' }}>
                 {children}
               </main>
             </div>

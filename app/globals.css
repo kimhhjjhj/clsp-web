@@ -142,6 +142,7 @@
   html {
     /* 브라우저/OS 다크모드가 폼 컨트롤(input 캐럿·스피너)을 하얗게 만드는 문제 차단 */
     color-scheme: light;
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;
@@ -150,6 +151,9 @@
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+    /* 모바일: 가로 스크롤·좌우 바운스 전역 차단 */
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
   }
   /* 숫자 입력 — hover/focus 시 캐럿이 흰색이 되어 배경에 묻히는 문제 */
   input,

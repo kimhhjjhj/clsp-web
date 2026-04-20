@@ -211,7 +211,7 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
   })
 
   return (
-    <div className="min-h-full bg-gray-50">
+    <div className="min-h-full bg-gray-50 overflow-x-hidden max-w-full">
       {/* 상단 바 */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="px-4 sm:px-8 py-3 flex items-center justify-between flex-wrap gap-2">
@@ -274,17 +274,17 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
               <React.Fragment key={s.id}>
                 <button
                   onClick={() => setStep(s.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${
                     active ? 'bg-blue-50 text-blue-700' : 'text-gray-400 hover:bg-gray-50'
                   }`}
                 >
-                  <Icon size={14} />
+                  <Icon size={14} className="flex-shrink-0" />
                   <span className="text-[11px] font-bold tracking-wider text-gray-400">
                     {String(s.id).padStart(2, '0')}
                   </span>
-                  {s.name}
+                  <span className="whitespace-nowrap">{s.name}</span>
                 </button>
-                {i < STEPS.length - 1 && <ChevronRight size={14} className="text-gray-300" />}
+                {i < STEPS.length - 1 && <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />}
               </React.Fragment>
             )
           })}
