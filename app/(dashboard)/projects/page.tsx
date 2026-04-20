@@ -198,7 +198,7 @@ function ProjectsPage() {
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-4">
         {/* 상태 탭 — segmented control 스타일 */}
-        <div className="flex items-center gap-0.5 p-0.5 bg-[rgba(15,23,42,0.04)] border border-[rgba(15,23,42,0.06)] rounded-[10px] overflow-x-auto w-fit">
+        <div className="flex items-center gap-0.5 p-0.5 bg-[rgba(15,23,42,0.04)] border border-[rgba(15,23,42,0.06)] rounded-[10px] overflow-x-auto thin-scroll max-w-full sm:w-fit">
           {STATUS_TABS.map(t => {
             const active = statusFilter === t.key
             const count = statusCounts[t.key]
@@ -224,13 +224,13 @@ function ProjectsPage() {
 
         {/* 검색 + 유형 필터 + 정렬 */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-md">
+          <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-md">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="프로젝트명·발주처·시공사·위치·유형 검색"
-              className="w-full pl-9 pr-8 h-9 bg-white border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="w-full pl-9 pr-8 h-10 sm:h-9 bg-white border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
             {query && (
               <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
@@ -240,10 +240,10 @@ function ProjectsPage() {
           </div>
 
           {types.length > 0 && (
-            <div className="inline-flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5">
+            <div className="inline-flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5 max-w-full overflow-x-auto thin-scroll">
               <button
                 onClick={() => setTypeFilter('all')}
-                className={`h-7 px-2.5 rounded text-[11px] font-semibold transition-colors ${
+                className={`h-7 px-2.5 rounded text-[11px] font-semibold whitespace-nowrap transition-colors ${
                   typeFilter === 'all' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >전체 유형</button>
@@ -251,7 +251,7 @@ function ProjectsPage() {
                 <button
                   key={t}
                   onClick={() => setTypeFilter(t)}
-                  className={`h-7 px-2.5 rounded text-[11px] font-semibold transition-colors ${
+                  className={`h-7 px-2.5 rounded text-[11px] font-semibold whitespace-nowrap transition-colors ${
                     typeFilter === t ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >{t}</button>
@@ -259,10 +259,10 @@ function ProjectsPage() {
             </div>
           )}
 
-          <div className="inline-flex items-center gap-2 text-xs text-gray-500 ml-auto">
+          <div className="inline-flex items-center gap-2 text-xs text-gray-500 sm:ml-auto flex-wrap">
             {/* 그룹 기준 */}
             <div className="inline-flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5">
-              <span className="text-[10px] text-gray-400 font-semibold px-1.5">그룹</span>
+              <span className="text-[10px] text-gray-400 font-semibold px-1.5 whitespace-nowrap">그룹</span>
               {([
                 { k: 'status', l: '상태' },
                 { k: 'type',   l: '유형' },
@@ -272,7 +272,7 @@ function ProjectsPage() {
                 <button
                   key={opt.k}
                   onClick={() => setGroupBy(opt.k)}
-                  className={`h-7 px-2.5 rounded text-[11px] font-semibold transition-colors ${
+                  className={`h-7 px-2.5 rounded text-[11px] font-semibold whitespace-nowrap transition-colors ${
                     groupBy === opt.k ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >{opt.l}</button>

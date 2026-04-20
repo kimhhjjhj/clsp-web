@@ -95,7 +95,7 @@ export default function PageHeader({ icon, title, subtitle, actions, tabs, stick
         )}
       </div>
       {tabs && (
-        <div className="relative px-4 sm:px-6 border-t border-slate-800/60 overflow-x-auto">
+        <div className="relative px-4 sm:px-6 border-t border-slate-800/60 overflow-x-auto thin-scroll">
           {tabs}
         </div>
       )}

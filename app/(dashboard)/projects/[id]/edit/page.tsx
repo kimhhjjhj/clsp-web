@@ -412,11 +412,11 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
-        <div className="flex gap-3 pt-2">
-          <Button type="submit" disabled={saving}>
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <Button type="submit" disabled={saving} className="w-full sm:w-auto">
             {saving ? '저장 중...' : '변경사항 저장'}
           </Button>
-          <Button type="button" variant="ghost" onClick={() => router.push(`/projects/${id}`)}>
+          <Button type="button" variant="ghost" onClick={() => router.push(`/projects/${id}`)} className="w-full sm:w-auto">
             취소
           </Button>
         </div>

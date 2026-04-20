@@ -54,7 +54,7 @@ export default function StagePage({
   const stageInfo = STAGE_LABELS[stageId]
 
   const stageNav = (
-    <div className="flex items-center gap-1 py-2 overflow-x-auto">
+    <div className="flex items-center gap-1 py-2 overflow-x-auto thin-scroll">
       {/* URL stage 2/3/4만 노출 (1은 사업 초기 검토로 이전됨) */}
       {['2', '3', '4'].map(s => {
         const info = STAGE_LABELS[s]
