@@ -1127,6 +1127,14 @@ function BidPage() {
                         const cmp = compareWithCpm(result.cpm.totalDuration, gl.total)
                         const reg = computeGuidelineRegression(input.type || '공동주택', baseInput.bldgArea)
                         const bench = guidelineBenchmark(baseInput.ground)
+                        // 참고 지표 편차 검증 — CPM 대비 ±20% 초과 시 경고
+                        const regDevPct = reg.days != null && reg.days > 0
+                          ? Math.round(((result.cpm.totalDuration - reg.days) / reg.days) * 100)
+                          : null
+                        const regAlert = regDevPct != null && Math.abs(regDevPct) > 20
+                        const benchInBand = result.cpm.totalDuration >= bench.typicalDays[0]
+                          && result.cpm.totalDuration <= bench.typicalDays[1]
+                        const benchAlert = !benchInBand
                         return (
                           <div className="mx-5 mb-5 relative overflow-hidden rounded-xl bg-white" style={{
                             border: `1px solid ${cmp.color}33`,
@@ -1195,7 +1203,7 @@ function BidPage() {
                                 준비 {gl.preparationDays} + CP {gl.criticalWorkDays} + 비작업 {gl.nonWorkDays} + 정리 {gl.cleanupDays}
                               </p>
 
-                              {/* ── 보조 지표 칩 (통일된 스타일) ─────── */}
+                              {/* ── 보조 지표 칩 (편차 20% 초과 시 amber 경고) ─── */}
                               <div className="flex items-center gap-1.5 mt-3 flex-wrap">
                                 <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mr-0.5">
                                   참고 지표
@@ -1210,16 +1218,26 @@ function BidPage() {
                                       variableValue: Number(input.bldgArea) || 0,
                                       inRange: reg.inRange,
                                     })}
-                                    triggerClassName="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 transition-colors"
+                                    triggerClassName={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                                      regAlert
+                                        ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300'
+                                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                    }`}
                                   >
+                                    {regAlert && <AlertTriangle size={11} className="text-amber-600" />}
                                     <span>회귀식</span>
                                     <span className="font-mono tabular-nums font-semibold">
                                       {Math.round(reg.days / 30)}개월 ({reg.days}일)
                                     </span>
-                                    {!reg.inRange && (
-                                      <span className="text-[9px] text-amber-600 font-semibold">범위외</span>
+                                    {regDevPct != null && (
+                                      <span className={`text-[10px] font-mono tabular-nums font-bold ${regAlert ? 'text-amber-700' : 'text-slate-500'}`}>
+                                        CPM {regDevPct >= 0 ? '+' : ''}{regDevPct}%
+                                      </span>
                                     )}
-                                    <Info size={10} className="text-slate-400" />
+                                    {!reg.inRange && (
+                                      <span className="text-[9px] text-amber-700 font-bold uppercase">범위외</span>
+                                    )}
+                                    <Info size={10} className={regAlert ? 'text-amber-500' : 'text-slate-400'} />
                                   </ValueExplainDialog>
                                 )}
                                 <ValueExplainDialog
@@ -1229,14 +1247,27 @@ function BidPage() {
                                     typicalDaysMax: bench.typicalDays[1],
                                     ground: baseInput.ground,
                                   })}
-                                  triggerClassName="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 transition-colors"
+                                  triggerClassName={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                                    benchAlert
+                                      ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300'
+                                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                  }`}
                                 >
+                                  {benchAlert && <AlertTriangle size={11} className="text-amber-600" />}
                                   <span>권장밴드 {bench.floorRange}</span>
                                   <span className="font-mono tabular-nums font-semibold">
                                     {Math.round(bench.typicalDays[0] / 30)}~{Math.round(bench.typicalDays[1] / 30)}개월
                                   </span>
-                                  <Info size={10} className="text-slate-400" />
+                                  <span className={`text-[10px] font-bold ${benchAlert ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                    {benchInBand ? '밴드 내' : result.cpm.totalDuration < bench.typicalDays[0] ? '밴드 아래' : '밴드 위'}
+                                  </span>
+                                  <Info size={10} className={benchAlert ? 'text-amber-500' : 'text-slate-400'} />
                                 </ValueExplainDialog>
+                                {(regAlert || benchAlert) && (
+                                  <span className="text-[10px] text-amber-700 font-semibold ml-1">
+                                    ⚠️ 편차 크니 재검토 권장
+                                  </span>
+                                )}
                               </div>
 
                               <details className="mt-3 pt-2 border-t border-slate-100">
