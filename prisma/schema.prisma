@@ -166,9 +166,37 @@ model DailyReport {
   content       String?
   notes         String?
   photos        Json?    // [{ url, caption?, trade?, uploadedAt }]
+  // G7. AI 자동 구조화
+  aiExtraction           Json?   // 마지막 추출 결과 (검토 전 프리뷰)
+  aiExtractionConfidence Float?
+  aiExtractedAt          DateTime?
+  aiReviewedAt           DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────────────────
+// G7. AI 호출 추적 — 정확도·비용 모니터링, 프롬프트 개선 재료
+// ─────────────────────────────────────────────────────────
+model AiExtractionLog {
+  id               String   @id @default(cuid())
+  entityType       String   // 'daily-report' | 'risk' | 'drawing' | ...
+  entityId         String
+  input            String   @db.Text
+  output           Json
+  model            String
+  promptTokens     Int
+  completionTokens Int
+  costUsd          Float?
+  success          Boolean
+  errorMessage     String?
+  accepted         Boolean? // 사용자가 결과를 적용했는지
+  createdAt        DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([success, createdAt])
 }
 // ── 생산성 실적 DB (관리자 승인 플로우) ──────────────────────────
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Calendar, Cloud, Sun, CloudRain, Copy, Save, Users, Wrench, Package,
   ChevronRight, Plus, X, Check, FileText, ArrowLeft, Search, HardHat,
-  Image as ImageIcon,
+  Image as ImageIcon, Sparkles, Loader2,
 } from 'lucide-react'
 import PhotoUpload, { type Photo } from './PhotoUpload'
 import { useAutoSaveDraft } from '@/lib/hooks/useAutoSaveDraft'
@@ -293,6 +293,36 @@ export default function DailyReportForm({ projectId, reportId, initialData }: Pr
 
       {/* 본문 */}
       <div className="px-4 sm:px-8 py-4 sm:py-6 max-w-6xl">
+        {/* G7. AI 자동 구조화 — 자유 서술 → 각 필드 자동 채움 */}
+        <AiExtractSection
+          reportId={reportId}
+          onApply={(ext) => {
+            setData(d => ({
+              ...d,
+              weather: (ext.weather as string | undefined) ?? d.weather,
+              tempMin: typeof ext.tempMin === 'number' ? ext.tempMin : d.tempMin,
+              tempMax: typeof ext.tempMax === 'number' ? ext.tempMax : d.tempMax,
+              manpower: Array.isArray(ext.manpower) && ext.manpower.length
+                ? (ext.manpower as Array<{trade: string; today: number}>).map(m => ({
+                    trade: m.trade, company: '', today: m.today,
+                  }))
+                : d.manpower,
+              equipmentList: Array.isArray(ext.equipmentList) && ext.equipmentList.length
+                ? (ext.equipmentList as Array<{name: string; count: number}>).map(e => ({
+                    name: e.name, spec: '', today: e.count,
+                  }))
+                : d.equipmentList,
+              materialList: Array.isArray(ext.materialList) && ext.materialList.length
+                ? (ext.materialList as Array<{name: string; quantity?: number; unit?: string}>).map(m => ({
+                    name: m.name, spec: m.unit ?? '', today: m.quantity ?? 0,
+                  }))
+                : d.materialList,
+            }))
+            setDirty(true)
+            toast.success('AI 추출 결과를 각 필드에 적용했습니다', '검토 후 저장해주세요')
+          }}
+        />
+
         {/* 초안 복원 배너 */}
         {hasDraft && draftEnvelope && (
           <div className="mb-4">
@@ -1115,3 +1145,148 @@ function PhotoStep({
     </Section>
   )
 }
+
+// ═══════════════════════════════════════════════════════════
+// G7. AI 자동 구조화 섹션
+// ═══════════════════════════════════════════════════════════
+function AiExtractSection({
+  reportId,
+  onApply,
+}: {
+  reportId?: string
+  onApply: (ext: Record<string, unknown>) => void
+}) {
+  const [open, setOpen] = useState(true)
+  const [text, setText] = useState('')
+  const [extracting, setExtracting] = useState(false)
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function run() {
+    setExtracting(true); setError(null); setResult(null)
+    try {
+      const r = await fetch('/api/ai/extract-daily-report', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId, content: text }),
+      })
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}))
+        throw new Error(j.error ?? `HTTP ${r.status}`)
+      }
+      setResult(await r.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'AI 추출 실패')
+    } finally { setExtracting(false) }
+  }
+
+  const conf = typeof result?.confidence === 'number' ? result.confidence as number : 0
+  const confPct = Math.round(conf * 100)
+  const confColor = confPct >= 70 ? 'text-emerald-600' : confPct >= 40 ? 'text-amber-600' : 'text-red-600'
+
+  return (
+    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl mb-4 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/30"
+      >
+        <div className="flex items-center gap-2">
+          <Sparkles size={16} className="text-indigo-600" />
+          <span className="text-sm font-bold text-slate-900">AI 자동 구조화</span>
+          <span className="text-[11px] text-slate-500">자유 서술 → 기상·인력·자재·작업·이슈 자동 추출</span>
+        </div>
+        <ChevronRight size={14} className={`text-slate-500 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-2">
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            rows={4}
+            placeholder={"예: 오늘 오전 비와서 2층 타설 연기. 철근반 8명 배근 계속 진행. 거푸집 3명 해체 작업. 레미콘 15루베 내일 09시 도착 예정. 안전사고 없음."}
+            className="w-full p-2.5 text-sm border border-slate-200 rounded bg-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+          />
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-500">
+              10자 이상 입력 후 분석 → 구조화된 필드로 자동 채움
+            </span>
+            <button
+              type="button"
+              onClick={run}
+              disabled={extracting || text.trim().length < 10}
+              className="ml-auto h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-50 hover:bg-indigo-700"
+            >
+              {extracting ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              {extracting ? '분석 중...' : 'AI 추출'}
+            </button>
+          </div>
+
+          {error && (
+            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">
+              {error}
+            </div>
+          )}
+
+          {result && (
+            <div className="bg-white rounded-lg border border-slate-200 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-semibold text-slate-700">추출 완료</span>
+                  <span className={`font-mono font-bold ${confColor}`}>
+                    신뢰도 {confPct}%
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onApply(result)}
+                  className="h-7 px-2.5 rounded bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold inline-flex items-center gap-1"
+                >
+                  <Check size={11} /> 필드에 적용
+                </button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                <div className="bg-slate-50 rounded px-2 py-1">
+                  <div className="text-slate-400 text-[10px]">날씨</div>
+                  <div className="font-semibold text-slate-800">{String(result.weather ?? '—')}</div>
+                </div>
+                <div className="bg-slate-50 rounded px-2 py-1">
+                  <div className="text-slate-400 text-[10px]">기온</div>
+                  <div className="font-semibold text-slate-800">
+                    {result.tempMin != null ? `${result.tempMin}~${result.tempMax ?? '—'}°C` : '—'}
+                  </div>
+                </div>
+                <div className="bg-slate-50 rounded px-2 py-1">
+                  <div className="text-slate-400 text-[10px]">인력</div>
+                  <div className="font-semibold text-slate-800">
+                    {Array.isArray(result.manpower) ? `${result.manpower.length}공종` : '—'}
+                  </div>
+                </div>
+                <div className="bg-slate-50 rounded px-2 py-1">
+                  <div className="text-slate-400 text-[10px]">이슈</div>
+                  <div className="font-semibold text-slate-800">
+                    {Array.isArray(result.issues) ? `${result.issues.length}건` : '—'}
+                  </div>
+                </div>
+              </div>
+              {Array.isArray(result.issues) && result.issues.length > 0 && (
+                <ul className="text-xs text-slate-600 space-y-0.5 pt-1 border-t border-slate-100">
+                  {(result.issues as Array<{severity: string; description: string}>).map((iss, i) => (
+                    <li key={i} className="flex items-center gap-1.5">
+                      <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                        iss.severity === 'high' ? 'bg-red-500' :
+                        iss.severity === 'med' ? 'bg-amber-500' : 'bg-slate-400'
+                      }`} />
+                      <span>{iss.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
