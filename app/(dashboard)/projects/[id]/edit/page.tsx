@@ -16,6 +16,8 @@ import IndustrySpecificFields, { type IndustrySpecific } from '@/components/comm
 import PageHeader from '@/components/common/PageHeader'
 import AiScheduleAdminInput from '@/components/bid/AiScheduleAdminInput'
 import type { AiScheduleEstimateData } from '@/lib/types/ai-schedule'
+import AiCostAdminInput from '@/components/bid/AiCostAdminInput'
+import type { AiCostEstimateData } from '@/lib/types/ai-cost'
 
 interface FormData {
   name: string
@@ -45,6 +47,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [form, setForm] = useState<FormData | null>(null)
   const [industrySpecific, setIndustrySpecific] = useState<IndustrySpecific>({})
   const [aiScheduleEstimate, setAiScheduleEstimate] = useState<AiScheduleEstimateData | null>(null)
+  const [aiCostEstimate, setAiCostEstimate] = useState<AiCostEstimateData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -75,6 +78,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         })
         setIndustrySpecific((p.industrySpecific as IndustrySpecific | null) ?? {})
         setAiScheduleEstimate((p.aiScheduleEstimate as AiScheduleEstimateData | null) ?? null)
+        setAiCostEstimate((p.aiCostEstimate as AiCostEstimateData | null) ?? null)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -127,6 +131,9 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         industrySpecific: Object.keys(industrySpecific).length > 0 ? industrySpecific : null,
         aiScheduleEstimate: aiScheduleEstimate && aiScheduleEstimate.totalDuration > 0
           ? aiScheduleEstimate
+          : null,
+        aiCostEstimate: aiCostEstimate && aiCostEstimate.totalAmount > 0
+          ? aiCostEstimate
           : null,
       }),
     })
@@ -386,6 +393,12 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </CardContent>
           </Card>
         )}
+
+        {/* AI 공사비 추정 (관리자 입력) */}
+        <AiCostAdminInput
+          value={aiCostEstimate}
+          onChange={setAiCostEstimate}
+        />
 
         {/* AI 공기 추론 (관리자 입력) */}
         <AiScheduleAdminInput

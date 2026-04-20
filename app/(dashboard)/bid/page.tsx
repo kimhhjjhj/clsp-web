@@ -10,7 +10,8 @@ import {
 import PageHeader from '@/components/common/PageHeader'
 import { useToast } from '@/components/common/Toast'
 import BenchmarkPanel from '@/components/common/BenchmarkPanel'
-import AiCostEstimate, { type AiResult } from '@/components/bid/AiCostEstimate'
+import AiCostCachedCard from '@/components/bid/AiCostCachedCard'
+import type { AiCostEstimateData } from '@/lib/types/ai-cost'
 import AiScheduleEstimate, { type AiScheduleResult } from '@/components/bid/AiScheduleEstimate'
 import {
   computeGuidelineSchedule, computeGuidelineSchedulePrecise, compareWithCpm,
@@ -435,9 +436,7 @@ function BidPage() {
           startDate: input.startDate || null,
           constructionMethod: input.constructionMethod,
           prdCount: Number(input.prdCount) || null,
-          aiCostEstimate: aiEstimate
-            ? { ...aiEstimate, estimatedAt: new Date().toISOString() }
-            : null,
+          // aiCostEstimate 는 /edit 관리자 큐레이션이 소스 — /bid 저장 시 건드리지 않음 (undefined → PUT 에서 보존)
           // 항상 배열로 전송 (빈 배열 = 명시적 초기화 → DB에서도 반영)
           productivityAdjustments: Array.from(multipliers.entries()).map(([taskId, multiplier]) => ({ taskId, multiplier })),
           // 조정 결과 총공기는 PUT/POST 모두 갱신 (UI와 DB 일치)
@@ -766,19 +765,11 @@ function BidPage() {
 
                   {topTab === 'cost' && (
                     <div className="p-5">
-                      {/* AI 개략 공사비 추정 — 물량 × 단가 방식 */}
-                      <AiCostEstimate
-                        type={input.type}
-                        ground={Number(input.ground) || undefined}
-                        basement={Number(input.basement) || undefined}
+                      {/* 🎯 AI 공사비 추정 (관리자 큐레이션) — DB 캐시 값 표시. 런타임 API 호출 0건 */}
+                      <AiCostCachedCard
+                        projectId={editingProjectId}
+                        estimate={aiEstimate as unknown as AiCostEstimateData | null}
                         bldgArea={Number(input.bldgArea) || undefined}
-                        buildingArea={Number(input.buildingArea) || undefined}
-                        siteArea={Number(input.siteArea) || undefined}
-                        totalDuration={result.cpm.totalDuration}
-                        tasks={result.cpm.tasks}
-                        storageKey={storeKey}
-                        initialResult={aiEstimate as AiResult | null}
-                        onResult={setAiEstimate}
                       />
                     </div>
                   )}
